@@ -67,5 +67,6 @@ const AppLayout = () => {
       </div>
     </SidebarProvider>
   );
+};
 
 export default AppLayout;
