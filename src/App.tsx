@@ -55,9 +55,15 @@ const App = () => (
             <Route path="chat" element={<ChatPage />} />
             <Route path="notes" element={<NotesPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            {/* Any unknown app sub-route will show the inner 404 page */}
             <Route path="*" element={<NotFoundPage />} />
           </Route>
 
+          {/* Privacy & Terms */}
+          <Route path="/privacy" element={<div className="p-20 text-center font-black uppercase tracking-tighter text-4xl">Privacy Policy</div>} />
+          <Route path="/terms" element={<div className="p-20 text-center font-black uppercase tracking-tighter text-4xl">Terms of Service</div>} />
+
+          {/* Root level 404 - for anything not caught above */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

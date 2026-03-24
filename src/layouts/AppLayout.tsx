@@ -31,8 +31,32 @@ const AppLayout = () => {
     }
   };
 
-  return (    <SidebarProvider defaultOpen={true}>
-      <div className="flex h-screen w-full bg-background overflow-hidden font-sans antialiased">
+  if (!hydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center w-full bg-background selection:bg-primary/20">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/20 blur-[40px] rounded-full animate-pulse" />
+            <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center relative z-10 shadow-glow">
+              <span className="text-primary-foreground font-black text-2xl tracking-tighter">C</span>
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground opacity-80">Loading Workspace</p>
+            <div className="flex gap-1.5">
+              <div className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
+              <div className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
+              <div className="w-1 h-1 rounded-full bg-primary animate-bounce" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex h-screen w-full bg-background overflow-hidden font-sans antialiased selection:bg-primary/20">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0 h-full relative">
           <AppTopBar
@@ -52,17 +76,6 @@ const AppLayout = () => {
               </aside>
             )}
           </div>
-          
-          {!hydrated && (
-            <div className="absolute inset-0 z-50 bg-background flex items-center justify-center">
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-primary animate-pulse flex items-center justify-center">
-                  <span className="text-primary-foreground font-black">C</span>
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Rebuilding Workspace...</p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </SidebarProvider>
