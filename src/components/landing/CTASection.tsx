@@ -18,18 +18,21 @@ const CTASection = () => {
           transition={{ duration: 0.6 }}
           className="max-w-2xl mx-auto text-center"
         >
-          <h2 className="font-display text-4xl sm:text-5xl font-bold tracking-tight mb-6">
+          <h2 className="font-display text-4xl sm:text-5xl font-black tracking-tight mb-6 text-foreground">
             Ready to unify your work?
           </h2>
-          <p className="text-lg text-muted-foreground mb-10">
+          <p className="text-lg text-muted-foreground mb-10 font-medium">
             Join teams who replaced their entire tool stack with one system.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button variant="hero" size="lg" className="text-base px-10 h-13" asChild>
-              <Link to="/onboarding">Start Free <ArrowRight className="w-4 h-4 ml-1" /></Link>
+            <Button variant="hero" size="lg" className="px-10 h-14 font-black uppercase tracking-widest text-[11px]" asChild>
+              <Link to="/signup" className="flex items-center justify-center gap-2">
+                Start free trial 
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </Button>
-            <Button variant="hero-outline" size="lg" className="text-base px-10 h-13">
-              Talk to Sales
+            <Button variant="hero-outline" size="lg" className="px-10 h-14 font-black uppercase tracking-widest text-[11px]" asChild>
+              <a href="mailto:sales@cynda.co" className="flex items-center justify-center">Contact sales</a>
             </Button>
           </div>
         </motion.div>

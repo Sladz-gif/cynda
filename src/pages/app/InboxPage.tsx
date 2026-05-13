@@ -1,17 +1,23 @@
 import { motion } from "framer-motion";
-import { Inbox, Archive, CheckCircle2, MessageSquare, Bell, Filter, Search, MoreHorizontal } from "lucide-react";
+import { Inbox, Archive, CheckCircle2, MessageSquare, Bell, Filter, Search, MoreHorizontal, ExternalLink, Trash2, ArrowRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useIndustryStore } from "@/lib/industry-store";
+import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const InboxPage = () => {
   const { toast } = useToast();
-  const [notifications, setNotifications] = useState([
-    { id: "1", type: "mention", title: "Sarah mentioned you in #design", detail: "Take a look at the new onboarding wireframes.", time: "5 min ago", read: false },
-    { id: "2", type: "update", title: "Project update: Q2 Campaign", detail: "Campaign was moved from 'Todo' to 'In Progress'.", time: "1 hr ago", read: false },
-    { id: "3", type: "task", title: "New task assigned: Client brief", detail: "Write the brief for the upcoming Acme Corp project.", time: "3 hrs ago", read: true },
-    { id: "4", type: "comment", title: "New comment on 'Logo Refresh'", detail: "Alex: I think we should try a more vibrant orange.", time: "Yesterday", read: true },
-  ]);
+  const navigate = useNavigate();
+  const { notifications = [], markNotificationRead, deleteNotification, seedNotifications, resetStore } = useIndustryStore();
   const [activeTab, setActiveTab] = useState("All");
 
   // Scroll to top on tab change
@@ -22,24 +28,11 @@ const InboxPage = () => {
     }
   }, [activeTab]);
 
-  const handleArchive = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    toast({ title: "Notification Archived" });
-  };
-
-  const handleMarkRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    toast({ title: "Marked as Read" });
-  };
-
-  const handleMarkAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    toast({ title: "All Marked as Read" });
-  };
-
-  const handleArchiveAll = () => {
-    setNotifications([]);
-    toast({ title: "All Notifications Archived" });
+  const handleNotificationClick = (n: any) => {
+    markNotificationRead(n.id);
+    if (n.actionUrl) {
+      navigate(n.actionUrl);
+    }
   };
 
   const filteredNotifications = notifications.filter(n => {
@@ -59,16 +52,25 @@ const InboxPage = () => {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
+      className="space-y-6 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8"
     >
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="font-display text-2xl font-bold text-foreground">Inbox</h2>
-          <p className="text-sm text-muted-foreground mt-1">Stay updated with task mentions and project changes.</p>
+          <h2 className="font-display text-2xl sm:text-3xl font-black uppercase tracking-tight text-foreground">Inbox</h2>
+          <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1 opacity-60">Stay updated with task mentions and project changes.</p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={handleArchiveAll}><Archive className="w-4 h-4 mr-1.5" /> Archive All</Button>
-          <Button size="sm" className="flex-1 sm:flex-none" onClick={handleMarkAllRead}><CheckCircle2 className="w-4 h-4 mr-1.5" /> Mark All Read</Button>
+          <Button variant="outline" size="sm" className="h-10 rounded-xl font-black uppercase text-[10px] tracking-widest border-destructive/20 text-destructive hover:bg-destructive/10" onClick={resetStore}>
+            Reset All Data
+          </Button>
+          {notifications.length === 0 && (
+            <Button variant="outline" size="sm" className="h-10 rounded-xl font-black uppercase text-[10px] tracking-widest" onClick={seedNotifications}>
+              Seed Test Data
+            </Button>
+          )}
+          <Button size="sm" className="flex-1 sm:flex-none h-10 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-glow">
+            <CheckCircle2 className="w-4 h-4 mr-2" /> Mark All Read
+          </Button>
         </div>
       </div>
 
@@ -77,8 +79,10 @@ const InboxPage = () => {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-              activeTab === tab ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-2 ${
+              activeTab === tab 
+                ? "bg-primary border-primary text-primary-foreground shadow-glow" 
+                : "border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
             }`}
           >
             {tab}
@@ -86,66 +90,96 @@ const InboxPage = () => {
         ))}
       </div>
 
-      <div className="divide-y divide-border/50 bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+      <div className="divide-y divide-border/50 bg-card/50 rounded-[2rem] border-2 border-border shadow-sm overflow-hidden">
         {filteredNotifications.map((notif) => (
           <div 
             key={notif.id} 
-            className={`px-4 sm:px-6 py-5 flex flex-col sm:flex-row items-start gap-4 transition-all hover:bg-secondary/20 cursor-pointer active:bg-secondary/30 ${
-              !notif.read ? "bg-primary/[0.02] border-l-4 border-l-primary" : "border-l-4 border-l-transparent"
+            className={`group relative px-6 py-6 flex flex-col sm:flex-row items-start gap-6 transition-all hover:bg-muted/50 cursor-pointer ${
+              !notif.read ? "bg-primary/[0.02]" : ""
             }`}
-            onClick={() => handleMarkRead(notif.id)}
+            onClick={() => handleNotificationClick(notif)}
           >
             <div className="flex items-center gap-4 w-full sm:w-auto shrink-0">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm ${
-                notif.type === 'mention' ? "bg-blue-500/10 text-blue-500" :
-                notif.type === 'update' ? "bg-orange-500/10 text-orange-500" :
-                notif.type === 'task' ? "bg-green-500/10 text-green-500" :
-                "bg-purple-500/10 text-purple-500"
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border-2 shadow-sm transition-transform group-hover:scale-105 ${
+                notif.type === 'share' ? "bg-blue-500/10 border-blue-500/20 text-blue-500" :
+                notif.type === 'form' ? "bg-purple-500/10 border-purple-500/20 text-purple-500" :
+                notif.type === 'mention' ? "bg-primary/10 border-primary/20 text-primary" :
+                "bg-primary/10 border-primary/20 text-primary"
               }`}>
-                {notif.type === 'mention' ? <MessageSquare className="w-5 h-5" /> :
-                 notif.type === 'update' ? <Bell className="w-5 h-5" /> :
-                 notif.type === 'task' ? <CheckCircle2 className="w-5 h-5" /> :
-                 <Bell className="w-5 h-5" />}
+                {notif.type === 'share' ? <ExternalLink className="w-6 h-6" /> :
+                 notif.type === 'form' ? <Users className="w-6 h-6" /> :
+                 notif.type === 'mention' ? <MessageSquare className="w-6 h-6" /> :
+                 <Bell className="w-6 h-6" />}
               </div>
               <div className="sm:hidden flex-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">{notif.time}</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 tabular-nums">
+                  {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
               </div>
             </div>
 
-            <div className="flex-1 min-w-0 space-y-1">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                <h3 className={`text-sm sm:text-base tracking-tight uppercase ${!notif.read ? "font-black text-foreground" : "font-bold text-muted-foreground"}`}>
-                  {notif.title}
-                </h3>
-                <span className="hidden sm:block text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">{notif.time}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className={cn(
+                  "text-[10px] font-black uppercase tracking-widest",
+                  !notif.read ? "text-primary" : "text-muted-foreground/60"
+                )}>
+                  {notif.source}
+                </span>
+                <span className="hidden sm:block text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 tabular-nums">
+                  {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground font-medium leading-relaxed line-clamp-2">
-                {notif.detail}
+              <h3 className={cn(
+                "text-base tracking-tight uppercase leading-snug mb-2",
+                !notif.read ? "font-black text-foreground" : "font-bold text-muted-foreground/80"
+              )}>
+                {notif.title}
+              </h3>
+              <p className="text-xs text-muted-foreground font-medium leading-relaxed line-clamp-2">
+                {notif.message}
               </p>
+              {!notif.read && (
+                <div className="mt-4 flex items-center gap-1.5 text-primary">
+                  <span className="text-[10px] font-black uppercase tracking-widest">Click to open</span>
+                  <ArrowRight className="w-3 h-3 animate-pulse" />
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto sm:self-center shrink-0">
-              {!notif.read && (
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="flex-1 sm:flex-none h-9 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-primary/10 hover:text-primary"
-                  onClick={(e) => { e.stopPropagation(); handleMarkRead(notif.id); }}
-                >
-                  Mark Read
-                </Button>
-              )}
-              <Button 
-                size="icon" 
-                variant="ghost" 
-                className="h-9 w-9 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                onClick={(e) => { e.stopPropagation(); handleArchive(notif.id); }}
-              >
-                <Archive className="w-4 h-4" />
-              </Button>
-              <Button size="icon" variant="ghost" className="h-9 w-9 rounded-lg text-muted-foreground">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto sm:self-center shrink-0" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-primary/10 hover:text-primary border-2 border-transparent hover:border-primary/20">
+                    <MoreHorizontal className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 rounded-2xl border-2 p-2 shadow-2xl">
+                  {!notif.read && (
+                    <DropdownMenuItem 
+                      onClick={() => markNotificationRead(notif.id)}
+                      className="rounded-xl font-black text-[10px] uppercase tracking-widest gap-3 h-11"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-primary" /> Mark as read
+                    </DropdownMenuItem>
+                  )}
+                  {notif.actionUrl && (
+                    <DropdownMenuItem 
+                      onClick={() => handleNotificationClick(notif)}
+                      className="rounded-xl font-black text-[10px] uppercase tracking-widest gap-3 h-11"
+                    >
+                      <ExternalLink className="h-4 w-4 text-primary" /> Open Source
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator className="my-2" />
+                  <DropdownMenuItem 
+                    className="rounded-xl font-black text-[10px] uppercase tracking-widest gap-3 h-11 text-destructive focus:text-destructive focus:bg-destructive/10"
+                    onClick={() => deleteNotification(notif.id)}
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete Alert
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         ))}

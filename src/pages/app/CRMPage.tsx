@@ -1,16 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Plus, Search, MoreHorizontal, DollarSign, Phone, Mail, ChevronRight, X, 
   Calendar, TrendingUp, Clock, User, UserPlus, Building2, Activity, Filter, 
   LayoutDashboard, Users, Kanban, ClipboardList, FileText, MessageSquare, 
   Zap, BarChart3, Ticket, BookOpen, CreditCard, Puzzle, ArrowRight,
   ChevronDown, CheckCircle2, Star, MailOpen, Send, Bot, Share2, Download,
-  MoreVertical, Edit, Trash2, Upload, Settings
+  MoreVertical, Edit, Trash2, Upload, Settings, ShieldCheck, FileSpreadsheet, History, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { useIndustryStore } from "@/lib/industry-store";
-import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
+import { useIndustryStore, CRMContact, CRMCompany, CRMDeal } from "@/lib/industry-store";
+import { useToast } from "@/hooks/use-toast";
+import { useLocation, useNavigate } from "react-router-dom";
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell
@@ -33,48 +36,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // --- Types ---
 
 type CRMTab = 
-  | "dashboard" | "contacts" | "companies" | "deals" 
-  | "marketing" | "automation" | "reports";
-
-type Contact = {
-  id: string;
-  name: string;
-  company: string;
-  email: string;
-  phone: string;
-  status: string;
-  lastContact: string;
-  deals: number;
-  value: string;
-  notes?: string;
-};
-
-type Company = {
-  id: string;
-  name: string;
-  industry: string;
-  size: string;
-  location: string;
-  contacts: number;
-  activeDeals: number;
-  totalValue: string;
-};
-
-type Deal = {
-  id: string;
-  company: string;
-  contact: string;
-  email: string;
-  value: string;
-  probability: number;
-  lastActivity: string;
-  nextAction?: string;
-  stage: string;
-};
+  | "crm" 
+  | "contacts" | "companies" | "marketing" | "crm-automation" | "reports" | "deals" | "import-history";
 
 type CRMCampaign = {
   id: string;
@@ -104,27 +77,10 @@ type CRMReport = {
 
 // --- Mock Data ---
 
-const initialContacts: Contact[] = [
-  { id: "c1", name: "James Wilson", company: "TechFlow Inc", email: "james@techflow.com", phone: "+1 555-0101", status: "Lead", lastContact: "2 days ago", deals: 1, value: "$12,000" },
-  { id: "c2", name: "Rachel Adams", company: "Acme Corp", email: "rachel@acme.com", phone: "+1 555-0102", status: "Negotiation", lastContact: "4 hours ago", deals: 2, value: "$68,000" },
-  { id: "c3", name: "David Chen", company: "GreenLeaf Labs", email: "david@greenleaf.com", phone: "+1 555-0103", status: "Proposal", lastContact: "1 day ago", deals: 1, value: "$42,000" },
-  { id: "c4", name: "Lisa Park", company: "DataSync Corp", email: "lisa@datasync.com", phone: "+1 555-0104", status: "Lead", lastContact: "1 day ago", deals: 1, value: "$8,500" },
-];
-
-const initialCompanies: Company[] = [
-  { id: "co1", name: "TechFlow Inc", industry: "Software", size: "50-200", location: "San Francisco", contacts: 12, activeDeals: 1, totalValue: "$12,000" },
-  { id: "co2", name: "Acme Corp", industry: "Manufacturing", size: "500+", location: "Chicago", contacts: 45, activeDeals: 2, totalValue: "$150,000" },
-  { id: "co3", name: "GreenLeaf Labs", industry: "Biotech", size: "10-50", location: "Boston", contacts: 8, activeDeals: 1, totalValue: "$42,000" },
-];
-
-const initialDeals: Deal[] = [
-  { id: "d1", company: "TechFlow Inc", contact: "James Wilson", email: "james@techflow.com", value: "$12,000", probability: 20, lastActivity: "2 days ago", nextAction: "Send intro email", stage: "Lead" },
-  { id: "d2", company: "DataSync Corp", contact: "Lisa Park", email: "lisa@datasync.com", value: "$8,500", probability: 15, lastActivity: "1 day ago", stage: "Lead" },
-  { id: "d3", company: "CloudBase", contact: "Tom Richards", email: "tom@cloudbase.io", value: "$24,000", probability: 40, lastActivity: "3 hours ago", nextAction: "Schedule demo", stage: "Qualified" },
-  { id: "d4", company: "PixelPerfect", contact: "Ana Martinez", email: "ana@pixelperfect.co", value: "$15,000", probability: 50, lastActivity: "5 hours ago", stage: "Qualified" },
-  { id: "d5", company: "GreenLeaf Labs", contact: "David Chen", email: "david@greenleaf.com", value: "$42,000", probability: 65, lastActivity: "1 day ago", nextAction: "Follow up on proposal", stage: "Proposal" },
-  { id: "d6", company: "Acme Corp", contact: "Rachel Adams", email: "rachel@acme.com", value: "$68,000", probability: 80, lastActivity: "4 hours ago", nextAction: "Review contract terms", stage: "Negotiation" },
-  { id: "d7", company: "BlueWave Digital", contact: "Mark Taylor", email: "mark@bluewave.io", value: "$35,000", probability: 100, lastActivity: "Yesterday", stage: "Closed Won" },
+const initialDeals: CRMDeal[] = [
+  { id: "d1", company: "TechFlow Inc", contact: "James Wilson", value: "$45,000", stage: "Negotiation", probability: 75, status: "active", email: "james@techflow.com" },
+  { id: "d2", company: "Acme Corp", contact: "Sarah Jenkins", value: "$12,000", stage: "Proposal", probability: 40, status: "active" },
+  { id: "d3", company: "Global Logics", contact: "Michael Chen", value: "$88,000", stage: "Qualified", probability: 20, status: "active" },
 ];
 
 const initialCampaigns: CRMCampaign[] = [
@@ -154,58 +110,221 @@ const revenueData = [
   { name: "Jun", revenue: 67000 },
 ];
 
-const pipelineStages = [
-  { name: "Lead", color: "bg-muted-foreground/30" },
-  { name: "Qualified", color: "bg-accent" },
-  { name: "Proposal", color: "bg-primary" },
-  { name: "Negotiation", color: "bg-primary" },
-  { name: "Closed Won", color: "bg-green-500" },
-];
+import { triggerAutomation } from "@/lib/automationEngine";
+import { transactionService } from "@/lib/transactionService";
 
 const CRMPage = () => {
   const { toast } = useToast();
-  const { userType } = useIndustryStore();
-  const industryName = userType?.replace('-', ' ') || 'business';
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { 
+    currentUser, 
+    adminProfile, 
+    staffList, 
+    userType, 
+    selectedModules = [],
+    crmContacts = [],
+    crmCompanies = [],
+    crmDeals = [],
+    addCRMContact,
+    addCRMCompany,
+    addCRMDeal,
+    updateCRMDeal,
+    addProject,
+  } = useIndustryStore();
   
-  const [tab, setTab] = useState<CRMTab>("dashboard");
+  const activeUser = currentUser || adminProfile;
+  const isDeptHead = activeUser?.role === 'Super Admin' || activeUser?.role?.includes('Director') || activeUser?.role?.includes('Manager');
+  
+  // Two-step Delete Confirmation
+  const [isDeleteModal1Open, setIsDeleteModal1Open] = useState(false);
+  const [isDeleteModal2Open, setIsDeleteModal2Open] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: string } | null>(null);
+
+  const handleDeleteItem = (id: string, type: string) => {
+    setItemToDelete({ id, type });
+    setIsDeleteModal1Open(true);
+  };
+
+  const confirmDeleteStep1 = () => {
+    setIsDeleteModal1Open(false);
+    setIsDeleteModal2Open(true);
+  };
+
+  const finalizeDelete = () => {
+    if (itemToDelete) {
+      // Logic for deleting based on type
+      if (itemToDelete.type === 'contact') {
+        // Mock delete contact
+      } else if (itemToDelete.type === 'company') {
+        // Mock delete company
+      } else if (itemToDelete.type === 'deal') {
+        // Mock delete deal
+      }
+      setIsDeleteModal2Open(false);
+      setItemToDelete(null);
+      toast({ title: `${itemToDelete.type.charAt(0).toUpperCase() + itemToDelete.type.slice(1)} deleted`, description: "The item has been permanently removed." });
+    }
+  };
+
+  const allNavItems = [
+    { id: "crm", label: "Dashboard", icon: LayoutDashboard },
+    { id: "contacts", label: "Contacts", icon: Users },
+    { id: "companies", label: "Companies", icon: Building2 },
+    { id: "deals", label: "Pipeline", icon: Kanban },
+    { id: "marketing", label: "Marketing", icon: ClipboardList },
+    { id: "crm-automation", label: "Automation", icon: Zap },
+    { id: "reports", label: "Reports", icon: BarChart3 },
+    { id: "import-history", label: "Import Logs", icon: History },
+  ];
+
+  const navItems = useMemo(() => {
+    // If Admin, show everything
+    if (isDeptHead) return allNavItems;
+    
+    // For regular users, show based on effective tools
+    const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
+    const filtered = allNavItems.filter(item => {
+      if (item.id === 'crm') return true; // Always show dashboard
+      return safeModules.includes(item.id);
+    });
+    return filtered;
+  }, [selectedModules, userType, isDeptHead]);
+
+  const [tab, setTab] = useState<string>(navItems[0]?.id || "crm");
+
+  useEffect(() => {
+    const raw = location.pathname.split("/app/")[1] || "dashboard";
+    const segment = raw.split("/")[0] || "dashboard";
+    const fromRoute = segment === "crm" ? "crm" : segment;
+    if (navItems.some((i) => i.id === fromRoute) && fromRoute !== tab) {
+      setTab(fromRoute as CRMTab);
+    }
+  }, [location.pathname, tab, navItems]);
+
+  const goToTab = (id: CRMTab) => {
+    const url = id === "crm" ? "/app/crm" : `/app/${id}`;
+    navigate(url);
+  };
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Selection state
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  // Data State
+  const [campaigns, setCampaigns] = useState<CRMCampaign[]>(initialCampaigns);
+  const [workflows, setWorkflows] = useState<CRMWorkflow[]>(initialWorkflows);
+  const [reports, setReports] = useState<CRMReport[]>(initialReports);
   
-  // State for entities
-  const [contacts, setContacts] = useState<Contact[]>(initialContacts || []);
-  const [companies, setCompanies] = useState<Company[]>(initialCompanies || []);
-  const [deals, setDeals] = useState<Deal[]>(initialDeals || []);
-  const [campaigns, setCampaigns] = useState<CRMCampaign[]>(initialCampaigns || []);
-  const [workflows, setWorkflows] = useState<CRMWorkflow[]>(initialWorkflows || []);
-  const [reports, setReports] = useState<CRMReport[]>(initialReports || []);
-  
-  // Modal state
+  // Modals for Quick Add
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
   const [isAddCompanyOpen, setIsAddCompanyOpen] = useState(false);
   const [isAddDealOpen, setIsAddDealOpen] = useState(false);
+
+  const [newContact, setNewContact] = useState<Partial<CRMContact>>({ name: "", email: "", status: 'Lead' });
+  const [newCompany, setNewCompany] = useState<Partial<CRMCompany>>({ name: "", industry: "", status: 'Lead', size: '1-10' });
+  const [newDeal, setNewDeal] = useState<Partial<CRMDeal>>({ title: "", value: 0, stage: 'Lead', probability: 10 });
+
+  const handleAddContact = () => {
+    if (!newContact.name || !newContact.email) return;
+    addCRMContact({
+      id: Math.random().toString(36).substr(2, 9),
+      name: newContact.name,
+      email: newContact.email,
+      status: newContact.status as any,
+      phone: newContact.phone,
+      companyId: newContact.companyId,
+      role: newContact.role
+    });
+    setIsAddContactOpen(false);
+    setNewContact({ name: "", email: "", status: 'Lead' });
+    toast({ title: "Contact Added", description: `${newContact.name} has been added to your database.` });
+  };
+
+  const handleAddCompany = () => {
+    if (!newCompany.name) return;
+    addCRMCompany({
+      id: Math.random().toString(36).substr(2, 9),
+      name: newCompany.name,
+      industry: newCompany.industry || "General",
+      status: newCompany.status as any,
+      size: newCompany.size || "1-10",
+      website: newCompany.website
+    });
+    setIsAddCompanyOpen(false);
+    setNewCompany({ name: "", industry: "", status: 'Lead', size: '1-10' });
+    toast({ title: "Company Added", description: `${newCompany.name} has been added to your database.` });
+  };
+
+  const handleAddDeal = () => {
+    if (!newDeal.title || !newDeal.companyId) return;
+    addCRMDeal({
+      id: Math.random().toString(36).substr(2, 9),
+      title: newDeal.title,
+      companyId: newDeal.companyId,
+      value: newDeal.value || 0,
+      stage: newDeal.stage as any,
+      probability: newDeal.probability || 10,
+      contactId: newDeal.contactId
+    });
+    setIsAddDealOpen(false);
+    setNewDeal({ title: "", value: 0, stage: 'Lead', probability: 10 });
+    toast({ title: "Deal Created", description: `"${newDeal.title}" added to pipeline.` });
+  };
+
+  const pipelineStages = [
+    { name: "Lead", color: "bg-slate-400" },
+    { name: "Qualified", color: "bg-primary" },
+    { name: "Proposal", color: "bg-blue-500" },
+    { name: "Negotiation", color: "bg-blue-600" },
+    { name: "Closed Won", color: "bg-green-500" },
+  ];
+
+  const moveDeal = (id: string, stage: string) => {
+    updateCRMDeal(id, { stage: stage as any });
+    toast({ title: "Deal Stage Updated", description: `Moved to ${stage}` });
+    
+    const deal = crmDeals.find(d => d.id === id);
+    if (deal) {
+      if (stage === "Closed Won" && deal.stage !== "Closed Won") {
+        const companyName = crmCompanies.find(c => c.id === deal.companyId)?.name || 'Unknown Company';
+        transactionService.createGhostInvoiceFromDeal(deal, companyName);
+        
+        // Auto-create project
+        addProject({
+          id: `proj_${Date.now()}`,
+          name: `Project: ${deal.title}`,
+          status: 'Planning',
+          completion: 0
+        });
+
+        toast({ 
+          title: "Closed Won! 🚀", 
+          description: `Invoice created and a new project has been added for ${companyName}.`,
+        });
+      }
+      // Trigger Automation
+      triggerAutomation('deal_stage_changed', { deal: { ...deal, stage } });
+    }
+  };
+  
+  // Modal state
   const [isAddCampaignOpen, setIsAddCampaignOpen] = useState(false);
   const [isAddWorkflowOpen, setIsAddWorkflowOpen] = useState(false);
   const [isAddReportOpen, setIsAddReportOpen] = useState(false);
+  const [isMigrationOpen, setIsMigrationOpen] = useState(false);
+  const [isUndoModalOpen, setIsUndoModalOpen] = useState(false);
+  const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
+  const [selectedDeal, setSelectedDeal] = useState<CRMDeal | null>(null);
+  
+  // Migration State
+  const [migrationStep, setMigrationStep] = useState(1);
+  const [migrationFile, setMigrationFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [mappings, setMappings] = useState<any[]>([]);
+  const [importStats, setImportStats] = useState({ created: 0, updated: 0, skipped: 0 });
+  const [undoImportId, setUndoImportId] = useState<string | null>(null);
 
-  const [newContact, setNewContact] = useState({ name: "", company: "", email: "", phone: "" });
-  const [newCompany, setNewCompany] = useState({ name: "", industry: "", location: "" });
-  const [newDeal, setNewDeal] = useState({ company: "", contact: "", value: "", stage: "Lead" });
   const [newCampaign, setNewCampaign] = useState({ title: "", status: "Draft" as const });
   const [newWorkflow, setNewWorkflow] = useState({ name: "", trigger: "", action: "" });
   const [newReport, setNewReport] = useState({ name: "", type: "Sales" as const });
-
-  const totalValue = (deals || []).reduce((a, d) => {
-    const val = parseInt((d.value || "").replace(/\D/g, "")) || 0;
-    return a + val;
-  }, 0);
-  const weightedValue = (deals || []).reduce((a, d) => {
-    const val = parseInt((d.value || "").replace(/\D/g, "")) || 0;
-    return a + (val * (d.probability || 0)) / 100;
-  }, 0);
 
   const handleExport = () => {
     toast({ 
@@ -214,14 +333,50 @@ const CRMPage = () => {
     });
   };
 
-  const handleDeleteContact = (id: string) => {
-    setContacts(prev => prev.filter(c => c.id !== id));
-    toast({ title: "Contact Deleted" });
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMigrationFile(file);
+    setIsProcessing(true);
+    // Mock processing
+    setTimeout(() => {
+      setIsProcessing(false);
+      setMigrationStep(2);
+      setMappings([
+        { id: "1", fileColumn: "Company Name", interpretedAs: "Company", destination: "Companies", status: "mapped" },
+        { id: "2", fileColumn: "Contact Email", interpretedAs: "Email", destination: "Contacts", status: "mapped" },
+        { id: "3", fileColumn: "Deal Value", interpretedAs: "Value", destination: "Deals", status: "mapped" },
+        { id: "4", fileColumn: "Unrecognized", interpretedAs: "Notes", destination: "Skip", status: "unmapped" },
+      ]);
+    }, 2000);
   };
 
-  const handleDeleteCompany = (id: string) => {
-    setCompanies(prev => prev.filter(c => c.id !== id));
-    toast({ title: "Company Deleted" });
+  const handleUpdateMapping = (id: string, interpretedAs: string, destination: string) => {
+    setMappings(mappings.map(m => m.id === id ? { ...m, interpretedAs, destination, status: destination === 'Skip' ? 'unmapped' : 'mapped' } : m));
+  };
+
+  const handleImport = () => {
+    setIsProcessing(true);
+    // Mock import
+    setTimeout(() => {
+      setIsProcessing(false);
+      setImportStats({ created: 42, updated: 5, skipped: 0 });
+      setUndoImportId("import-123");
+      setMigrationStep(3);
+      toast({ title: "Migration Successful", description: "47 records have been added to your CRM." });
+    }, 2000);
+  };
+
+  const handleUndoImport = () => {
+    setIsProcessing(true);
+    // Mock undo
+    setTimeout(() => {
+      setIsProcessing(false);
+      setUndoImportId(null);
+      setIsUndoModalOpen(false);
+      setMigrationStep(1);
+      toast({ title: "Migration Reversed", description: "All records from the last import have been removed." });
+    }, 1500);
   };
 
   const handleShareReport = (name: string) => {
@@ -237,56 +392,6 @@ const CRMPage = () => {
       title: `${action} Initialized`, 
       description: `Opening ${action.toLowerCase()} interface for ${contact}.` 
     });
-  };
-
-  const handleAddContact = () => {
-    if (!newContact.name || !newContact.email) return;
-    const contact: Contact = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...newContact,
-      status: "Lead",
-      lastContact: "Just now",
-      deals: 0,
-      value: "$0"
-    };
-    setContacts((prev) => [contact, ...(prev || [])]);
-    setIsAddContactOpen(false);
-    setNewContact({ name: "", company: "", email: "", phone: "" });
-    toast({ title: "Contact Added", description: `${contact.name} has been added to your database.` });
-  };
-
-  const handleAddCompany = () => {
-    if (!newCompany.name) return;
-    const company: Company = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...newCompany,
-      size: "1-10",
-      contacts: 0,
-      activeDeals: 0,
-      totalValue: "$0"
-    };
-    setCompanies((prev) => [company, ...(prev || [])]);
-    setIsAddCompanyOpen(false);
-    setNewCompany({ name: "", industry: "", location: "" });
-    toast({ title: "Company Added", description: `${company.name} has been created.` });
-  };
-
-  const handleAddDeal = () => {
-    if (!newDeal.company || !newDeal.value) return;
-    const deal: Deal = {
-      id: Math.random().toString(36).substr(2, 9),
-      company: newDeal.company,
-      contact: newDeal.contact || "Unknown",
-      email: "",
-      value: `$${newDeal.value}`,
-      probability: 10,
-      lastActivity: "Just now",
-      stage: newDeal.stage
-    };
-    setDeals((prev) => [...(prev || []), deal]);
-    setIsAddDealOpen(false);
-    setNewDeal({ company: "", contact: "", value: "", stage: "Lead" });
-    toast({ title: "Deal Created", description: `New deal for ${deal.company} added to pipeline.` });
   };
 
   const handleAddWorkflow = () => {
@@ -340,24 +445,6 @@ const CRMPage = () => {
     toast({ title: "Campaign Created" });
   };
 
-  const moveDeal = (id: string, newStage: string) => {
-    setDeals((prev) => {
-      if (!prev) return [];
-      return prev.map(d => d.id === id ? { ...d, stage: newStage, lastActivity: "Just now" } : d);
-    });
-    toast({ title: "Deal Moved", description: `Deal moved to ${newStage}.` });
-  };
-
-  const navItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "contacts", label: "Contacts", icon: Users },
-    { id: "companies", label: "Companies", icon: Building2 },
-    { id: "deals", label: "Deals", icon: Kanban },
-    { id: "marketing", label: "Marketing", icon: ClipboardList },
-    { id: "automation", label: "Automation", icon: Zap },
-    { id: "reports", label: "Reports", icon: BarChart3 },
-  ];
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -370,14 +457,25 @@ const CRMPage = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="rounded-xl h-9 border-2 font-black uppercase tracking-widest text-[9px]" 
+              onClick={() => {
+                if (!isDeptHead) {
+                  toast({ title: "Access Denied", description: "Only department heads can migrate data.", variant: "destructive" });
+                  return;
+                }
+                setIsMigrationOpen(true);
+              }}
+            >
+              <Upload className="w-3.5 h-3.5 mr-2" /> Data Migration
+            </Button>
             <Button variant="outline" size="sm" className="rounded-xl" onClick={handleExport}>
               <Download className="w-4 h-4 mr-1.5" /> Export
             </Button>
-            {tab === "contacts" && <Button size="sm" className="rounded-xl" onClick={() => setIsAddContactOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> Add Contact</Button>}
-            {tab === "companies" && <Button size="sm" className="rounded-xl" onClick={() => setIsAddCompanyOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> Add Company</Button>}
-            {tab === "deals" && <Button size="sm" className="rounded-xl" onClick={() => setIsAddDealOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> Create Deal</Button>}
             {tab === "marketing" && <Button size="sm" className="rounded-xl" onClick={() => setIsAddCampaignOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> Create Campaign</Button>}
-            {tab === "automation" && <Button size="sm" className="rounded-xl" onClick={() => setIsAddWorkflowOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> Create Workflow</Button>}
+            {tab === "crm-automation" && <Button size="sm" className="rounded-xl" onClick={() => setIsAddWorkflowOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> Create Workflow</Button>}
             {tab === "reports" && <Button size="sm" className="rounded-xl" onClick={() => setIsAddReportOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> Create Report</Button>}
           </div>
         </div>
@@ -389,7 +487,7 @@ const CRMPage = () => {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setTab(item.id as CRMTab)}
+                    onClick={() => goToTab(item.id as CRMTab)}
                     className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-widest transition-all relative whitespace-nowrap ${
                       tab === item.id ? "text-primary" : "text-muted-foreground hover:text-foreground"
                     }`}
@@ -407,13 +505,13 @@ const CRMPage = () => {
 
       {/* Tab Content */}
       <div className="min-h-[600px]">
-        {tab === "dashboard" && (
+        {tab === "crm" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  { label: "Total Revenue", value: `$${((totalValue || 0) / 1000).toFixed(1)}k`, change: "+12.5%", Icon: DollarSign, color: "text-green-500" },
-                  { label: "Active Deals", value: (deals || []).filter(d => d.stage !== "Closed Won").length, change: "+3", Icon: Kanban, color: "text-primary" },
-                  { label: "Lead Conversion", value: "24%", change: "+2.1%", Icon: TrendingUp, color: "text-accent" },
+                  { label: "Lead Growth", value: "142", change: "+12.5%", Icon: TrendingUp, color: "text-green-500" },
+                  { label: "Active Campaigns", value: (campaigns || []).filter(c => c.status === 'Running').length, change: "+3", Icon: Zap, color: "text-primary" },
+                  { label: "Engagement Rate", value: "24%", change: "+2.1%", Icon: Activity, color: "text-accent" },
                 ].map((stat) => {
                   const StatIcon = stat.Icon;
                   return (
@@ -481,77 +579,104 @@ const CRMPage = () => {
                     );
                   })}
                 </div>
-                <Button variant="ghost" className="w-full mt-4 text-[10px] font-bold uppercase tracking-widest text-primary" onClick={() => setTab("automation")}>View All Activity</Button>
+                <Button variant="ghost" className="w-full mt-4 text-[10px] font-bold uppercase tracking-widest text-primary" onClick={() => setTab("crm-automation")}>View All Activity</Button>
               </div>
             </div>
           </motion.div>
         )}
 
         {tab === "contacts" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-            <div className="flex items-center gap-4 mb-2">
-              <div className="relative flex-1">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="relative w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Search contacts by name, email or company..." 
-                  className="pl-10 rounded-xl"
+                  placeholder="Search contacts..." 
+                  className="pl-10 h-11 rounded-xl bg-card border-2 border-border focus-visible:border-primary/30 transition-all font-bold text-xs"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button variant="outline" className="rounded-xl"><Filter className="w-4 h-4 mr-2" /> Filter</Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="rounded-xl border-2 uppercase font-black tracking-widest text-[9px] h-11">
+                  <Filter className="w-3.5 h-3.5 mr-2" /> Filters
+                </Button>
+                <Button onClick={() => setIsAddContactOpen(true)} className="rounded-xl shadow-glow h-11 px-6 uppercase font-black tracking-widest text-[9px]">
+                  <Plus className="w-4 h-4 mr-2" /> Add Contact
+                </Button>
+              </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-              <table className="w-full text-left">
+            <div className="rounded-[32px] border-2 border-border bg-card overflow-hidden">
+              <table className="w-full">
                 <thead>
-                  <tr className="bg-secondary/20 border-b border-border">
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Name</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Company</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Deals</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Last Contact</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Actions</th>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Name</th>
+                    <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Company</th>
+                    <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Role</th>
+                    <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
+                    <th className="px-6 py-4 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {(contacts || []).filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.company.toLowerCase().includes(searchQuery.toLowerCase())).map((contact) => (
-                    <tr key={contact.id} className="hover:bg-secondary/10 transition-colors group cursor-pointer" onClick={() => setSelectedContact(contact)}>
+                  {filteredContacts.map((contact) => (
+                    <tr key={contact.id} className="group hover:bg-secondary/20 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                            {(contact.name || "U").split(" ").map(n => n[0]).join("")}
-                          </div>
+                          <Avatar className="h-9 w-9 rounded-xl border border-border">
+                            <AvatarFallback className="bg-primary/5 text-primary text-[10px] font-black">{contact.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
                           <div>
-                            <p className="text-sm font-bold text-foreground">{contact.name || "Unknown"}</p>
-                            <p className="text-[10px] text-muted-foreground">{contact.email}</p>
+                            <p className="text-xs font-black uppercase tracking-tight">{contact.name}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground lowercase tracking-widest">{contact.email}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm text-foreground font-medium">{contact.company}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
-                          contact.status === 'Lead' ? 'bg-orange-500/10 text-orange-600' : 
-                          contact.status === 'Negotiation' ? 'bg-primary/10 text-primary' : 
-                          'bg-green-500/10 text-green-600'
-                        }`}>
-                          {contact.status}
+                        <span className="text-xs font-bold text-foreground uppercase tracking-tight">
+                          {crmCompanies.find(c => c.id === contact.companyId)?.name || "—"}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm font-bold text-foreground">{contact.deals}</span>
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{contact.role || "—"}</span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-xs text-muted-foreground">{contact.lastContact}</span>
+                        <Badge className={cn(
+                          "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border-none",
+                          contact.status === 'Active' ? "bg-green-500/10 text-green-600" : "bg-primary/10 text-primary"
+                        )}>
+                          {contact.status}
+                        </Badge>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleQuickAction("Email", contact.name); }}><Mail className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleQuickAction("Call", contact.name); }}><Phone className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDeleteContact(contact.id); }}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl">
+                            <DropdownMenuItem 
+                              className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg cursor-pointer"
+                              onClick={() => {
+                                navigate(`/app/chat?contactId=${contact.id}`);
+                              }}
+                            >
+                              Message
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg cursor-pointer">Edit Contact</DropdownMenuItem>
+                            <DropdownMenuItem className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg cursor-pointer">Create Deal</DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg cursor-pointer text-destructive focus:text-destructive"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleDeleteItem(contact.id, 'contact');
+                              }}
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
@@ -562,143 +687,136 @@ const CRMPage = () => {
         )}
 
         {tab === "companies" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-            <div className="flex items-center gap-4 mb-2">
-              <div className="relative flex-1">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="relative w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Search companies by name or industry..." 
-                  className="pl-10 rounded-xl"
+                  placeholder="Search companies..." 
+                  className="pl-10 h-11 rounded-xl bg-card border-2 border-border focus-visible:border-primary/30 transition-all font-bold text-xs"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button variant="outline" className="rounded-xl"><Filter className="w-4 h-4 mr-2" /> Filter</Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="rounded-xl border-2 uppercase font-black tracking-widest text-[9px] h-11">
+                  <Filter className="w-3.5 h-3.5 mr-2" /> Filters
+                </Button>
+                <Button onClick={() => setIsAddCompanyOpen(true)} className="rounded-xl shadow-glow h-11 px-6 uppercase font-black tracking-widest text-[9px]">
+                  <Plus className="w-4 h-4 mr-2" /> Add Company
+                </Button>
+              </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-secondary/20 border-b border-border">
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Company Name</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Industry</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Size</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Location</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Contacts</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Value</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {companies.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.industry.toLowerCase().includes(searchQuery.toLowerCase())).map((company) => (
-                    <tr key={company.id} className="hover:bg-secondary/10 transition-colors group cursor-pointer" onClick={() => setSelectedCompany(company)}>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center text-accent">
-                            <Building2 className="w-4 h-4" />
-                          </div>
-                          <p className="text-sm font-bold text-foreground">{company.name}</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-xs font-medium text-muted-foreground">{company.industry}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-xs text-foreground font-bold">{company.size}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-xs text-muted-foreground">{company.location}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-xs font-bold text-foreground">{company.contacts}</span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <span className="text-sm font-display font-bold text-primary">{company.totalValue}</span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleQuickAction("Contact Team", company.name); }}><Users className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDeleteCompany(company.id); }}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredCompanies.map((company) => (
+                <motion.div 
+                  key={company.id}
+                  layout
+                  className="p-6 rounded-[32px] border-2 border-border bg-card hover:border-primary/30 transition-all group"
+                >
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center text-primary group-hover:bg-primary/10 transition-colors">
+                      <Building2 className="w-6 h-6" />
+                    </div>
+                    <Badge className={cn(
+                      "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border-none",
+                      company.status === 'Client' ? "bg-green-500/10 text-green-600" : "bg-primary/10 text-primary"
+                    )}>
+                      {company.status}
+                    </Badge>
+                  </div>
+                  <h3 className="text-lg font-black uppercase tracking-tight text-foreground">{company.name}</h3>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{company.industry}</span>
+                  </div>
+                  
+                  <div className="mt-8 pt-6 border-t border-border/50 flex items-center justify-between">
+                    <div>
+                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Active Deals</p>
+                      <p className="text-sm font-black text-foreground">
+                        {crmDeals.filter(d => d.companyId === company.id).length}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl group-hover:bg-primary group-hover:text-white transition-all">
+                      <ArrowRight className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
         )}
 
         {tab === "deals" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-            <div className="flex items-center justify-between bg-secondary/10 p-4 rounded-xl border border-border">
-              <div className="flex items-center gap-8">
-                <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Pipeline</p>
-                  <p className="text-xl font-display font-bold text-foreground">${((totalValue || 0) / 1000).toFixed(1)}k</p>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <input placeholder="Search deals..." className="h-9 pl-8 pr-3 text-xs bg-secondary/30 rounded-xl border-none focus:ring-1 focus:ring-primary w-64" />
                 </div>
-                <div className="w-px h-8 bg-border" />
-                <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Weighted Forecast</p>
-                  <p className="text-xl font-display font-bold text-primary">${((weightedValue || 0) / 1000).toFixed(1)}k</p>
-                </div>
+                <Button variant="outline" size="sm" className="rounded-xl h-9 text-[10px] font-bold uppercase tracking-widest"><Filter className="w-3.5 h-3.5 mr-1.5" /> Filter</Button>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="rounded-xl">Board View</Button>
-                <Button variant="ghost" size="sm" className="rounded-xl">List View</Button>
-              </div>
+              <Button size="sm" onClick={() => setIsAddDealOpen(true)} className="rounded-xl h-9 bg-primary text-white shadow-lg shadow-primary/20"><Plus className="w-4 h-4 mr-1.5" /> New Deal</Button>
             </div>
 
-            <div className="flex gap-4 overflow-x-auto pb-6 -mx-6 px-6 scrollbar-hide">
+            <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-6 scrollbar-hide -mx-4 px-4 sm:-mx-2 sm:px-2 snap-x snap-mandatory">
               {pipelineStages.map((stage) => (
-                <div key={stage.name} className="w-72 flex-shrink-0">
+                <div key={stage.name} className="w-[280px] sm:w-80 flex-shrink-0 snap-center">
                   <div className="flex items-center justify-between mb-4 px-1">
                     <div className="flex items-center gap-2">
-                      <div className={`w-2.5 h-2.5 rounded-full ${stage.color}`} />
-                      <span className="text-sm font-bold text-foreground uppercase tracking-widest">{stage.name}</span>
+                      <div className={`w-2 h-2 rounded-full ${stage.color}`} />
+                      <span className="text-xs font-black uppercase tracking-widest text-foreground">{stage.name}</span>
                       <span className="px-1.5 py-0.5 rounded bg-secondary text-[10px] font-bold text-muted-foreground">
-                        {(deals || []).filter(d => d.stage === stage.name).length}
+                        {crmDeals.filter(d => d.stage === stage.name).length}
                       </span>
                     </div>
-                    <button className="p-1 hover:bg-secondary rounded transition-colors"><Plus className="w-4 h-4 text-muted-foreground" /></button>
                   </div>
-                  
                   <div className="space-y-3 min-h-[500px]">
-                    {(deals || []).filter(d => d.stage === stage.name).map((deal) => (
+                    {crmDeals.filter(d => d.stage === stage.name).map((deal) => (
                       <motion.div
                         key={deal.id}
                         layout
-                        onClick={() => setSelectedDeal(deal)}
-                        className="group rounded-xl border border-border bg-card p-4 cursor-pointer hover:border-primary/40 hover:shadow-md transition-all relative overflow-hidden"
+                        className="group rounded-2xl border-2 border-border bg-card p-5 cursor-pointer hover:border-primary/40 hover:shadow-xl transition-all relative overflow-hidden"
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{deal.company}</p>
-                          <button onClick={(e) => { e.stopPropagation(); moveDeal(deal.id, pipelineStages[Math.min(pipelineStages.length - 1, pipelineStages.findIndex(s => s.name === stage.name) + 1)].name); }} className="opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ArrowRight className="w-3.5 h-3.5 text-primary" />
-                          </button>
+                        <div className="flex items-start justify-between mb-4">
+                          <p className="text-sm font-black text-foreground uppercase tracking-tight leading-none">
+                            {crmCompanies.find(c => c.id === deal.companyId)?.name || "Unknown Company"}
+                          </p>
+                          <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest border-border bg-secondary/30">{deal.probability}%</Badge>
                         </div>
-                        <p className="text-sm font-bold text-foreground mb-3">{deal.contact}</p>
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-lg font-display font-bold text-foreground">{deal.value}</span>
-                          <span className="text-[10px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded">{deal.probability}%</span>
-                        </div>
-                        <div className="h-1 rounded-full bg-secondary overflow-hidden mb-4">
-                          <div className="h-full bg-primary rounded-full" style={{ width: `${deal.probability}%` }} />
-                        </div>
-                        <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                          <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase">
-                            <Clock className="w-3 h-3" />
-                            {deal.lastActivity}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">{deal.title}</p>
+                          <div className="flex items-center justify-between pt-4 border-t border-border/50">
+                            <p className="text-lg font-display font-black text-primary">${deal.value.toLocaleString()}</p>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <div className="w-8 h-8 rounded-lg bg-muted/30 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                </div>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="rounded-xl">
+                                <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest">Move to Stage</DropdownMenuLabel>
+                                {pipelineStages.map(s => (
+                                  <DropdownMenuItem 
+                                    key={s.name} 
+                                    onClick={() => moveDeal(deal.id, s.name)}
+                                    className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg cursor-pointer"
+                                  >
+                                    {s.name}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                          {deal.nextAction && (
-                            <div className="flex items-center gap-1.5 text-[9px] font-bold text-primary uppercase">
-                              <Star className="w-3 h-3" />
-                              Next Action
-                            </div>
-                          )}
                         </div>
                       </motion.div>
                     ))}
+                    <button onClick={() => setIsAddDealOpen(true)} className="w-full py-3 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all bg-secondary/30 hover:bg-secondary/50 rounded-2xl border-2 border-dashed border-border mt-2">
+                      <Plus className="w-3.5 h-3.5" /> Add Deal
+                    </button>
                   </div>
                 </div>
               ))}
@@ -773,7 +891,7 @@ const CRMPage = () => {
           </div>
         )}
 
-        {tab === "automation" && (
+        {tab === "crm-automation" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
@@ -919,14 +1037,14 @@ const CRMPage = () => {
                         <Pie
                           data={[
                             { name: 'Lead', value: 12000, color: '#94a3b8' },
-                            { name: 'Qualified', value: 39000, color: '#f97316' },
+                            { name: 'Qualified', value: 39000, color: 'hsl(var(--primary))' },
                             { name: 'Proposal', value: 42000, color: '#3b82f6' },
                             { name: 'Negotiation', value: 68000, color: '#2563eb' },
                           ]}
                           cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
                         >
                           {[0,1,2,3].map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={['#94a3b8', '#f97316', '#3b82f6', '#2563eb'][index]} />
+                            <Cell key={`cell-${index}`} fill={['#94a3b8', 'hsl(var(--primary))', '#3b82f6', '#2563eb'][index]} />
                           ))}
                         </Pie>
                         <Tooltip />
@@ -936,7 +1054,7 @@ const CRMPage = () => {
                   <div className="space-y-3 mt-4">
                     {[
                       { label: 'Lead', val: '$12k', color: 'bg-slate-400' },
-                      { label: 'Qualified', val: '$39k', color: 'bg-orange-500' },
+                      { label: 'Qualified', val: '$39k', color: 'bg-primary' },
                       { label: 'Proposal', val: '$42k', color: 'bg-blue-500' },
                       { label: 'Negotiation', val: '$68k', color: 'bg-blue-600' },
                     ].map((p) => (
@@ -965,74 +1083,685 @@ const CRMPage = () => {
             </div>
           </div>
         )}
-      </div>
 
-      {/* Global Modals */}
-      <Dialog open={isAddContactOpen} onOpenChange={setIsAddContactOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="font-display font-bold text-xl">Add New Contact</DialogTitle>
-            <DialogDescription>Add a new customer or lead to your CRM database.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="c-name">Full Name</Label>
-              <Input id="c-name" placeholder="John Doe" className="rounded-xl" value={newContact.name} onChange={e => setNewContact({...newContact, name: e.target.value})} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="c-email">Email Address</Label>
-              <Input id="c-email" type="email" placeholder="john@example.com" className="rounded-xl" value={newContact.email} onChange={e => setNewContact({...newContact, email: e.target.value})} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="c-company">Company</Label>
-                <Input id="c-company" placeholder="Acme Inc" className="rounded-xl" value={newContact.company} onChange={e => setNewContact({...newContact, company: e.target.value})} />
+        {tab === "import-history" && (
+          <div key="import-history" className="space-y-6">
+            <div className="rounded-2xl border-2 border-border bg-card overflow-hidden shadow-sm">
+              <div className="px-8 py-6 border-b border-border bg-muted/30 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Migration Logs</h3>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Review past data imports and mapping history</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="px-3 py-1.5 rounded-xl bg-primary/5 border border-primary/10 text-primary text-[10px] font-black uppercase tracking-widest">
+                    {importHistory.length} Imports Saved
+                  </div>
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="c-phone">Phone</Label>
-                <Input id="c-phone" placeholder="+1..." className="rounded-xl" value={newContact.phone} onChange={e => setNewContact({...newContact, phone: e.target.value})} />
+              <div className="divide-y divide-border">
+                {importHistory.length > 0 ? importHistory.map((log) => (
+                  <div key={log.id} className="p-8 hover:bg-secondary/5 transition-all group">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-6">
+                        <div className="w-12 h-12 rounded-2xl bg-card border-2 border-border flex items-center justify-center text-primary shadow-sm">
+                          <FileSpreadsheet className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-black uppercase tracking-tight text-foreground">{log.fileName}</h4>
+                          <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                            <span>{log.date}</span>
+                            <span className="w-1 h-1 rounded-full bg-muted" />
+                            <span>Imported by {log.importedBy}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-8">
+                        <div className="flex gap-6">
+                          <div className="text-center">
+                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Created</p>
+                            <p className="text-lg font-black text-primary">{log.created}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Updated</p>
+                            <p className="text-lg font-black text-foreground">{log.updated}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Skipped</p>
+                            <p className="text-lg font-black text-muted-foreground">{log.skipped}</p>
+                          </div>
+                        </div>
+                        <div className="px-3 py-1 rounded bg-green-500/10 text-green-600 border border-green-500/20 text-[9px] font-black uppercase tracking-widest">
+                          {log.status}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Expandable Mappings Info */}
+                    <div className="mt-8 pt-6 border-t border-dashed border-border grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {log.mappings.filter((m: any) => m.status === 'mapped').slice(0, 3).map((m: any, idx: number) => (
+                        <div key={idx} className="flex items-center gap-3 px-4 py-2 rounded-xl bg-card border border-border">
+                          <span className="text-[10px] font-black uppercase text-foreground">{m.fileColumn}</span>
+                          <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-[10px] font-black uppercase text-primary">{m.interpretedAs}</span>
+                        </div>
+                      ))}
+                      {log.mappings.filter((m: any) => m.status === 'mapped').length > 3 && (
+                        <div className="flex items-center justify-center px-4 py-2 rounded-xl bg-muted/30 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                          + {log.mappings.filter((m: any) => m.status === 'mapped').length - 3} More Mappings
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )) : (
+                  <div className="p-24 text-center space-y-4">
+                    <div className="w-16 h-16 rounded-3xl bg-secondary/30 flex items-center justify-center mx-auto">
+                      <History className="w-8 h-8 text-muted-foreground/30" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-muted-foreground">No migration history</h4>
+                      <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-1">Imports will appear here once completed</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Add Contact Dialog */}
+      <Dialog open={isAddContactOpen} onOpenChange={setIsAddContactOpen}>
+        <DialogContent className="sm:max-w-[450px] rounded-[32px]">
+          <DialogHeader>
+            <DialogTitle className="font-black text-xl uppercase tracking-tight">New Contact</DialogTitle>
+            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add a new lead or client to your database</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Full Name</Label>
+              <Input 
+                placeholder="James Wilson" 
+                value={newContact.name}
+                onChange={(e) => setNewContact({...newContact, name: e.target.value})}
+                className="h-12 rounded-xl border-2 font-bold"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Work Email</Label>
+              <Input 
+                placeholder="james@company.com" 
+                value={newContact.email}
+                onChange={(e) => setNewContact({...newContact, email: e.target.value})}
+                className="h-12 rounded-xl border-2 font-bold"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Company</Label>
+              <Select onValueChange={(val) => setNewContact({...newContact, companyId: val})}>
+                <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
+                  <SelectValue placeholder="Select Company" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {crmCompanies.map(c => (
+                    <SelectItem key={c.id} value={c.id} className="font-bold uppercase text-[10px]">{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddContactOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddContact}>Add Contact</Button>
+            <Button onClick={handleAddContact} className="w-full h-12 rounded-xl shadow-glow uppercase font-black tracking-widest text-xs">Create Contact</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isAddDealOpen} onOpenChange={setIsAddDealOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+      {/* Add Company Dialog */}
+      <Dialog open={isAddCompanyOpen} onOpenChange={setIsAddCompanyOpen}>
+        <DialogContent className="sm:max-w-[450px] rounded-[32px]">
           <DialogHeader>
-            <DialogTitle className="font-display font-bold text-xl">Create New Deal</DialogTitle>
+            <DialogTitle className="font-black text-xl uppercase tracking-tight">New Company</DialogTitle>
+            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add a new organization to your records</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label>Company</Label>
-              <Input placeholder="Select company..." className="rounded-xl" value={newDeal.company} onChange={e => setNewDeal({...newDeal, company: e.target.value})} />
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Company Name</Label>
+              <Input 
+                placeholder="TechFlow Inc" 
+                value={newCompany.name}
+                onChange={(e) => setNewCompany({...newCompany, name: e.target.value})}
+                className="h-12 rounded-xl border-2 font-bold"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Industry</Label>
+              <Input 
+                placeholder="Software, Finance, etc." 
+                value={newCompany.industry}
+                onChange={(e) => setNewCompany({...newCompany, industry: e.target.value})}
+                className="h-12 rounded-xl border-2 font-bold"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Value ($)</Label>
-                <Input type="number" placeholder="5000" className="rounded-xl" value={newDeal.value} onChange={e => setNewDeal({...newDeal, value: e.target.value})} />
-              </div>
-              <div className="grid gap-2">
-                <Label>Initial Stage</Label>
-                <Select value={newDeal.stage} onValueChange={val => setNewDeal({...newDeal, stage: val})}>
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue />
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Size</Label>
+                <Select onValueChange={(val) => setNewCompany({...newCompany, size: val})}>
+                  <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
+                    <SelectValue placeholder="1-10" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {pipelineStages.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}
+                  <SelectContent className="rounded-xl">
+                    {["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"].map(s => (
+                      <SelectItem key={s} value={s} className="font-bold uppercase text-[10px]">{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Status</Label>
+                <Select onValueChange={(val) => setNewCompany({...newCompany, status: val as any})}>
+                  <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
+                    <SelectValue placeholder="Lead" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {["Lead", "Client", "Former"].map(s => (
+                      <SelectItem key={s} value={s} className="font-bold uppercase text-[10px]">{s}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDealOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddDeal}>Create Deal</Button>
+            <Button onClick={handleAddCompany} className="w-full h-12 rounded-xl shadow-glow uppercase font-black tracking-widest text-xs">Create Company</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Deal Dialog */}
+      <Dialog open={isAddDealOpen} onOpenChange={setIsAddDealOpen}>
+        <DialogContent className="sm:max-w-[450px] rounded-[32px]">
+          <DialogHeader>
+            <DialogTitle className="font-black text-xl uppercase tracking-tight">New Deal</DialogTitle>
+            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add a new opportunity to the pipeline</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Deal Title</Label>
+              <Input 
+                placeholder="Enterprise License" 
+                value={newDeal.title}
+                onChange={(e) => setNewDeal({...newDeal, title: e.target.value})}
+                className="h-12 rounded-xl border-2 font-bold"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Value ($)</Label>
+                <Input 
+                  type="number"
+                  placeholder="5000" 
+                  value={newDeal.value}
+                  onChange={(e) => setNewDeal({...newDeal, value: Number(e.target.value)})}
+                  className="h-12 rounded-xl border-2 font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Probability (%)</Label>
+                <Input 
+                  type="number"
+                  placeholder="20" 
+                  value={newDeal.probability}
+                  onChange={(e) => setNewDeal({...newDeal, probability: Number(e.target.value)})}
+                  className="h-12 rounded-xl border-2 font-bold"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Company</Label>
+              <Select onValueChange={(val) => setNewDeal({...newDeal, companyId: val})}>
+                <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
+                  <SelectValue placeholder="Select Company" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {crmCompanies.map(c => (
+                    <SelectItem key={c.id} value={c.id} className="font-bold uppercase text-[10px]">{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleAddDeal} className="w-full h-12 rounded-xl shadow-glow uppercase font-black tracking-widest text-xs">Create Deal</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Migration logic modals */}
+      <Dialog open={isMigrationOpen} onOpenChange={setIsMigrationOpen}>
+        <DialogContent className="sm:max-w-[600px] rounded-[24px] p-0 overflow-hidden border-none shadow-2xl">
+          <DialogHeader className="p-8 border-b border-border bg-muted/30">
+            <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-primary mb-4">
+              <Bot className="w-3.5 h-3.5" />
+              <span>AI Data Migration</span>
+            </div>
+            <DialogTitle className="font-black text-2xl text-foreground uppercase tracking-tight">MIGRATE YOUR CRM</DialogTitle>
+            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
+              Upload any spreadsheet and Cyndi will map it to your workspace
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-8 space-y-8 bg-background min-h-[400px]">
+            {migrationStep === 1 && (
+              <div className="space-y-6">
+                {!isProcessing ? (
+                  <div className="relative group">
+                    <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={handleFileUpload} />
+                    <div className="border-4 border-dashed border-border group-hover:border-primary/50 rounded-3xl p-12 flex flex-col items-center justify-center transition-all bg-card/50">
+                      <Upload className="w-10 h-10 text-muted-foreground mb-4" />
+                      <p className="text-sm font-black uppercase tracking-tight text-foreground">Upload CSV or XLSX</p>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase mt-2">Export from HubSpot, Salesforce, or Excel</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-12 flex flex-col items-center justify-center space-y-6">
+                    <div className="w-16 h-16 rounded-2xl border-4 border-primary/20 border-t-primary animate-spin" />
+                    <div className="text-center space-y-2">
+                      <p className="text-sm font-black uppercase tracking-widest">Cyndi is interpreting data...</p>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Analyzing columns and mapping entities</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {migrationStep === 2 && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex flex-col">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">Review AI Mappings</h4>
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1">47 records detected in "{migrationFile?.name}"</p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded bg-green-500/10 text-green-600 text-[9px] font-black uppercase tracking-widest">98% Confidence</span>
+                </div>
+                <div className="space-y-3">
+                  {mappings.map((m, i) => (
+                    <div key={i} className={`flex items-center gap-4 p-3 rounded-xl border ${m.status === 'unmapped' ? 'bg-secondary/5 border-border/50 opacity-60' : 'bg-muted/30 border-border'}`}>
+                      <div className="flex-1">
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">Your Column</p>
+                        <p className="text-xs font-black uppercase text-foreground">{m.fileColumn}</p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-primary" />
+                      <div className="flex-[1.5]">
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">Interpreted As</p>
+                        <Select 
+                          defaultValue={m.interpretedAs} 
+                          onValueChange={(val) => handleUpdateMapping(m.id, val, m.destination)}
+                        >
+                          <SelectTrigger className="h-7 border-none bg-transparent p-0 text-xs font-black uppercase text-primary focus:ring-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="Name" className="text-xs font-bold uppercase">Name</SelectItem>
+                            <SelectItem value="Email" className="text-xs font-bold uppercase">Email</SelectItem>
+                            <SelectItem value="Phone" className="text-xs font-bold uppercase">Phone</SelectItem>
+                            <SelectItem value="Company" className="text-xs font-bold uppercase">Company</SelectItem>
+                            <SelectItem value="Value" className="text-xs font-bold uppercase">Value</SelectItem>
+                            <SelectItem value="Notes" className="text-xs font-bold uppercase">Notes</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex-1 text-right">
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">Destination</p>
+                        <Select 
+                          defaultValue={m.destination}
+                          onValueChange={(val) => handleUpdateMapping(m.id, m.interpretedAs, val)}
+                        >
+                          <SelectTrigger className="h-7 border-none bg-transparent p-0 text-[10px] font-black uppercase text-muted-foreground focus:ring-0 text-right justify-end">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="Contacts" className="text-xs font-bold uppercase">Contacts</SelectItem>
+                            <SelectItem value="Companies" className="text-xs font-bold uppercase">Companies</SelectItem>
+                            <SelectItem value="Deals" className="text-xs font-bold uppercase">Deals</SelectItem>
+                            <SelectItem value="Skip" className="text-xs font-bold uppercase text-destructive">Skip Column</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Integrity Preview */}
+                <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="w-4 h-4 text-primary" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-foreground">Data Integrity Rules Active</p>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="text-center">
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase">New</p>
+                      <p className="text-xs font-black text-primary">+42</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase">Update</p>
+                      <p className="text-xs font-black text-muted-foreground">5</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase">Skip</p>
+                      <p className="text-xs font-black text-muted-foreground">3</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {migrationStep === 3 && (
+              <div className="py-8 flex flex-col items-center justify-center space-y-6 text-center">
+                <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <CheckCircle2 className="w-10 h-10 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="text-xl font-black uppercase tracking-tight text-foreground">Migration Complete</h4>
+                  <p className="text-sm font-medium text-muted-foreground mt-2">
+                    {importStats.created} records created, {importStats.updated} updated, and {importStats.skipped} duplicates skipped.
+                  </p>
+                </div>
+                
+                {undoImportId && (
+                  <div className="w-full p-4 rounded-2xl bg-muted/30 border-2 border-border flex flex-col items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-primary" />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-foreground">Undo Window Active</p>
+                    </div>
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">You have 10 minutes to reverse this import.</p>
+                    <Button 
+                      variant="outline" 
+                      className="rounded-lg h-8 text-[9px] font-black uppercase tracking-widest border-destructive/20 text-destructive hover:bg-destructive/5"
+                      onClick={() => setIsUndoModalOpen(true)}
+                    >
+                      Undo Migration
+                    </Button>
+                  </div>
+                )}
+
+                <Button className="rounded-xl h-12 px-12 font-black uppercase tracking-widest text-[9px] bg-primary text-white shadow-lg w-full" onClick={() => setIsMigrationOpen(false)}>Back to Dashboard</Button>
+              </div>
+            )}
+          </div>
+
+          {migrationStep === 2 && (
+            <DialogFooter className="p-8 border-t border-border bg-muted/30">
+              <Button variant="outline" className="rounded-xl h-12 px-8 font-black uppercase tracking-widest text-[9px]" onClick={() => setMigrationStep(1)}>Back</Button>
+              <Button className="rounded-xl h-12 px-12 font-black uppercase tracking-widest text-[9px] bg-primary text-white shadow-lg" onClick={handleImport}>
+                {isProcessing ? 'Importing...' : `Import 47 Records`}
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Undo Confirmation Modal */}
+      <Dialog open={isUndoModalOpen} onOpenChange={setIsUndoModalOpen}>
+        <DialogContent className="sm:max-w-[400px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">Reverse Migration?</DialogTitle>
+            <DialogDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              This will remove all 47 records added during this session. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-6 flex gap-2">
+            <Button variant="outline" className="rounded-xl flex-1 h-11" onClick={() => setIsUndoModalOpen(false)}>Cancel</Button>
+            <Button variant="destructive" className="rounded-xl flex-1 h-11" onClick={handleUndoImport}>
+              {isProcessing ? 'Rolling back...' : 'Confirm Undo'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDealDetailOpen} onOpenChange={setIsDealDetailOpen}>
+        <DialogContent className="sm:max-w-[800px] rounded-[24px] p-0 overflow-hidden border-none shadow-2xl">
+          {selectedDeal && (
+            <div className="flex flex-col h-[85vh]">
+              {/* Header */}
+              <div className="p-8 border-b border-border bg-muted/30 relative">
+                <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">
+                  <Kanban className="w-3.5 h-3.5" />
+                  <span>Pipeline</span>
+                  <ChevronRight className="w-2.5 h-2.5" />
+                  <span>{selectedDeal.stage}</span>
+                </div>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="font-display font-black text-3xl text-foreground tracking-tight uppercase leading-none mb-2">{selectedDeal.company}</h2>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <User className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs font-black uppercase text-muted-foreground">{selectedDeal.contact}</span>
+                      </div>
+                      <div className="w-1 h-1 rounded-full bg-muted" />
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs font-black uppercase text-muted-foreground">TechFlow Inc</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-display font-black text-primary leading-none mb-1">{selectedDeal.value}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{selectedDeal.probability}% Probability</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 mt-8">
+                  {pipelineStages.map((s, idx) => {
+                    const isCurrent = s.name === selectedDeal.stage;
+                    const isPast = pipelineStages.findIndex(ps => ps.name === selectedDeal.stage) > idx;
+                    return (
+                      <React.Fragment key={s.name}>
+                        <button 
+                          onClick={() => moveDeal(selectedDeal.id, s.name)}
+                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                            isCurrent ? "bg-primary text-white shadow-md" : 
+                            isPast ? "bg-green-500/10 text-green-600 border border-green-500/20" : 
+                            "bg-card border border-border text-muted-foreground hover:bg-muted/30"
+                          }`}
+                        >
+                          {s.name}
+                        </button>
+                        {idx < pipelineStages.length - 1 && <div className="w-4 h-px bg-border" />}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Content Grid */}
+              <div className="flex-1 overflow-y-auto bg-background p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Main Column */}
+                <div className="md:col-span-2 space-y-8">
+                  {/* Activity Input */}
+                  <div className="p-6 rounded-[20px] bg-muted/30 border-2 border-border">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Bot className="w-4 h-4 text-primary" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Log Activity</span>
+                    </div>
+                    <Textarea 
+                      placeholder="Add a note or log a call/meeting..." 
+                      className="min-h-[100px] bg-card border-none rounded-xl focus-visible:ring-1 focus-visible:ring-primary/20 text-sm font-medium p-4"
+                    />
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-card text-muted-foreground shadow-sm"><Phone className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-card text-muted-foreground shadow-sm"><Mail className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-card text-muted-foreground shadow-sm"><Calendar className="w-4 h-4" /></Button>
+                      </div>
+                      <Button className="rounded-xl h-9 px-6 font-black uppercase tracking-widest text-[9px] bg-primary hover:bg-primary/90 text-white shadow-md">Post Note</Button>
+                    </div>
+                  </div>
+
+                  {/* Activity Timeline */}
+                  <div className="space-y-6">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5" /> Activity Timeline
+                    </h3>
+                    <div className="space-y-4 relative">
+                      <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-border" />
+                      {[
+                        { type: 'Stage Change', detail: 'Moved from Proposal to Negotiation', time: '2 hours ago', icon: Kanban, color: 'text-primary' },
+                        { type: 'Email Sent', detail: 'Pricing overview sent to James Wilson', time: 'Yesterday', icon: Send, color: 'text-blue-500' },
+                        { type: 'Call Logged', detail: 'Discussed budget and implementation timeline', time: '2 days ago', icon: Phone, color: 'text-green-500' },
+                        { type: 'Note Added', detail: 'Strong interest in the enterprise tier with Cyndi automations', time: '3 days ago', icon: FileText, color: 'text-primary' },
+                      ].map((activity, i) => (
+                        <div key={i} className="flex gap-4 relative group">
+                          <div className={`w-10 h-10 rounded-xl bg-card border-2 border-border flex items-center justify-center shrink-0 z-10 group-hover:border-primary transition-colors ${activity.color}`}>
+                            <activity.icon className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 pb-6 border-b border-muted/30">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-foreground">{activity.type}</span>
+                              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{activity.time}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground font-medium leading-relaxed">{activity.detail}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sidebar Column */}
+                <div className="space-y-6">
+                  <div className="p-6 rounded-[20px] border-2 border-border space-y-4">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Deal Info</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Owner</span>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6 rounded-md">
+                            <AvatarFallback className="bg-primary/10 text-primary text-[8px] font-black">JW</AvatarFallback>
+                          </Avatar>
+                          <span className="text-[10px] font-black uppercase text-foreground">James Wilson</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Priority</span>
+                        <span className="px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[9px] font-black uppercase tracking-widest">High</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Forecast</span>
+                        <span className="text-[10px] font-black uppercase text-foreground">Q2 2024</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 rounded-[20px] border-2 border-border space-y-4">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Contact Details</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-muted/30 flex items-center justify-center">
+                          <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Email</p>
+                          <p className="text-[10px] font-black uppercase text-foreground truncate">{selectedDeal.email || 'james@techflow.com'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-muted/30 flex items-center justify-center">
+                          <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Phone</p>
+                          <p className="text-[10px] font-black uppercase text-foreground">+1 555-0101</p>
+                        </div>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="w-full rounded-xl h-10 text-[9px] font-black uppercase tracking-widest border-border bg-muted/30 hover:bg-border transition-all">View Contact</Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-border bg-muted/30 flex items-center justify-between">
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="rounded-xl h-9 text-[9px] font-black uppercase tracking-widest border-border bg-card text-muted-foreground hover:text-destructive hover:border-destructive/20 transition-all"
+                    onClick={() => handleDeleteItem(selectedDeal.id, 'deal')}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Deal
+                  </Button>
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" size="sm" className="rounded-xl h-9 px-6 text-[9px] font-black uppercase tracking-widest border-border bg-card text-muted-foreground" onClick={() => setIsDealDetailOpen(false)}>Close</Button>
+                  <Button className="rounded-xl h-9 px-8 text-[9px] font-black uppercase tracking-widest bg-primary hover:bg-primary/90 text-white shadow-md">Won Deal</Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal 1 */}
+      <Dialog open={isDeleteModal1Open} onOpenChange={setIsDeleteModal1Open}>
+        <DialogContent className="sm:max-w-[400px] rounded-[32px] border-4 p-8 bg-card">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive mb-4">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">
+              Delete {itemToDelete?.type.charAt(0).toUpperCase() + itemToDelete?.type.slice(1)}?
+            </DialogTitle>
+            <DialogDescription className="text-sm font-medium text-muted-foreground">
+              Are you sure you want to remove this {itemToDelete?.type} from your records?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button 
+              variant="destructive"
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={confirmDeleteStep1}
+            >
+              Yes, I'm sure
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={() => setIsDeleteModal1Open(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal 2 */}
+      <Dialog open={isDeleteModal2Open} onOpenChange={setIsDeleteModal2Open}>
+        <DialogContent className="sm:max-w-[400px] rounded-[32px] border-4 p-8 bg-card border-destructive">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-2xl bg-destructive flex items-center justify-center text-white mb-4 animate-pulse">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight text-destructive">Final Confirmation</DialogTitle>
+            <DialogDescription className="text-sm font-bold text-destructive/80 uppercase tracking-widest">
+              This action is irreversible. Are you absolutely certain?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button 
+              variant="destructive"
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-destructive/20"
+              onClick={finalizeDelete}
+            >
+              Permanently Delete
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={() => setIsDeleteModal2Open(false)}
+            >
+              I changed my mind
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1136,115 +1865,6 @@ const CRMPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Entity Details Sidebar */}
-      <AnimatePresence>
-        {selectedContact && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm" onClick={() => setSelectedContact(null)} />
-            <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed right-0 top-0 bottom-0 w-full max-w-lg z-50 bg-card border-l border-border shadow-2xl p-8 overflow-y-auto">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Contact Details</h3>
-                <button onClick={() => setSelectedContact(null)} className="p-2 hover:bg-secondary rounded-lg transition-colors"><X className="w-5 h-5 text-muted-foreground" /></button>
-              </div>
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary">
-                  {(selectedContact.name || "U").split(" ").map(n => n[0]).join("")}
-                </div>
-                <div>
-                  <h2 className="text-2xl font-display font-bold text-foreground">{selectedContact.name || "Unknown"}</h2>
-                  <p className="text-sm text-muted-foreground">{selectedContact.company}</p>
-                </div>
-              </div>
-              <div className="flex justify-center gap-2 mb-8">
-                <Button size="sm" variant="outline" className="h-8" onClick={() => handleQuickAction("Email", selectedContact.name)}>
-                  <Mail className="w-3.5 h-3.5 mr-1.5" /> Email
-                </Button>
-                <Button size="sm" variant="outline" className="h-8" onClick={() => handleQuickAction("Call", selectedContact.name)}>
-                  <Phone className="w-3.5 h-3.5 mr-1.5" /> Call
-                </Button>
-              </div>
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 rounded-xl border border-border bg-secondary/10">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Email</p>
-                    <p className="text-xs font-bold truncate">{selectedContact.email}</p>
-                  </div>
-                  <div className="p-3 rounded-xl border border-border bg-secondary/10">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Phone</p>
-                    <p className="text-xs font-bold">{selectedContact.phone}</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Notes</Label>
-                  <Textarea placeholder="Add private notes about this contact..." className="rounded-xl min-h-[100px]" defaultValue={selectedContact.notes} />
-                </div>
-                <div className="pt-6 border-t border-border">
-                  <h4 className="text-[10px] font-bold uppercase text-muted-foreground mb-4">Quick Actions</h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    <Button variant="outline" className="flex-col h-16 gap-1 rounded-xl" onClick={() => handleQuickAction("Email", selectedContact.name)}><Mail className="w-4 h-4" /> <span className="text-[9px]">Email</span></Button>
-                    <Button variant="outline" className="flex-col h-16 gap-1 rounded-xl" onClick={() => handleQuickAction("Call", selectedContact.name)}><Phone className="w-4 h-4" /> <span className="text-[9px]">Call</span></Button>
-                    <Button variant="outline" className="flex-col h-16 gap-1 rounded-xl" onClick={() => handleQuickAction("Meeting", selectedContact.name)}><Calendar className="w-4 h-4" /> <span className="text-[9px]">Meeting</span></Button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-
-        {selectedCompany && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm" onClick={() => setSelectedCompany(null)} />
-            <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed right-0 top-0 bottom-0 w-full max-w-lg z-50 bg-card border-l border-border shadow-2xl p-8 overflow-y-auto">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Company Details</h3>
-                <button onClick={() => setSelectedCompany(null)} className="p-2 hover:bg-secondary rounded-lg transition-colors"><X className="w-5 h-5 text-muted-foreground" /></button>
-              </div>
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-16 h-16 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
-                  <Building2 className="w-8 h-8" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-display font-bold text-foreground">{selectedCompany.name}</h2>
-                  <p className="text-sm text-muted-foreground">{selectedCompany.industry} · {selectedCompany.location}</p>
-                </div>
-              </div>
-              <div className="space-y-6">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="p-3 rounded-xl border border-border bg-secondary/10">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Size</p>
-                    <p className="text-xs font-bold">{selectedCompany.size}</p>
-                  </div>
-                  <div className="p-3 rounded-xl border border-border bg-secondary/10">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Contacts</p>
-                    <p className="text-xs font-bold">{selectedCompany.contacts}</p>
-                  </div>
-                  <div className="p-3 rounded-xl border border-border bg-secondary/10">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Deals</p>
-                    <p className="text-xs font-bold">{selectedCompany.activeDeals}</p>
-                  </div>
-                </div>
-                <div className="p-4 rounded-xl border border-border bg-primary/5">
-                  <p className="text-[10px] font-bold text-primary uppercase mb-1 tracking-widest">Total Value</p>
-                  <p className="text-2xl font-display font-bold text-primary">{selectedCompany.totalValue}</p>
-                </div>
-                <div className="pt-6 border-t border-border">
-                  <h4 className="text-[10px] font-bold uppercase text-muted-foreground mb-4">Associations</h4>
-                  <div className="space-y-2">
-                    <Button variant="outline" className="w-full justify-between rounded-xl h-12">
-                      <span className="flex items-center gap-2"><Users className="w-4 h-4" /> View Linked Contacts</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                    <Button variant="outline" className="w-full justify-between rounded-xl h-12">
-                      <span className="flex items-center gap-2"><Kanban className="w-4 h-4" /> View Linked Deals</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

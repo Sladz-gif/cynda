@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Hash, Send, Paperclip, Smile, Search, Plus, Sparkles, Pin, Reply, MoreHorizontal, Mic, AtSign, X, ChevronDown } from "lucide-react";
+import { Hash, Send, Paperclip, Smile, Search, Plus, Bot, Pin, Reply, MoreHorizontal, Mic, AtSign, X, ChevronDown, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const channels = [
   { name: "general", unread: 3, pinned: true },
@@ -131,7 +133,23 @@ const MessagesPage = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] -m-6 border-t border-border overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] -m-6 border-t border-border overflow-hidden">
+      <div className="flex items-center gap-2 px-3 sm:px-4 py-2 border-b border-border bg-card/90 shrink-0 flex-wrap">
+        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-1">Chat</span>
+        <Button
+          type="button"
+          variant="default"
+          size="sm"
+          className="rounded-xl gap-2 h-9 text-[10px] font-black uppercase tracking-widest shadow-glow"
+        >
+          <MessageSquare className="w-4 h-4" /> Chat
+        </Button>
+        <Badge variant="outline" className="ml-auto text-[8px] font-black uppercase tracking-widest border-primary/30">
+          v1.2 preview
+        </Badge>
+      </div>
+
+      <div className="flex flex-1 min-h-0 overflow-hidden">
       {/* Channel sidebar */}
       <div className="w-64 border-r border-border flex flex-col bg-card">
         <div className="p-3 border-b border-border">
@@ -140,7 +158,7 @@ const MessagesPage = () => {
             className="flex items-center gap-2 w-full h-8 px-2 rounded-lg border border-border bg-background text-xs text-muted-foreground hover:border-primary/30 transition-colors"
           >
             <Search className="w-3.5 h-3.5" />
-            <span>Search messages</span>
+            <span>Search chat</span>
           </button>
         </div>
 
@@ -330,7 +348,7 @@ const MessagesPage = () => {
               placeholder={`Message #${activeChannel}`}
               className="flex-1 bg-transparent text-sm focus:outline-none"
             />
-            <button className="text-muted-foreground hover:text-primary transition-colors"><Sparkles className="w-4 h-4" /></button>
+            <button className="text-muted-foreground hover:text-primary transition-colors"><Bot className="w-4 h-4" /></button>
             <button className="text-muted-foreground hover:text-foreground transition-colors"><AtSign className="w-4 h-4" /></button>
             <button className="text-muted-foreground hover:text-foreground transition-colors"><Smile className="w-4 h-4" /></button>
             <button className="text-muted-foreground hover:text-foreground transition-colors"><Mic className="w-4 h-4" /></button>
@@ -394,6 +412,7 @@ const MessagesPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
     </div>
   );
 };

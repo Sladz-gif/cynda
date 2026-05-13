@@ -1,129 +1,95 @@
-import { useState, useEffect } from "react";
-import { X, Sparkles, Send, Zap, MessageSquare, List } from "lucide-react";
+import { X, Bot, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useIndustryStore, USER_TYPES } from "@/lib/industry-store";
-import { motion, AnimatePresence } from "framer-motion";
+import { Input } from "@/components/ui/input";
+import { motion } from "framer-motion";
 
 interface CyndiPanelProps {
   onClose: () => void;
 }
 
-type Message = { role: "user" | "assistant"; content: string };
-
 const CyndiPanel = ({ onClose }: CyndiPanelProps) => {
-  const { userType } = useIndustryStore();
-  const userConfig = USER_TYPES[userType] || USER_TYPES.solo;
-  
-  const [messages, setMessages] = useState<Message[]>([
-    { 
-      role: "assistant", 
-      content: `Hi! I'm Cyndi, your AI assistant for the ${userConfig.name} workspace. How can I help you optimize your workflow today?` 
-    },
-  ]);
-  const [input, setInput] = useState("");
-
-  // Reset messages when userType changes to reflect new behavior
-  useEffect(() => {
-    setMessages([
-      { 
-        role: "assistant", 
-        content: `Workspace mode: ${userConfig.name}. I'm ready to assist with your specific ${userType} tasks.` 
-      },
-    ]);
-  }, [userType, userConfig.name]);
-
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages((prev) => [
-      ...prev,
-      { role: "user" as const, content: input },
-      { role: "assistant" as const, content: `Processing "${input}"... I'll have those insights ready in a moment.` },
-    ]);
-    setInput("");
-  };
-
-  const quickActions = [
-    { label: "Create task", icon: List },
-    { label: "Summarize", icon: Zap },
-    { label: "Draft email", icon: MessageSquare },
-  ];
-
   return (
-    <div className="w-full h-full border-l border-border bg-card/95 backdrop-blur-md flex flex-col shadow-2xl">
-      {/* Header */}
-      <div className="h-14 px-4 flex items-center justify-between border-b border-border bg-background/50">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shadow-glow">
-            <Sparkles className="w-4 h-4 text-primary-foreground" />
+    <div className="flex flex-col h-full min-h-0 w-full bg-card overflow-hidden relative">
+      <div className="h-16 px-4 sm:px-6 flex items-center justify-between border-b border-border bg-background/50 backdrop-blur-md shrink-0 gap-2">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="relative shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shadow-glow">
+              <Bot className="w-6 h-6 text-primary-foreground" />
+            </div>
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary border-2 border-card" />
           </div>
-          <div>
-            <span className="font-display font-black text-sm uppercase tracking-tight">Cyndi AI</span>
+          <div className="min-w-0">
+            <span className="font-display font-black text-sm uppercase tracking-tight text-foreground truncate block">
+              Cyndi AI
+            </span>
             <div className="flex items-center gap-1">
-              <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Active</span>
+              <span className="text-[8px] font-black text-primary uppercase tracking-widest">Training</span>
             </div>
           </div>
         </div>
-        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-secondary" onClick={onClose}>
-          <X className="w-4 h-4" />
-        </Button>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
-        <AnimatePresence mode="popLayout">
-          {messages.map((msg, i) => (
-            <motion.div 
-              key={i} 
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs font-bold shadow-sm ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-tr-none shadow-glow"
-                    : "bg-secondary/80 text-foreground border border-border/50 rounded-tl-none"
-                }`}
-              >
-                {msg.content}
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {/* Quick actions */}
-      <div className="px-4 py-3 flex gap-2 flex-wrap bg-secondary/20">
-        {quickActions.map((action) => {
-          const Icon = action.icon;
-          return (
-            <button
-              key={action.label}
-              onClick={() => setInput(action.label)}
-              className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border border-border bg-background hover:bg-secondary transition-all active:scale-95 shadow-sm"
-            >
-              <Icon className="w-3 h-3 text-primary" />
-              {action.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Input */}
-      <div className="p-4 border-t border-border bg-background">
-        <div className="flex gap-2 bg-secondary/50 p-1 rounded-2xl border border-border/50">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Ask Cyndi anything..."
-            className="flex-1 h-10 px-4 bg-transparent text-xs font-bold focus:outline-none placeholder:text-muted-foreground/50 placeholder:uppercase placeholder:tracking-widest"
-          />
-          <Button size="icon" className="h-10 w-10 rounded-xl bg-primary text-primary-foreground shadow-glow shrink-0" onClick={handleSend}>
-            <Send className="w-4 h-4" />
+        <div className="flex items-center gap-0.5 shrink-0">
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-secondary" onClick={onClose}>
+            <X className="w-5 h-5" />
           </Button>
         </div>
+      </div>
+
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gradient-to-b from-card to-secondary/30 relative overflow-hidden">
+        {/* Background glow */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+          <div className="w-64 h-64 bg-primary/10 blur-[100px] rounded-full" />
+        </div>
+
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="relative z-10 flex flex-col items-center max-w-sm mx-auto"
+        >
+          <div className="w-24 h-24 mb-8 relative">
+            <motion.div 
+              animate={{ rotate: 360 }}
+              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+              className="absolute inset-0 rounded-full border-2 border-dashed border-primary/30"
+            />
+            <div className="absolute inset-2 rounded-full bg-gradient-to-tr from-primary to-blue-500 shadow-glow-lg flex items-center justify-center">
+              <Sparkles className="w-10 h-10 text-white" />
+            </div>
+          </div>
+
+          <h2 className="text-2xl font-display font-black uppercase tracking-tighter text-foreground mb-4">
+            Cyndi Coming Soon
+          </h2>
+          
+          <p className="text-sm font-medium text-muted-foreground mb-8 leading-relaxed">
+            Cyndi is currently in training. Soon, she'll understand your projects, deals, and daily workflows like a seasoned team member.
+          </p>
+
+          <div className="space-y-4 w-full">
+            <div className="p-4 rounded-2xl border-2 border-primary/20 bg-primary/5 flex items-start gap-3 w-full text-left">
+              <Bot className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-primary mb-1">Coming in V1.2</p>
+                <p className="text-xs font-medium text-foreground">
+                  Automated task creation, CRM intelligence, and natural language reporting.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border-2 border-border bg-secondary/10 p-4 space-y-3">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground text-left ml-1">
+                Notify me when she's ready
+              </p>
+              <Input
+                placeholder="your@email.com"
+                className="h-10 px-4 rounded-xl border-2 border-border bg-background text-xs font-bold focus:ring-0 focus:border-primary transition-all"
+              />
+              <Button className="w-full h-10 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-glow">
+                Let me know when she's ready
+              </Button>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );

@@ -1,167 +1,143 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { 
-  Briefcase, User, Building2, Globe, LayoutDashboard, MessageSquare, Kanban, Users, Receipt, UserCheck, FileText, BarChart3, Zap, ClipboardList
-} from "lucide-react";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { TOOL_METADATA } from "./tool-metadata";
+import { createAuthSlice, AuthSlice, UserType, SubscriptionTier, AdminProfile, Staff } from "./auth-slice";
+import { createCRMSlice, CRMSlice, CRMContact, CRMCompany, CRMDeal } from "./crm-slice";
+import { createWorkspaceSlice, WorkspaceSlice, WorkspaceTask, WorkspaceProject, WorkspaceInvoice, WorkspaceExpense, Notification, ThemeSettings, DEFAULT_SELECTED_MODULES, TRIAL_ALLOWED_TOOLS } from "./workspace-slice";
+import { createAutomationSlice, AutomationSlice, AutomationTemplate, ActiveAutomation, AutomationLog, AutomationDepartment } from "./automation-slice";
+import { createPeopleSlice, PeopleSlice, ExternalContact, ExternalAccount, StaffCustomField, CustomDepartment } from "./people-slice";
+import { User, Building2, Users, Globe, LucideIcon } from "lucide-react";
 
-export type UserType = 'solo' | 'small-business' | 'large-business' | 'enterprise';
+// Re-export types for backward compatibility
+export type { 
+  UserType, SubscriptionTier, AdminProfile, Staff, 
+  CRMContact, CRMCompany, CRMDeal,
+  WorkspaceTask, WorkspaceProject, WorkspaceInvoice, WorkspaceExpense, Notification, ThemeSettings,
+  AutomationTemplate, ActiveAutomation, AutomationLog, AutomationDepartment,
+  ExternalContact, ExternalAccount, StaffCustomField, CustomDepartment
+};
 
-export interface ModuleConfig {
-  id: string;
-  label: string;
-  icon: any;
-  department: string;
-}
+export { DEFAULT_SELECTED_MODULES, TRIAL_ALLOWED_TOOLS };
 
-export interface UserConfig {
-  id: UserType;
-  name: string;
-  icon: any;
-  description: string;
-}
+export const USER_TYPES: Record<
+  UserType,
+  { id: UserType; name: string; description: string; icon: LucideIcon }
+> = {
+  solo: {
+    id: "solo",
+    name: "Solo",
+    description: "Just me.",
+    icon: User,
+  },
+  "small-business": {
+    id: "small-business",
+    name: "Small Business",
+    description: "2 to 5 people",
+    icon: Building2,
+  },
+  "large-business": {
+    id: "large-business",
+    name: "Organisation",
+    description: "16+ team members",
+    icon: Users,
+  },
+  enterprise: {
+    id: "enterprise",
+    name: "Enterprise",
+    description: "Custom deployment & scale.",
+    icon: Globe,
+  },
+};
 
 export const DEPARTMENTS = {
   CRM: {
-    id: 'crm',
-    label: 'CRM',
+    id: "crm",
+    label: TOOL_METADATA.crm.label,
     tools: [
-      { id: 'leads', label: 'Leads', icon: Users },
-      { id: 'contacts', label: 'Contacts', icon: Users },
-      { id: 'pipeline', label: 'Pipeline', icon: Kanban },
-      { id: 'deals', label: 'Deals', icon: FileText },
-      { id: 'sales-forecast', label: 'Sales Forecast', icon: BarChart3 },
-    ]
+      { ...TOOL_METADATA.crm, description: "Manage your contact database and view customer activity." },
+      { ...TOOL_METADATA.marketing, description: "Launch and track multi-channel marketing campaigns." },
+      { ...TOOL_METADATA["crm-automation"], description: "Automate your sales pipeline and lead follow-ups." },
+      { ...TOOL_METADATA.reports, description: "Detailed analytics on conversion rates and revenue growth." },
+    ],
   },
   Finance: {
-    id: 'finance',
-    label: 'Finance',
+    id: "finance",
+    label: TOOL_METADATA.finance.label,
     tools: [
-      { id: 'invoicing', label: 'Invoicing', icon: Receipt },
-      { id: 'expenses', label: 'Expenses', icon: Receipt },
-      { id: 'payroll', label: 'Payroll', icon: Receipt },
-      { id: 'budgeting', label: 'Budgeting', icon: BarChart3 },
-      { id: 'tax-management', label: 'Tax Management', icon: FileText },
-    ]
+      { ...TOOL_METADATA["finance-dashboard"], description: "Overview of your cash flow, profit, and financial health." },
+      { ...TOOL_METADATA.invoicing, description: "Create professional invoices and track payments." },
+      { ...TOOL_METADATA.expenses, description: "Log business spending and manage reimbursement workflows." },
+      { ...TOOL_METADATA.payroll, description: "Manage employee salaries, taxes, and distributions." },
+      { ...TOOL_METADATA.inventory, description: "Track stock levels, assets, and equipment in real-time." },
+    ],
   },
   Projects: {
-    id: 'projects',
-    label: 'Projects',
+    id: "projects",
+    label: TOOL_METADATA.projects.label,
     tools: [
-      { id: 'tasks', label: 'Tasks', icon: CheckCircle },
-      { id: 'kanban', label: 'Kanban', icon: Kanban },
-      { id: 'gantt', label: 'Gantt', icon: BarChart3 },
-      { id: 'time-tracking', icon: Clock, label: 'Time Tracking' },
-      { id: 'resource-management', label: 'Resource Management', icon: Users },
-    ]
+      { ...TOOL_METADATA.tasks, description: "Coordinate work across your team with lists and priorities." },
+      { ...TOOL_METADATA["list-view"], description: "A detailed list-based approach to project management." },
+      { ...TOOL_METADATA.calendar, description: "Visualize deadlines and milestones on a unified timeline." },
+      { ...TOOL_METADATA.timeline, description: "Advanced project planning with dependencies and roadmaps." },
+      { ...TOOL_METADATA["resource-management"], description: "Balance team workload and assign tasks efficiently." },
+    ],
   },
   HR: {
-    id: 'hr',
-    label: 'HR',
+    id: "hr",
+    label: TOOL_METADATA.hr.label,
     tools: [
-      { id: 'employees', label: 'Employees', icon: UserCheck },
-      { id: 'attendance', label: 'Attendance', icon: UserCheck },
-      { id: 'onboarding', label: 'Onboarding', icon: UserCheck },
-      { id: 'performance', label: 'Performance', icon: BarChart3 },
-      { id: 'benefits', label: 'Benefits', icon: Receipt },
-    ]
+      { ...TOOL_METADATA["hr-dashboard"], description: "Monitor team health, attendance, and general staff metrics." },
+      { ...TOOL_METADATA.directory, description: "A central hub for all staff contact and profile information." },
+      { ...TOOL_METADATA.hiring, description: "Manage job postings, candidates, and interview pipelines." },
+      { ...TOOL_METADATA.onboarding, description: "Streamline the experience for new team members." },
+      { ...TOOL_METADATA["time-off"], description: "Track leave requests, vacations, and sick days." },
+    ],
   },
   Other: {
-    id: 'other',
-    label: 'Other Tools',
+    id: "other",
+    label: TOOL_METADATA.other.label,
     tools: [
-      { id: 'chat', label: 'Chat', icon: MessageSquare },
-      { id: 'notes', label: 'Notes', icon: FileText },
-      { id: 'automation', label: 'Automation', icon: Zap },
-      { id: 'forms', label: 'Forms', icon: ClipboardList },
-      { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-      { id: 'wiki', label: 'Wiki', icon: Globe },
-      { id: 'file-management', label: 'File Management', icon: FileText },
-    ]
-  }
-};
-
-export const USER_TYPES: Record<UserType, UserConfig> = {
-  solo: {
-    id: 'solo',
-    name: 'Solo',
-    icon: User,
-    description: 'Solo workspace with lightweight tools',
-  },
-  'small-business': {
-    id: 'small-business',
-    name: 'Small Business',
-    icon: Building2,
-    description: 'Team workspace with full tool access',
-  },
-  'large-business': {
-    id: 'large-business',
-    name: 'Large Business',
-    icon: Globe,
-    description: 'Multi-department with advanced controls',
-  },
-  enterprise: {
-    id: 'enterprise',
-    name: 'Enterprise',
-    icon: Globe,
-    description: 'Custom solutions for large organizations',
+      { ...TOOL_METADATA.chat, description: "Real-time communication with channels and direct messages." },
+      { ...TOOL_METADATA.email, description: "Send and receive professional emails from your workspace." },
+      { ...TOOL_METADATA.notes, description: "Collaborative documents, wikis, and personal knowledge base." },
+      { ...TOOL_METADATA.forms, description: "Build custom forms and databases to collect structured data." },
+      { ...TOOL_METADATA["file-management"], description: "A secure repository for all your documents and assets." },
+    ],
   },
 };
 
-interface AdminProfile {
-  name: string;
-  email: string;
-  role: string;
-}
-
-interface Staff {
-  id: string;
-  name: string;
-  email: string;
-  tools: string[];
-  department?: string;
-  role: 'Director' | 'Manager' | 'Employee';
-}
-
-interface Team {
-  id: string;
-  name: string;
-  leaderId: string;
-  memberIds: string[];
-}
-
-interface IndustryState {
-  userType: UserType;
-  selectedModules: string[];
-  adminProfile: AdminProfile | null;
-  staffList: Staff[];
-  teams: Team[];
-  customDepartments: { name: string; tools: string[] }[];
-  setUserType: (type: UserType) => void;
-  setSelectedModules: (modules: string[]) => void;
-  setAdminProfile: (profile: AdminProfile) => void;
-  addStaff: (staff: Staff) => void;
-  addTeam: (team: Team) => void;
-  addCustomDepartment: (dept: { name: string; tools: string[] }) => void;
-}
+export type IndustryState = AuthSlice & CRMSlice & WorkspaceSlice & AutomationSlice & PeopleSlice;
 
 export const useIndustryStore = create<IndustryState>()(
   persist(
-    (set) => ({
-      userType: 'solo',
-      selectedModules: [],
-      adminProfile: { name: "Guest User", email: "guest@cynda.io", role: "Solo" },
-      staffList: [],
-      teams: [],
-      customDepartments: [],
-      setUserType: (type) => set({ userType: type }),
-      setSelectedModules: (modules) => set({ selectedModules: Array.isArray(modules) ? modules : [] }),
-      setAdminProfile: (profile) => set({ adminProfile: profile }),
-      addStaff: (staff) => set((state) => ({ staffList: Array.isArray(state.staffList) ? [...state.staffList, staff] : [staff] })),
-      addTeam: (team) => set((state) => ({ teams: Array.isArray(state.teams) ? [...state.teams, team] : [team] })),
-      addCustomDepartment: (dept) => set((state) => ({ customDepartments: Array.isArray(state.customDepartments) ? [...state.customDepartments, dept] : [dept] })),
+    (...a) => ({
+      ...createAuthSlice(...a),
+      ...createCRMSlice(...a),
+      ...createWorkspaceSlice(...a),
+      ...createAutomationSlice(...a),
+      ...createPeopleSlice(...a),
+      // Override logout to clear all relevant slices if needed
+      logout: () => {
+        const [set] = a;
+        set({
+          currentUser: null,
+          isAuthenticated: false,
+          adminProfile: null,
+          selectedModules: [],
+          notifications: [],
+          trialStartedAt: null,
+          isOnboarded: false
+        });
+      },
+      // Dev tool to clear storage and reset
+      resetStore: () => {
+        const [set] = a;
+        localStorage.removeItem('industry-storage');
+        window.location.reload();
+      }
     }),
     {
-      name: 'cynda-user-storage',
+      name: "industry-storage",
     }
   )
 );

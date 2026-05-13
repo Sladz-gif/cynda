@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Quote, Sparkles, BookOpen, Brain, Briefcase, Users, TrendingUp } from "lucide-react";
+import { ArrowLeft, Quote, Bot, BookOpen, Brain, Briefcase, Users, TrendingUp } from "lucide-react";
 import { useState, useMemo } from "react";
 
 const BUSINESS_WISDOM = [
@@ -44,7 +44,7 @@ const NotFoundPage = () => {
     switch (currentWisdom.category) {
       case "Marketing": return <TrendingUp className="w-5 h-5" />;
       case "Sales": return <Briefcase className="w-5 h-5" />;
-      case "Leadership": return <Sparkles className="w-5 h-5" />;
+      case "Leadership": return <Bot className="w-5 h-5" />;
       case "HR": return <Users className="w-5 h-5" />;
       case "IT": return <Brain className="w-5 h-5" />;
       case "Project Management": return <BookOpen className="w-5 h-5" />;
@@ -113,7 +113,7 @@ const NotFoundPage = () => {
             onClick={handleNext}
             className="rounded-full px-8 gap-2 bg-primary text-primary-foreground shadow-glow"
           >
-            <Sparkles className="w-4 h-4" />
+            <Bot className="w-4 h-4" />
             Next Fact
           </Button>
         </div>

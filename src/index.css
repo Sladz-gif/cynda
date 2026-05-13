@@ -8,36 +8,36 @@
   :root {
     /* Cynda Brand Palette */
     --background: 30 20% 96%;
-    --foreground: 228 30% 15%;
+    --foreground: 228 45% 8%;
 
     --card: 30 15% 93%;
-    --card-foreground: 228 30% 15%;
+    --card-foreground: 228 45% 8%;
 
     --popover: 30 20% 96%;
-    --popover-foreground: 228 30% 15%;
+    --popover-foreground: 228 45% 8%;
 
     /* Burning Orange — Primary */
-    --primary: 20 100% 57%;
+    --primary: 24 100% 50%;
     --primary-foreground: 0 0% 100%;
 
     /* Pale Cashmere — Secondary */
     --secondary: 25 25% 87%;
-    --secondary-foreground: 228 30% 15%;
+    --secondary-foreground: 228 45% 8%;
 
-    /* Blue Estate — Accent */
-    --accent: 228 38% 37%;
+    /* Burning Orange — Accent */
+    --accent: 24 100% 50%;
     --accent-foreground: 0 0% 100%;
 
     /* Muted — Cinnamon Ice */
     --muted: 22 30% 76%;
-    --muted-foreground: 228 15% 40%;
+    --muted-foreground: 228 35% 22%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 91% 50%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 25 15% 85%;
     --input: 25 15% 85%;
-    --ring: 20 100% 57%;
+    --ring: 24 100% 50%;
     --radius: 0.75rem;
 
     /* Wahoo — deep navy for sections */
@@ -50,24 +50,26 @@
 
     /* Gradients */
     --gradient-hero: linear-gradient(135deg, hsl(30 20% 96%) 0%, hsl(25 25% 87%) 50%, hsl(22 30% 82%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(20 100% 57%) 0%, hsl(15 90% 50%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
     --gradient-dark: linear-gradient(180deg, hsl(230 32% 23%) 0%, hsl(220 5% 13%) 100%);
 
     /* Shadows */
     --shadow-sm: 0 2px 8px -2px hsl(228 30% 15% / 0.06);
     --shadow-md: 0 8px 24px -8px hsl(228 30% 15% / 0.1);
     --shadow-lg: 0 20px 60px -15px hsl(228 30% 15% / 0.15);
-    --shadow-glow: 0 0 40px -10px hsl(20 100% 57% / 0.3);
+    --shadow-glow: 0 0 40px -10px hsl(var(--primary) / 0.3);
+    --shadow-glow-sm: 0 0 20px -5px hsl(var(--primary) / 0.2);
+    --shadow-glow-lg: 0 0 60px -15px hsl(var(--primary) / 0.4);
 
     /* Sidebar */
     --sidebar-background: 30 15% 93%;
-    --sidebar-foreground: 228 30% 15%;
-    --sidebar-primary: 20 100% 57%;
+    --sidebar-foreground: 228 45% 8%;
+    --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 228 38% 37%;
+    --sidebar-accent: var(--primary);
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 25 15% 85%;
-    --sidebar-ring: 20 100% 57%;
+    --sidebar-ring: var(--primary);
   }
 
   .dark {
@@ -80,24 +82,17 @@
     --popover: 230 20% 17%;
     --popover-foreground: 30 20% 92%;
 
-    --primary: 20 100% 57%;
-    --primary-foreground: 0 0% 100%;
-
     --secondary: 230 20% 22%;
     --secondary-foreground: 30 20% 92%;
-
-    --accent: 228 38% 50%;
-    --accent-foreground: 0 0% 100%;
 
     --muted: 230 15% 25%;
     --muted-foreground: 30 10% 60%;
 
-    --destructive: 0 62% 30%;
+    --destructive: 0 100% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 230 15% 22%;
     --input: 230 15% 22%;
-    --ring: 20 100% 57%;
 
     --wahoo: 230 32% 23%;
     --wahoo-foreground: 30 20% 92%;
@@ -108,16 +103,82 @@
     --shadow-sm: 0 2px 8px -2px hsl(0 0% 0% / 0.2);
     --shadow-md: 0 8px 24px -8px hsl(0 0% 0% / 0.3);
     --shadow-lg: 0 20px 60px -15px hsl(0 0% 0% / 0.4);
-    --shadow-glow: 0 0 40px -10px hsl(20 100% 57% / 0.4);
 
+    /* Sidebar Dark Mode */
     --sidebar-background: 230 20% 17%;
     --sidebar-foreground: 30 20% 92%;
-    --sidebar-primary: 20 100% 57%;
+    --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 228 38% 50%;
+    --sidebar-accent: var(--primary);
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 230 15% 22%;
-    --sidebar-ring: 20 100% 57%;
+    --sidebar-ring: var(--primary);
+  }
+
+  /* Glassmorphism Global Styles */
+  .glass-enabled {
+    --glass-blur: 12px;
+    --glass-opacity: 0.7;
+  }
+
+  .glass-enabled .bg-card {
+    @apply backdrop-blur-[var(--glass-blur)] bg-card/[var(--glass-opacity)] border-white/20;
+  }
+
+  .glass-enabled .bg-secondary\/30 {
+    @apply backdrop-blur-[var(--glass-blur)] bg-secondary/[calc(var(--glass-opacity)*0.4)] border-white/10;
+  }
+
+  .glass-enabled .bg-white {
+    @apply backdrop-blur-[var(--glass-blur)] bg-white/[var(--glass-opacity)] border-white/20;
+  }
+
+  /* Layout Density Engine */
+  [data-density="compact"] {
+    --density-scale: 0.85;
+  }
+
+  [data-density="spacious"] {
+    --density-scale: 1.15;
+  }
+
+  [data-density="compact"] .p-2 { padding: calc(0.5rem * var(--density-scale)); }
+  [data-density="compact"] .p-3 { padding: calc(0.75rem * var(--density-scale)); }
+  [data-density="compact"] .p-4 { padding: calc(1rem * var(--density-scale)); }
+  [data-density="compact"] .p-5 { padding: calc(1.25rem * var(--density-scale)); }
+  [data-density="compact"] .p-6 { padding: calc(1.5rem * var(--density-scale)); }
+  [data-density="compact"] .p-8 { padding: calc(2rem * var(--density-scale)); }
+  [data-density="compact"] .gap-2 { gap: calc(0.5rem * var(--density-scale)); }
+  [data-density="compact"] .gap-3 { gap: calc(0.75rem * var(--density-scale)); }
+  [data-density="compact"] .gap-4 { gap: calc(1rem * var(--density-scale)); }
+  [data-density="compact"] .gap-6 { gap: calc(1.5rem * var(--density-scale)); }
+  [data-density="compact"] .gap-8 { gap: calc(2rem * var(--density-scale)); }
+  [data-density="compact"] .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: calc(1rem * var(--density-scale)); }
+  [data-density="compact"] .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: calc(1.5rem * var(--density-scale)); }
+  [data-density="compact"] .space-y-8 > :not([hidden]) ~ :not([hidden]) { margin-top: calc(2rem * var(--density-scale)); }
+  
+  [data-density="spacious"] .p-2 { padding: calc(0.5rem * var(--density-scale)); }
+  [data-density="spacious"] .p-3 { padding: calc(0.75rem * var(--density-scale)); }
+  [data-density="spacious"] .p-4 { padding: calc(1rem * var(--density-scale)); }
+  [data-density="spacious"] .p-5 { padding: calc(1.25rem * var(--density-scale)); }
+  [data-density="spacious"] .p-6 { padding: calc(1.5rem * var(--density-scale)); }
+  [data-density="spacious"] .p-8 { padding: calc(2rem * var(--density-scale)); }
+  [data-density="spacious"] .gap-2 { gap: calc(0.5rem * var(--density-scale)); }
+  [data-density="spacious"] .gap-3 { gap: calc(0.75rem * var(--density-scale)); }
+  [data-density="spacious"] .gap-4 { gap: calc(1rem * var(--density-scale)); }
+  [data-density="spacious"] .gap-6 { gap: calc(1.5rem * var(--density-scale)); }
+  [data-density="spacious"] .gap-8 { gap: calc(2rem * var(--density-scale)); }
+  [data-density="spacious"] .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: calc(1rem * var(--density-scale)); }
+  [data-density="spacious"] .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: calc(1.5rem * var(--density-scale)); }
+  [data-density="spacious"] .space-y-8 > :not([hidden]) ~ :not([hidden]) { margin-top: calc(2rem * var(--density-scale)); }
+
+  /* Smooth Theme Transitions */
+  html {
+    transition: background-color 0.3s ease, color 0.3s ease, font-size 0.2s ease;
+  }
+
+  * {
+    transition: border-color 0.3s ease, background-color 0.3s ease-in-out, box-shadow 0.3s ease;
   }
 
   @layer utilities {
@@ -143,6 +204,31 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
   }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 @layer utilities {
@@ -161,5 +247,13 @@
 
   .shadow-glow {
     box-shadow: var(--shadow-glow);
+  }
+
+  .shadow-glow-sm {
+    box-shadow: var(--shadow-glow-sm);
+  }
+
+  .shadow-glow-lg {
+    box-shadow: var(--shadow-glow-lg);
   }
 }

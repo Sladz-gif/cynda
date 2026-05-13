@@ -5,11 +5,14 @@ import {
   Filter, MoreHorizontal, LayoutDashboard, Receipt, Wallet, 
   CreditCard, Users, Clock, ShieldCheck, Globe, Zap, CheckCircle2,
   AlertCircle, Package, Building2, Landmark, History, Link2, ExternalLink,
-  Edit, Trash2, MoreVertical, Send, Eye
+  Edit, Trash2, MoreVertical, Send, Eye, BarChart3, Check, User, Bot
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useIndustryStore, CRMContact } from "@/lib/industry-store";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useMemo, useEffect } from "react";
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, PieChart, Pie, LineChart, Line
@@ -19,6 +22,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -30,13 +34,93 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
-type FinanceTool = 'dashboard' | 'invoicing' | 'expenses' | 'payroll' | 'inventory' | 'clients' | 'time-tracking' | 'payments' | 'multi-currency' | 'integrations' | 'documents';
+type FinanceTool = string;
 
 const FinancePage = () => {
-  const [activeTool, setActiveTool] = useState<FinanceTool>('dashboard');
-  const [searchQuery, setSearchQuery] = useState("");
+  // Finance module component
+  const { 
+    userType, 
+    selectedModules = [], 
+    crmContacts = [], 
+    setCyndiOpen, 
+    setCyndiDraft,
+    invoices: storeInvoices = [],
+    addInvoice: storeAddInvoice,
+    expenses: storeExpenses = [],
+    addExpense: storeAddExpense,
+  } = useIndustryStore();
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const allTools = [
+    { id: 'finance-dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'invoicing', label: 'Invoicing', icon: Receipt },
+    { id: 'expenses', label: 'Expenses', icon: Wallet },
+    { id: 'payroll', label: 'Payroll', icon: CreditCard },
+    { id: 'inventory', label: 'Inventory', icon: Package },
+    { id: 'clients', label: 'Clients', icon: Users },
+    { id: 'finance-time-tracking', label: 'Billable Hours', icon: Clock },
+    { id: 'payments', label: 'Payments', icon: ShieldCheck },
+    { id: 'multi-currency', label: 'Currency', icon: Globe },
+    { id: 'integrations', label: 'Integrations', icon: Zap },
+    { id: 'documents', label: 'Documents', icon: FileText },
+    { id: 'finance-reports', label: 'Reports', icon: BarChart3 },
+  ];
+
+  const tools = useMemo(() => {
+    const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
+    if (userType === 'enterprise' || userType === 'large-business') return allTools;
+    
+    const filtered = allTools.filter(item => safeModules.includes(item.id));
+    
+    if (filtered.length === 0) {
+      return [allTools[0]]; // Default to dashboard
+    }
+    return filtered;
+  }, [selectedModules, userType]);
+
+  const [activeTool, setActiveTool] = useState<string>(tools[0]?.id || 'finance-dashboard');
+
+  // Sync active tool if selection changes
+  useEffect(() => {
+    if (tools.length > 0 && !tools.find(i => i.id === activeTool)) {
+      setActiveTool(tools[0].id);
+    }
+  }, [tools, activeTool]);
+
+  useEffect(() => {
+    const raw = location.pathname.split("/app/")[1] || "dashboard";
+    const segment = raw.split("/")[0] || "dashboard";
+    const fromRoute = segment === "finance" ? "finance-dashboard" : segment;
+    if (allTools.some((t) => t.id === fromRoute) && fromRoute !== activeTool) {
+      setActiveTool(fromRoute);
+    }
+  }, [location.pathname, activeTool]);
+
+  const goToTool = (id: string) => {
+    const url = id === "finance-dashboard" ? "/app/finance" : `/app/${id}`;
+    navigate(url);
+  };
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeReportType, setActiveReportType] = useState<'p-and-l' | 'balance-sheet' | 'cash-flow'>('p-and-l');
 
   // --- Modals State ---
   const [isAddInvoiceOpen, setIsAddInvoiceOpen] = useState(false);
@@ -49,20 +133,44 @@ const FinancePage = () => {
   const [isAddIntegrationOpen, setIsAddIntegrationOpen] = useState(false);
   const [isAddDocumentOpen, setIsAddDocumentOpen] = useState(false);
 
-  // --- Mock Data ---
-  const [invoices, setInvoices] = useState([
-    { id: "INV-001", client: "Acme Corp", amount: "$4,250.00", date: "2024-03-20", status: "Paid", icon: Building2 },
-    { id: "INV-002", client: "Global Tech", amount: "$1,800.00", date: "2024-03-22", status: "Pending", icon: Globe },
-    { id: "INV-003", client: "Solaris Inc", amount: "$12,400.00", date: "2024-03-15", status: "Overdue", icon: Zap },
-    { id: "INV-004", client: "Nebula Soft", amount: "$3,100.00", date: "2024-03-25", status: "Paid", icon: ShieldCheck },
-  ]);
+  // Sync store with mock data if empty
+  useEffect(() => {
+    if (storeInvoices.length === 0) {
+      const initialInvoices = [
+        { id: "INV-001", client: "Acme Corp", amount: 4250.00, date: "2024-03-20", status: "Paid" },
+        { id: "INV-002", client: "Global Tech", amount: 1800.00, date: "2024-03-22", status: "Pending" },
+        { id: "INV-003", client: "Solaris Inc", amount: 12400.00, date: "2024-03-15", status: "Overdue" },
+        { id: "INV-004", client: "Nebula Soft", amount: 3100.00, date: "2024-03-25", status: "Paid" },
+      ];
+      initialInvoices.forEach(inv => storeAddInvoice(inv));
+    }
+    
+    if (storeExpenses.length === 0) {
+      const initialExpenses = [
+        { id: "EXP-001", category: "Office Rent", amount: 2500.00, date: "2024-03-01", status: "Approved" },
+        { id: "EXP-002", category: "Cloud Services", amount: 420.00, date: "2024-03-05", status: "Approved" },
+        { id: "EXP-003", category: "Marketing", amount: 1200.00, date: "2024-03-10", status: "Pending" },
+        { id: "EXP-004", category: "Hardware", amount: 850.00, date: "2024-03-15", status: "Rejected" },
+      ];
+      initialExpenses.forEach(exp => storeAddExpense(exp));
+    }
+  }, []);
 
-  const [expenses, setExpenses] = useState([
-    { id: "EXP-001", category: "Office Rent", amount: "$2,500.00", date: "2024-03-01", status: "Approved" },
-    { id: "EXP-002", category: "Cloud Services", amount: "$420.00", date: "2024-03-05", status: "Approved" },
-    { id: "EXP-003", category: "Marketing", amount: "$1,200.00", date: "2024-03-10", status: "Pending" },
-    { id: "EXP-004", category: "Hardware", amount: "$850.00", date: "2024-03-15", status: "Rejected" },
-  ]);
+  // Format store invoices for display
+  const invoices = useMemo(() => {
+    return storeInvoices.map(inv => ({
+      ...inv,
+      amount: typeof inv.amount === 'number' ? `$${inv.amount.toLocaleString()}` : inv.amount,
+      icon: inv.client.includes('Global') ? Globe : inv.client.includes('Solaris') ? Zap : inv.client.includes('Nebula') ? ShieldCheck : Building2
+    }));
+  }, [storeInvoices]);
+
+  const expenses = useMemo(() => {
+    return storeExpenses.map(exp => ({
+      ...exp,
+      amount: typeof exp.amount === 'number' ? `$${exp.amount.toLocaleString()}` : exp.amount
+    }));
+  }, [storeExpenses]);
 
   const [payroll, setPayroll] = useState([
     { id: "PAY-001", employee: "Sarah Johnson", role: "Sr. Engineer", amount: "$8,500.00", status: "Paid" },
@@ -116,24 +224,10 @@ const FinancePage = () => {
   ];
 
   const categoryData = [
-    { name: 'Fixed', value: 45, color: '#f97316' },
+    { name: 'Fixed', value: 45, color: 'hsl(var(--primary))' },
     { name: 'Variable', value: 30, color: '#3b82f6' },
     { name: 'Marketing', value: 15, color: '#10b981' },
     { name: 'Other', value: 10, color: '#94a3b8' },
-  ];
-
-  const tools = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'invoicing', label: 'Invoicing', icon: Receipt },
-    { id: 'expenses', label: 'Expenses', icon: Wallet },
-    { id: 'payroll', label: 'Payroll', icon: CreditCard },
-    { id: 'inventory', label: 'Inventory', icon: Package },
-    { id: 'clients', label: 'Clients', icon: Users },
-    { id: 'time-tracking', label: 'Time Tracking', icon: Clock },
-    { id: 'payments', label: 'Payments', icon: ShieldCheck },
-    { id: 'multi-currency', label: 'Currency', icon: Globe },
-    { id: 'integrations', label: 'Integrations', icon: Zap },
-    { id: 'documents', label: 'Documents', icon: FileText },
   ];
 
   const handlePrimaryAction = () => {
@@ -141,7 +235,7 @@ const FinancePage = () => {
     else if (activeTool === 'expenses') setIsAddExpenseOpen(true);
     else if (activeTool === 'payroll') setIsAddPayrollOpen(true);
     else if (activeTool === 'inventory') setIsAddAssetOpen(true);
-    else if (activeTool === 'time-tracking') setIsAddTimeEntryOpen(true);
+    else if (activeTool === 'finance-time-tracking') setIsAddTimeEntryOpen(true);
     else if (activeTool === 'payments') setIsAddPaymentOpen(true);
     else if (activeTool === 'multi-currency') setIsAddCurrencyOpen(true);
     else if (activeTool === 'integrations') setIsAddIntegrationOpen(true);
@@ -154,24 +248,321 @@ const FinancePage = () => {
     }
   };
 
-  const handleExport = () => {
-    toast({ 
-      title: "Export Started", 
-      description: `Your ${activeTool} report is being prepared for download.` 
+  const [newInvoice, setNewInvoice] = useState({ client: "", amount: "", date: new Date().toISOString().split('T')[0] });
+  const [newExpense, setNewExpense] = useState({ category: "", amount: "", date: new Date().toISOString().split('T')[0] });
+  const [newPayment, setNewPayment] = useState({ method: "Bank Transfer", amount: "", date: new Date().toISOString().split('T')[0], type: "Inbound" as const });
+
+  const [isClientPopoverOpen, setIsClientPopoverOpen] = useState(false);
+
+  const handleLetCyndiHandleIt = (context: string) => {
+    setIsAddInvoiceOpen(false);
+    setIsAddExpenseOpen(false);
+    setCyndiDraft(`I want to ${context}. Here's what I need...`);
+    setCyndiOpen(true);
+  };
+
+  const handleAddInvoice = () => {
+    if (!newInvoice.client || !newInvoice.amount) return;
+    const inv = {
+      id: `INV-${Math.floor(100 + Math.random() * 900)}`,
+      client: newInvoice.client,
+      amount: `$${Number(newInvoice.amount).toLocaleString()}`,
+      date: newInvoice.date,
+      status: "Pending" as const,
+      icon: Building2
+    };
+    storeAddInvoice({
+      id: inv.id,
+      client: inv.client,
+      amount: Number(newInvoice.amount),
+      date: inv.date,
+      status: inv.status
     });
+    setIsAddInvoiceOpen(false);
+    setNewInvoice({ client: "", amount: "", date: new Date().toISOString().split('T')[0] });
+    toast({ title: "Invoice Created", description: `Invoice for ${newInvoice.client} has been generated.` });
   };
 
-  const handleDelete = (id: string, type: string) => {
-    if (type === 'invoice') setInvoices(prev => prev.filter(i => i.id !== id));
-    if (type === 'expense') setExpenses(prev => prev.filter(e => e.id !== id));
-    if (type === 'time') setTimeEntries(prev => prev.filter(t => t.id !== id));
-    if (type === 'document') setDocuments(prev => prev.filter(d => d.id !== id));
-    if (type === 'asset') setInventory(prev => prev.filter(i => i.id !== id));
-    toast({ title: "Deleted", description: `${type} ${id} removed successfully.` });
-  };
+  const handleAddExpense = () => {
+    if (!newExpense.category || !newExpense.amount) return;
+    const exp = {
+      id: `EXP-${Math.floor(100 + Math.random() * 900)}`,
+      category: newExpense.category,
+      amount: `$${Number(newExpense.amount).toLocaleString()}`,
+      date: newExpense.date,
+      status: "Pending" as const
+    };
+    storeAddExpense({
+      id: exp.id,
+      category: exp.category,
+      amount: Number(newExpense.amount),
+      date: exp.date,
+      status: exp.status
+    });
+    setIsAddExpenseOpen(false);
+    setNewExpense({ category: "", amount: "", date: new Date().toISOString().split('T')[0] });
+     toast({ title: "Expense Logged", description: `Expense for ${newExpense.category} is pending approval.` });
+   };
 
-  return (
+   const handleAddPayment = () => {
+     if (!newPayment.amount) return;
+     const payment = {
+       id: `TRX-${Math.floor(100 + Math.random() * 900)}`,
+       method: newPayment.method,
+       amount: `$${Number(newPayment.amount).toLocaleString()}`,
+       date: newPayment.date,
+       status: "Completed" as const,
+       type: newPayment.type
+     };
+     setPayments([payment, ...payments]);
+     setIsAddPaymentOpen(false);
+     setNewPayment({ method: "Bank Transfer", amount: "", date: new Date().toISOString().split('T')[0], type: "Inbound" as const });
+     toast({ title: "Payment Recorded", description: "The transaction has been logged successfully." });
+   };
+
+   const handleExport = () => {
+     toast({ 
+       title: "Export Started", 
+       description: `Your ${activeTool} report is being prepared for download.` 
+     });
+   };
+
+   // Two-step Delete Confirmation
+   const [isDeleteModal1Open, setIsDeleteModal1Open] = useState(false);
+   const [isDeleteModal2Open, setIsDeleteModal2Open] = useState(false);
+   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: string } | null>(null);
+
+   const handleDelete = (id: string, type: string) => {
+     setItemToDelete({ id, type });
+     setIsDeleteModal1Open(true);
+   };
+
+   const confirmDeleteStep1 = () => {
+     setIsDeleteModal1Open(false);
+     setIsDeleteModal2Open(true);
+   };
+
+   const finalizeDelete = () => {
+     if (itemToDelete) {
+       const { id, type } = itemToDelete;
+       // We can add logic here to delete from store if needed
+       setIsDeleteModal2Open(false);
+       setItemToDelete(null);
+       toast({ title: "Deleted", description: `${type} ${id} removed successfully.` });
+     }
+   };
+ 
+   return (
     <div className="space-y-6">
+      {/* Add Invoice Dialog */}
+      <Dialog open={isAddInvoiceOpen} onOpenChange={setIsAddInvoiceOpen}>
+        <DialogContent className="sm:max-w-[450px] rounded-[32px]">
+          <DialogHeader>
+            <DialogTitle className="font-black text-xl uppercase tracking-tight">New Invoice</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Client Name</Label>
+              <Popover open={isClientPopoverOpen} onOpenChange={setIsClientPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isClientPopoverOpen}
+                    className="w-full h-12 rounded-xl border-2 font-bold justify-between bg-transparent hover:bg-secondary/10"
+                  >
+                    {newInvoice.client || "Select CRM Contact..."}
+                    <MoreVertical className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0 rounded-2xl border-2" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search CRM contacts..." className="h-12" />
+                    <CommandList>
+                      <CommandEmpty>No contact found.</CommandEmpty>
+                      <CommandGroup heading="CRM Contacts">
+                        {crmContacts.map((contact) => (
+                          <CommandItem
+                            key={contact.id}
+                            value={contact.name}
+                            onSelect={(currentValue) => {
+                              setNewInvoice({ ...newInvoice, client: currentValue });
+                              setIsClientPopoverOpen(false);
+                            }}
+                            className="flex items-center gap-3 p-3 cursor-pointer"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <User className="w-4 h-4 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-black uppercase tracking-tight">{contact.name}</p>
+                              <p className="text-[10px] font-bold text-muted-foreground truncate">{contact.email}</p>
+                            </div>
+                            <Check
+                              className={cn(
+                                "ml-auto h-4 w-4 text-primary",
+                                newInvoice.client === contact.name ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Amount ($)</Label>
+                <Input 
+                  type="number"
+                  placeholder="0.00" 
+                  value={newInvoice.amount}
+                  onChange={(e) => setNewInvoice({...newInvoice, amount: e.target.value})}
+                  className="h-12 rounded-xl border-2 font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Date</Label>
+                <Input 
+                  type="date"
+                  value={newInvoice.date}
+                  onChange={(e) => setNewInvoice({...newInvoice, date: e.target.value})}
+                  className="h-12 rounded-xl border-2 font-bold"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex flex-col gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => handleLetCyndiHandleIt("create an invoice")}
+              className="w-full rounded-xl border-2 border-primary/30 text-primary hover:bg-primary/5 uppercase font-black tracking-widest text-[10px] h-12"
+            >
+              <Bot className="w-4 h-4 mr-2" /> Let Cyndi handle it
+            </Button>
+            <Button onClick={handleAddInvoice} className="w-full h-12 rounded-xl shadow-glow uppercase font-black tracking-widest text-xs">Create Invoice</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Expense Dialog */}
+      <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
+        <DialogContent className="sm:max-w-[450px] rounded-[32px]">
+          <DialogHeader>
+            <DialogTitle className="font-black text-xl uppercase tracking-tight">Log Expense</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Category</Label>
+              <Select onValueChange={(val) => setNewExpense({...newExpense, category: val})}>
+                <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
+                  <SelectValue placeholder="Select Category" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {["Software", "Rent", "Marketing", "Travel", "Hardware", "Utilities"].map(c => (
+                    <SelectItem key={c} value={c} className="font-bold uppercase text-[10px]">{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Amount ($)</Label>
+                <Input 
+                  type="number"
+                  placeholder="0.00" 
+                  value={newExpense.amount}
+                  onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                  className="h-12 rounded-xl border-2 font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Date</Label>
+                <Input 
+                  type="date"
+                  value={newExpense.date}
+                  onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
+                  className="h-12 rounded-xl border-2 font-bold"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex flex-col gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => handleLetCyndiHandleIt("log an expense")}
+              className="w-full rounded-xl border-2 border-primary/30 text-primary hover:bg-primary/5 uppercase font-black tracking-widest text-[10px] h-12"
+            >
+              <Bot className="w-4 h-4 mr-2" /> Let Cyndi handle it
+            </Button>
+            <Button onClick={handleAddExpense} className="w-full h-12 rounded-xl shadow-glow uppercase font-black tracking-widest text-xs">Submit Expense</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Payment Dialog */}
+      <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
+        <DialogContent className="sm:max-w-[450px] rounded-[32px]">
+          <DialogHeader>
+            <DialogTitle className="font-black text-xl uppercase tracking-tight">Record Payment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Payment Type</Label>
+              <Select defaultValue="Inbound" onValueChange={(val) => setNewPayment({...newPayment, type: val as "Inbound" | "Outbound"})}>
+                <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Inbound">Inbound (Received)</SelectItem>
+                  <SelectItem value="Outbound">Outbound (Sent)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Payment Method</Label>
+              <Select defaultValue="Bank Transfer" onValueChange={(val) => setNewPayment({...newPayment, method: val})}>
+                <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="Stripe">Stripe</SelectItem>
+                  <SelectItem value="PayPal">PayPal</SelectItem>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Amount ($)</Label>
+                <Input 
+                  type="number"
+                  placeholder="0.00" 
+                  value={newPayment.amount}
+                  onChange={(e) => setNewPayment({...newPayment, amount: e.target.value})}
+                  className="h-12 rounded-xl border-2 font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Date</Label>
+                <Input 
+                  type="date"
+                  value={newPayment.date}
+                  onChange={(e) => setNewPayment({...newPayment, date: e.target.value})}
+                  className="h-12 rounded-xl border-2 font-bold"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex flex-col gap-3">
+            <Button onClick={handleAddPayment} className="w-full h-12 rounded-xl shadow-glow uppercase font-black tracking-widest text-xs">Log Payment</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
@@ -187,7 +578,7 @@ const FinancePage = () => {
             </Button>
             <Button 
               size="sm" 
-              className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white"
+              className="rounded-xl bg-primary hover:bg-primary/90 text-white shadow-sm"
               onClick={handlePrimaryAction}
             >
               <Plus className="w-4 h-4 mr-1.5" />
@@ -196,7 +587,7 @@ const FinancePage = () => {
                activeTool === 'payroll' ? 'Run Payroll' : 
                activeTool === 'inventory' ? 'Add Asset' : 
                activeTool === 'clients' ? 'New Client' : 
-               activeTool === 'time-tracking' ? 'Log Time' : 'New Entry'}
+               activeTool === 'finance-time-tracking' ? 'Log Time' : 'New Entry'}
             </Button>
           </div>
         </div>
@@ -208,7 +599,7 @@ const FinancePage = () => {
             return (
               <button
                 key={tool.id}
-                onClick={() => setActiveTool(tool.id as FinanceTool)}
+                onClick={() => goToTool(tool.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-widest transition-all relative whitespace-nowrap ${
                   activeTool === tool.id ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -228,7 +619,7 @@ const FinancePage = () => {
       <div className="min-h-[600px]">
         <div className="py-4">
           <AnimatePresence mode="wait">
-            {activeTool === 'dashboard' && (
+            {activeTool === 'finance-dashboard' && (
               <motion.div 
                 key="dashboard"
                 initial={{ opacity: 0, y: 10 }}
@@ -240,7 +631,7 @@ const FinancePage = () => {
                   {[
                     { label: "Total Revenue", value: "$124,500", change: "+12.5%", icon: DollarSign, color: "text-green-500" },
                     { label: "Net Profit", value: "$42,200", change: "+8.2%", icon: TrendingUp, color: "text-primary" },
-                    { label: "Outstanding", value: "$18,400", change: "-2.4%", icon: Clock, color: "text-orange-500" },
+                    { label: "Outstanding", value: "$18,400", change: "-2.4%", icon: Clock, color: "text-primary" },
                   ].map((stat) => {
                     const StatIcon = stat.icon;
                     return (
@@ -352,313 +743,73 @@ const FinancePage = () => {
                   })}
                 </div>
 
-                <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-border bg-secondary/10 flex items-center justify-between">
-                    <h3 className="text-sm font-bold uppercase tracking-widest">Recent Invoices</h3>
+                <div className="p-6 rounded-xl border border-border bg-card shadow-sm">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Recent Invoices</h3>
                     <div className="flex items-center gap-2">
                       <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                        <input placeholder="Search..." className="h-8 pl-8 pr-3 text-xs bg-background rounded-lg border border-border w-48" />
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input 
+                          placeholder="Search invoices..." 
+                          className="pl-9 h-9 w-[250px] text-xs rounded-xl"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
                       </div>
-                      <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest"><Filter className="w-3.5 h-3.5 mr-1.5" /> Filter</Button>
+                      <Button variant="outline" size="sm" className="rounded-xl">
+                        <Filter className="w-4 h-4 mr-1.5" /> Filter
+                      </Button>
                     </div>
                   </div>
+
                   <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-secondary/5 border-b border-border">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">ID</th>
-                          <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Client</th>
-                          <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Amount</th>
-                          <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Due Date</th>
-                          <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</th>
-                          <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Actions</th>
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="pb-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Invoice</th>
+                          <th className="pb-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Client</th>
+                          <th className="pb-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Amount</th>
+                          <th className="pb-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Date</th>
+                          <th className="pb-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Status</th>
+                          <th className="pb-4 text-right"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {invoices.map((inv) => {
-                          const ClientIcon = inv.icon;
-                          return (
-                            <tr key={inv.id} className="hover:bg-secondary/5 transition-colors group">
-                              <td className="px-6 py-4 text-xs font-bold text-foreground">{inv.id}</td>
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-7 h-7 rounded bg-secondary flex items-center justify-center text-primary">
-                                    <ClientIcon className="w-3.5 h-3.5" />
-                                  </div>
-                                  <span className="text-xs font-bold text-foreground">{inv.client}</span>
+                        {invoices.filter(i => i.client.toLowerCase().includes(searchQuery.toLowerCase())).map((invoice) => (
+                          <tr key={invoice.id} className="group hover:bg-secondary/20 transition-colors">
+                            <td className="py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                                  <FileText className="w-4 h-4 text-primary" />
                                 </div>
-                              </td>
-                              <td className="px-6 py-4 text-xs font-bold text-foreground">{inv.amount}</td>
-                              <td className="px-6 py-4 text-xs text-muted-foreground">{inv.date}</td>
-                              <td className="px-6 py-4">
-                                <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                                  inv.status === 'Paid' ? 'bg-green-500/10 text-green-600' :
-                                  inv.status === 'Pending' ? 'bg-orange-500/10 text-orange-600' :
-                                  'bg-destructive/10 text-destructive'
-                                }`}>{inv.status}</span>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button variant="ghost" size="icon" className="h-7 w-7"><Eye className="w-3.5 h-3.5" /></Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(inv.id, 'invoice')}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {activeTool === 'expenses' && (
-              <motion.div key="expenses" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-border bg-secondary/10 flex items-center justify-between">
-                      <h3 className="text-sm font-bold uppercase tracking-widest">Expense Log</h3>
-                      <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest text-primary">View All History</Button>
-                    </div>
-                    <div className="divide-y divide-border">
-                      {expenses.map((exp) => (
-                        <div key={exp.id} className="px-6 py-4 flex items-center justify-between hover:bg-secondary/5 transition-colors group">
-                          <div className="flex items-center gap-4">
-                            <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-primary">
-                              <Wallet className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-foreground">{exp.category}</p>
-                              <p className="text-[10px] text-muted-foreground uppercase font-bold">{exp.date}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-8">
-                            <p className="text-sm font-display font-bold text-foreground">{exp.amount}</p>
-                            <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                              exp.status === 'Approved' ? 'bg-green-500/10 text-green-600' :
-                              exp.status === 'Pending' ? 'bg-orange-500/10 text-orange-600' :
-                              'bg-destructive/10 text-destructive'
-                            }`}>{exp.status}</span>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(exp.id, 'expense')}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="p-6 rounded-xl border border-border bg-card shadow-sm">
-                      <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-6">Approval Pipeline</h3>
-                      <div className="space-y-4">
-                        {[
-                          { label: "Pending Review", value: 3, color: "bg-orange-500" },
-                          { label: "Approved Today", value: 12, color: "bg-green-500" },
-                          { label: "Flagged", value: 1, color: "bg-destructive" },
-                        ].map((item) => (
-                          <div key={item.label} className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary/5">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-2 h-2 rounded-full ${item.color}`} />
-                              <span className="text-xs font-bold text-foreground">{item.label}</span>
-                            </div>
-                            <span className="text-sm font-display font-bold">{item.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <Button className="w-full mt-6 rounded-xl text-xs font-bold uppercase tracking-widest" variant="outline">Run Audit</Button>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {activeTool === 'payroll' && (
-              <motion.div key="payroll" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="p-6 rounded-xl border border-border bg-card shadow-sm flex items-center justify-between bg-primary/5">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                      <CreditCard className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-lg text-foreground">Next Pay Cycle: April 1st</h3>
-                      <p className="text-sm text-muted-foreground">Estimated total: <span className="font-bold text-foreground">$142,500.00</span></p>
-                    </div>
-                  </div>
-                  <Button className="rounded-xl font-bold uppercase tracking-widest text-[10px]" onClick={() => setIsAddPayrollOpen(true)}>Run Payroll Early</Button>
-                </div>
-
-                <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-border bg-secondary/10">
-                    <h3 className="text-sm font-bold uppercase tracking-widest">Employee Payroll</h3>
-                  </div>
-                  <div className="divide-y divide-border">
-                    {payroll.map((pay) => (
-                      <div key={pay.id} className="px-6 py-4 flex items-center justify-between hover:bg-secondary/5 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-primary font-bold">
-                            {pay.employee.split(" ").map(n => n[0]).join("")}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-foreground">{pay.employee}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold">{pay.role}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-12">
-                          <div className="text-right">
-                            <p className="text-sm font-display font-bold text-foreground">{pay.amount}</p>
-                            <p className="text-[9px] text-muted-foreground uppercase font-bold">Monthly Gross</p>
-                          </div>
-                          <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                            pay.status === 'Paid' ? 'bg-green-500/10 text-green-600' : 'bg-orange-500/10 text-orange-600'
-                          }`}>{pay.status}</span>
-                          <Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="w-4 h-4" /></Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {activeTool === 'inventory' && (
-              <motion.div key="inventory" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {inventory.map((item) => (
-                    <div key={item.id} className="p-5 rounded-xl border border-border bg-card shadow-sm hover:border-primary/30 transition-all group">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-primary">
-                          <Package className="w-5 h-5" />
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                            item.status === 'In Use' ? 'bg-blue-500/10 text-blue-600' : 'bg-green-500/10 text-green-600'
-                          }`}>{item.status}</span>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(item.id, 'asset')}>
-                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                      <h4 className="font-bold text-foreground mb-1">{item.item}</h4>
-                      <p className="text-xs text-muted-foreground mb-4">Serial: {item.serial}</p>
-                      <div className="flex items-center justify-between pt-4 border-t border-border">
-                        <p className="text-sm font-display font-bold text-primary">{item.value}</p>
-                        <Button variant="ghost" size="sm" className="h-7 text-[9px] font-bold uppercase">Details</Button>
-                      </div>
-                    </div>
-                  ))}
-                  <button 
-                    onClick={() => setIsAddAssetOpen(true)}
-                    className="p-5 rounded-xl border-2 border-dashed border-border bg-secondary/5 hover:bg-secondary/10 hover:border-primary/30 transition-all flex flex-col items-center justify-center gap-2 group"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center border border-border group-hover:scale-110 transition-transform">
-                      <Plus className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
-                    </div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Add New Asset</p>
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {activeTool === 'clients' && (
-              <motion.div key="clients" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-border bg-secondary/10 flex items-center justify-between">
-                    <h3 className="text-sm font-bold uppercase tracking-widest">Client Financial Overview</h3>
-                    <Button size="sm" variant="outline" className="rounded-xl h-8 text-[10px] font-bold uppercase"><Plus className="w-3.5 h-3.5 mr-1.5" /> New Client Record</Button>
-                  </div>
-                  <div className="divide-y divide-border">
-                    {[
-                      { name: "Acme Corp", industry: "Manufacturing", totalBilled: "$42,500", status: "Active", health: "Good" },
-                      { name: "Global Tech", industry: "SaaS", totalBilled: "$18,800", status: "Active", health: "Good" },
-                      { name: "Solaris Inc", industry: "Energy", totalBilled: "$92,400", status: "On Hold", health: "Warning" },
-                    ].map((client) => (
-                      <div key={client.name} className="px-6 py-4 flex items-center justify-between hover:bg-secondary/5 transition-colors cursor-pointer group">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-primary">
-                            <Building2 className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-foreground">{client.name}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold">{client.industry}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-12">
-                          <div className="text-right">
-                            <p className="text-sm font-display font-bold text-foreground">{client.totalBilled}</p>
-                            <p className="text-[9px] text-muted-foreground uppercase font-bold">Life-time Billed</p>
-                          </div>
-                          <div className="w-24">
-                            <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                              client.health === 'Good' ? 'bg-green-500/10 text-green-600' : 'bg-orange-500/10 text-orange-600'
-                            }`}>Health: {client.health}</span>
-                          </div>
-                          <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity"><ArrowRight className="w-4 h-4" /></Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {activeTool === 'time-tracking' && (
-              <motion.div key="time-tracking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {[
-                    { label: "Total Hours", value: "1,240.5", icon: Clock, color: "text-primary" },
-                    { label: "Billable Hours", value: "982.0", icon: Target, color: "text-green-500" },
-                    { label: "Pending Approval", value: "45.5", icon: AlertCircle, color: "text-orange-500" },
-                  ].map((stat) => {
-                    const StatIcon = stat.icon;
-                    return (
-                      <div key={stat.label} className="p-4 rounded-xl border border-border bg-card shadow-sm">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className={`p-1.5 rounded-lg bg-secondary/50 ${stat.color}`}>
-                            <StatIcon className="w-4 h-4" />
-                          </div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{stat.label}</p>
-                        </div>
-                        <p className="text-xl font-display font-bold text-foreground">{stat.value}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-border bg-secondary/10 flex items-center justify-between">
-                    <h3 className="text-sm font-bold uppercase tracking-widest">Time Logs</h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-secondary/5 border-b border-border">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Employee</th>
-                          <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Project</th>
-                          <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Hours</th>
-                          <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Date</th>
-                          <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</th>
-                          <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {timeEntries.map((entry) => (
-                          <tr key={entry.id} className="hover:bg-secondary/5 transition-colors group">
-                            <td className="px-6 py-4">
-                              <span className="text-xs font-bold text-foreground">{entry.employee}</span>
+                                <span className="text-sm font-bold">{invoice.id}</span>
+                              </div>
                             </td>
-                            <td className="px-6 py-4 text-xs text-muted-foreground">{entry.project}</td>
-                            <td className="px-6 py-4 text-xs font-bold text-foreground">{entry.hours}h</td>
-                            <td className="px-6 py-4 text-xs text-muted-foreground">{entry.date}</td>
-                            <td className="px-6 py-4">
-                              <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                                entry.status === 'Approved' ? 'bg-green-500/10 text-green-600' : 'bg-orange-500/10 text-orange-600'
-                              }`}>{entry.status}</span>
+                            <td className="py-4">
+                              <div className="flex items-center gap-2">
+                                {invoice.icon && <invoice.icon className="w-3.5 h-3.5 text-muted-foreground" />}
+                                <span className="text-sm font-medium">{invoice.client}</span>
+                              </div>
                             </td>
-                            <td className="px-6 py-4 text-right">
+                            <td className="py-4 text-sm font-bold">{invoice.amount}</td>
+                            <td className="py-4 text-sm text-muted-foreground">{invoice.date}</td>
+                            <td className="py-4">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                invoice.status === 'Paid' ? 'bg-green-500/10 text-green-600' :
+                                invoice.status === 'Overdue' ? 'bg-destructive/10 text-destructive' :
+                                'bg-primary/10 text-primary'
+                              }`}>
+                                {invoice.status}
+                              </span>
+                            </td>
+                            <td className="py-4 text-right">
                               <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button variant="ghost" size="icon" className="h-7 w-7"><Edit className="w-3.5 h-3.5" /></Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(entry.id, 'time')}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => handleDelete(invoice.id, 'invoice')}>
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
                               </div>
                             </td>
                           </tr>
@@ -670,53 +821,140 @@ const FinancePage = () => {
               </motion.div>
             )}
 
+            {activeTool === 'expenses' && (
+              <motion.div key="expenses" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div className="p-6 rounded-xl border border-border bg-card shadow-sm">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-6">Recent Expenses</h3>
+                  <div className="space-y-4">
+                    {expenses.map((expense) => (
+                      <div key={expense.id} className="flex items-center justify-between p-4 rounded-xl border border-border bg-secondary/10">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                            <Wallet className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold">{expense.category}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{expense.date} • {expense.id}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold">{expense.amount}</p>
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                            expense.status === 'Approved' ? 'text-green-600' : 'text-primary'
+                          }`}>{expense.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTool === 'payroll' && (
+              <motion.div key="payroll" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div className="p-6 rounded-xl border border-border bg-card shadow-sm">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-6">Payroll Summary</h3>
+                  <div className="space-y-4">
+                    {payroll.map((entry) => (
+                      <div key={entry.id} className="flex items-center justify-between p-4 rounded-xl border border-border hover:bg-secondary/20 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Users className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold">{entry.employee}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{entry.role}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold">{entry.amount}</p>
+                          <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest">{entry.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTool === 'inventory' && (
+              <motion.div key="inventory" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div className="p-6 rounded-xl border border-border bg-card shadow-sm">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-6">Company Assets</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {inventory.map((item) => (
+                      <div key={item.id} className="p-4 rounded-xl border border-border bg-secondary/5 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-white border border-border">
+                            <Package className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold">{item.item}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{item.serial}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold">{item.value}</p>
+                          <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{item.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTool === 'finance-time-tracking' && (
+              <motion.div key="time" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div className="p-6 rounded-xl border border-border bg-card shadow-sm">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-6">Billable Hours</h3>
+                  <div className="space-y-4">
+                    {timeEntries.map((entry) => (
+                      <div key={entry.id} className="flex items-center justify-between p-4 rounded-xl border border-border">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                            <Clock className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold">{entry.employee}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{entry.project}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold">{entry.hours} hrs</p>
+                          <p className="text-[10px] text-muted-foreground">{entry.date}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {activeTool === 'payments' && (
               <motion.div key="payments" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {[
-                    { label: "Net Volume", value: "$452,400", icon: TrendingUp, color: "text-primary" },
-                    { label: "Successful", value: "98.2%", icon: CheckCircle2, color: "text-green-500" },
-                    { label: "Processing", value: "$12,400", icon: Clock, color: "text-orange-500" },
-                    { label: "Disputes", value: "0", icon: ShieldCheck, color: "text-blue-500" },
-                  ].map((stat) => {
-                    const StatIcon = stat.icon;
-                    return (
-                      <div key={stat.label} className="p-4 rounded-xl border border-border bg-card shadow-sm">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className={`p-1.5 rounded-lg bg-secondary/50 ${stat.color}`}>
-                            <StatIcon className="w-4 h-4" />
-                          </div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{stat.label}</p>
-                        </div>
-                        <p className="text-xl font-display font-bold text-foreground">{stat.value}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-border bg-secondary/10">
-                    <h3 className="text-sm font-bold uppercase tracking-widest">Transaction History</h3>
-                  </div>
-                  <div className="divide-y divide-border">
-                    {payments.map((payment) => (
-                      <div key={payment.id} className="px-6 py-4 flex items-center justify-between hover:bg-secondary/5 transition-colors">
+                <div className="p-6 rounded-xl border border-border bg-card shadow-sm">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-6">Recent Payments</h3>
+                  <div className="space-y-4">
+                    {payments.map((trx) => (
+                      <div key={trx.id} className="flex items-center justify-between p-4 rounded-xl border border-border">
                         <div className="flex items-center gap-4">
-                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${payment.type === 'Inbound' ? 'bg-green-500/10 text-green-600' : 'bg-orange-500/10 text-orange-600'}`}>
-                            {payment.type === 'Inbound' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                          <div className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center",
+                            trx.type === "Inbound" ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive"
+                          )}>
+                            {trx.type === "Inbound" ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-foreground">{payment.method}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold">{payment.date}</p>
+                            <p className="text-sm font-bold">{trx.method}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{trx.id} • {trx.date}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-8">
-                          <p className={`text-sm font-display font-bold ${payment.type === 'Inbound' ? 'text-green-600' : 'text-foreground'}`}>
-                            {payment.type === 'Inbound' ? '+' : '-'}{payment.amount}
+                        <div className="text-right">
+                          <p className={cn("text-sm font-bold", trx.type === "Inbound" ? "text-green-600" : "text-destructive")}>
+                            {trx.type === "Inbound" ? "+" : "-"}{trx.amount}
                           </p>
-                          <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                            payment.status === 'Completed' ? 'bg-green-500/10 text-green-600' : 'bg-orange-500/10 text-orange-600'
-                          }`}>{payment.status}</span>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{trx.status}</span>
                         </div>
                       </div>
                     ))}
@@ -724,89 +962,221 @@ const FinancePage = () => {
                 </div>
               </motion.div>
             )}
+            
+            {activeTool === 'finance-reports' && (
+              <motion.div key="reports" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div className="flex items-center justify-between bg-secondary/10 p-4 rounded-2xl border border-border">
+                  <div className="flex items-center gap-1">
+                    {[
+                      { id: 'p-and-l', label: 'Profit & Loss' },
+                      { id: 'balance-sheet', label: 'Balance Sheet' },
+                      { id: 'cash-flow', label: 'Cash Flow' },
+                    ].map((report) => (
+                      <button
+                        key={report.id}
+                        onClick={() => setActiveReportType(report.id as any)}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                          activeReportType === report.id ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground hover:bg-secondary"
+                        }`}
+                      >
+                        {report.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select defaultValue="this-month">
+                      <SelectTrigger className="w-[140px] h-9 text-[10px] font-black uppercase tracking-widest rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="this-month">This Month</SelectItem>
+                        <SelectItem value="last-quarter">Last Quarter</SelectItem>
+                        <SelectItem value="this-year">This Year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="sm" className="rounded-xl h-9">
+                      <Download className="w-3.5 h-3.5 mr-2" /> Export PDF
+                    </Button>
+                  </div>
+                </div>
 
-            {activeTool === 'multi-currency' && (
-              <motion.div key="multi-currency" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {currencies.map((currency) => (
-                    <div key={currency.code} className="p-6 rounded-xl border border-border bg-card shadow-sm">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-primary font-bold">
-                          {currency.code}
+                <div className="p-8 rounded-[24px] border-2 border-border bg-card shadow-sm max-w-4xl mx-auto">
+                  <div className="text-center mb-12">
+                    <h3 className="font-display text-2xl font-black uppercase tracking-tight">
+                      {activeReportType === 'p-and-l' ? 'Statement of Profit and Loss' : 
+                       activeReportType === 'balance-sheet' ? 'Balance Sheet' : 'Cash Flow Statement'}
+                    </h3>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-2">Cynda Business OS • As of March 2024</p>
+                  </div>
+
+                  {activeReportType === 'p-and-l' && (
+                    <div className="space-y-8">
+                      <div className="space-y-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Operating Revenue</h4>
+                        <div className="space-y-3">
+                          {[
+                            { label: 'Product Sales', amount: '$85,400.00' },
+                            { label: 'Service Revenue', amount: '$32,100.00' },
+                            { label: 'Subscription Fees', amount: '$12,500.00' },
+                          ].map((row) => (
+                            <div key={row.label} className="flex items-center justify-between text-sm">
+                              <span className="font-medium text-muted-foreground">{row.label}</span>
+                              <span className="font-bold">{row.amount}</span>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
+                            <span className="text-xs font-black uppercase tracking-widest">Total Revenue</span>
+                            <span className="text-base font-black text-primary">$130,000.00</span>
+                          </div>
                         </div>
-                        <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                          currency.status === 'Primary' ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground'
-                        }`}>{currency.status}</span>
                       </div>
-                      <h4 className="font-bold text-foreground mb-1">{currency.name}</h4>
-                      <p className="text-xs text-muted-foreground">1 USD = {currency.rate} {currency.code}</p>
-                      <div className="mt-6 pt-4 border-t border-border flex justify-between items-center">
-                        <Button variant="ghost" size="sm" className="h-7 text-[9px] font-bold uppercase">Exchange Rate</Button>
-                        <Button variant="ghost" size="sm" className="h-7 text-[9px] font-bold uppercase text-primary">Set Primary</Button>
+
+                      <div className="space-y-4 pt-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Operating Expenses</h4>
+                        <div className="space-y-3">
+                          {[
+                            { label: 'Cost of Goods Sold', amount: '$24,500.00' },
+                            { label: 'Salaries & Wages', amount: '$42,200.00' },
+                            { label: 'Rent & Utilities', amount: '$8,500.00' },
+                            { label: 'Marketing & Advertising', amount: '$12,400.00' },
+                          ].map((row) => (
+                            <div key={row.label} className="flex items-center justify-between text-sm">
+                              <span className="font-medium text-muted-foreground">{row.label}</span>
+                              <span className="font-bold">{row.amount}</span>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
+                            <span className="text-xs font-black uppercase tracking-widest">Total Expenses</span>
+                            <span className="text-base font-black text-primary">$87,600.00</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-6 bg-primary/5 rounded-2xl border-2 border-primary/20 mt-12">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Net Operating Income</p>
+                            <p className="text-xs text-muted-foreground font-medium mt-1">Earnings before interest and taxes (EBIT)</p>
+                          </div>
+                          <p className="text-3xl font-display font-black text-primary">$42,400.00</p>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                  <button onClick={() => setIsAddCurrencyOpen(true)} className="p-6 rounded-xl border-2 border-dashed border-border bg-secondary/5 hover:bg-secondary/10 transition-all flex flex-col items-center justify-center gap-2">
-                    <Plus className="w-6 h-6 text-muted-foreground" />
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Add Currency</p>
-                  </button>
-                </div>
-              </motion.div>
-            )}
+                  )}
 
-            {activeTool === 'integrations' && (
-              <motion.div key="integrations" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {integrations.map((int) => {
-                    const IntIcon = int.icon;
-                    return (
-                      <div key={int.id} className="p-5 rounded-xl border border-border bg-card shadow-sm hover:border-primary/30 transition-all">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-primary">
-                            <IntIcon className="w-5 h-5" />
+                  {activeReportType === 'balance-sheet' && (
+                    <div className="space-y-10">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                        <div className="space-y-6">
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-green-600 border-b border-green-600/20 pb-2">Assets</h4>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <p className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground/60">Current Assets</p>
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-xs font-medium"><span>Cash and Equivalents</span><span>$142,500</span></div>
+                                <div className="flex justify-between text-xs font-medium"><span>Accounts Receivable</span><span>$18,400</span></div>
+                                <div className="flex justify-between text-xs font-medium"><span>Inventory</span><span>$32,100</span></div>
+                              </div>
+                            </div>
+                            <div className="space-y-2 pt-2">
+                              <p className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground/60">Fixed Assets</p>
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-xs font-medium"><span>Equipment & Hardware</span><span>$24,000</span></div>
+                                <div className="flex justify-between text-xs font-medium"><span>Accumulated Depreciation</span><span className="text-red-500">($4,200)</span></div>
+                              </div>
+                            </div>
+                            <div className="flex justify-between pt-4 border-t border-border">
+                              <span className="text-xs font-black uppercase">Total Assets</span>
+                              <span className="text-sm font-black text-green-600">$212,800</span>
+                            </div>
                           </div>
-                          <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                            int.status === 'Connected' ? 'bg-green-500/10 text-green-600' : 'bg-secondary text-muted-foreground'
-                          }`}>{int.status}</span>
                         </div>
-                        <h4 className="font-bold text-foreground mb-1">{int.name}</h4>
-                        <p className="text-xs text-muted-foreground mb-4">{int.category}</p>
-                        <Button variant={int.status === 'Connected' ? 'outline' : 'default'} className="w-full h-8 text-[10px] font-bold uppercase rounded-xl">
-                          {int.status === 'Connected' ? 'Configure' : 'Connect'}
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
 
-            {activeTool === 'documents' && (
-              <motion.div key="documents" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-border bg-secondary/10 flex items-center justify-between">
-                    <h3 className="text-sm font-bold uppercase tracking-widest">Financial Documents</h3>
-                  </div>
-                  <div className="divide-y divide-border">
-                    {documents.map((doc) => (
-                      <div key={doc.id} className="px-6 py-4 flex items-center justify-between hover:bg-secondary/5 transition-colors group">
-                        <div className="flex items-center gap-4">
-                          <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-primary">
-                            <FileText className="w-4 h-4" />
+                        <div className="space-y-6">
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-red-600 border-b border-red-600/20 pb-2">Liabilities & Equity</h4>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <p className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground/60">Liabilities</p>
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-xs font-medium"><span>Accounts Payable</span><span>$12,400</span></div>
+                                <div className="flex justify-between text-xs font-medium"><span>Deferred Revenue</span><span>$8,500</span></div>
+                                <div className="flex justify-between text-xs font-medium"><span>Short-term Loans</span><span>$15,000</span></div>
+                              </div>
+                            </div>
+                            <div className="space-y-2 pt-2">
+                              <p className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground/60">Equity</p>
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-xs font-medium"><span>Owner Capital</span><span>$100,000</span></div>
+                                <div className="flex justify-between text-xs font-medium"><span>Retained Earnings</span><span>$76,900</span></div>
+                              </div>
+                            </div>
+                            <div className="flex justify-between pt-4 border-t border-border">
+                              <span className="text-xs font-black uppercase">Total L & E</span>
+                              <span className="text-sm font-black text-red-600">$212,800</span>
+                            </div>
                           </div>
+                        </div>
+                      </div>
+                      
+                      <div className="p-4 bg-secondary/30 rounded-xl flex items-center gap-3 border border-border">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Balance sheet is in balance • Assets = Liabilities + Equity</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeReportType === 'cash-flow' && (
+                    <div className="space-y-8">
+                      <div className="space-y-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Operating Activities</h4>
+                        <div className="space-y-3">
+                          {[
+                            { label: 'Net Income', amount: '$42,400.00' },
+                            { label: 'Adjustments for Depreciation', amount: '$4,200.00' },
+                            { label: 'Changes in Working Capital', amount: '($2,500.00)' },
+                          ].map((row) => (
+                            <div key={row.label} className="flex items-center justify-between text-sm">
+                              <span className="font-medium text-muted-foreground">{row.label}</span>
+                              <span className="font-bold">{row.amount}</span>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
+                            <span className="text-xs font-black uppercase tracking-widest">Net Cash from Operations</span>
+                            <span className="text-base font-black text-primary">$44,100.00</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-600 border-b border-blue-600/20 pb-2">Investing Activities</h4>
+                        <div className="space-y-3">
+                          {[
+                            { label: 'Purchase of Equipment', amount: '($15,000.00)' },
+                            { label: 'Sale of Assets', amount: '$2,000.00' },
+                          ].map((row) => (
+                            <div key={row.label} className="flex items-center justify-between text-sm">
+                              <span className="font-medium text-muted-foreground">{row.label}</span>
+                              <span className="font-bold">{row.amount}</span>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
+                            <span className="text-xs font-black uppercase tracking-widest">Net Cash from Investing</span>
+                            <span className="text-base font-black text-blue-600">($13,000.00)</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-6 bg-secondary/30 rounded-2xl border-2 border-border mt-12">
+                        <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-bold text-foreground">{doc.name}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold">{doc.type} • {doc.size}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Net Cash Change</p>
+                            <p className="text-xs text-muted-foreground font-medium mt-1">Total increase/decrease in cash</p>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold">{doc.date}</p>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"><Download className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(doc.id, 'document')}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                          <p className="text-3xl font-display font-black text-foreground">$31,100.00</p>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -814,270 +1184,167 @@ const FinancePage = () => {
         </div>
       </div>
 
-      {/* --- Global Modals --- */}
+      {/* Delete Confirmation Modal 1 */}
+      <Dialog open={isDeleteModal1Open} onOpenChange={setIsDeleteModal1Open}>
+        <DialogContent className="sm:max-w-[400px] rounded-[32px] border-4 p-8 bg-card">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive mb-4">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">
+              Delete {itemToDelete?.type.charAt(0).toUpperCase() + itemToDelete?.type.slice(1)}?
+            </DialogTitle>
+            <DialogDescription className="text-sm font-medium text-muted-foreground">
+              Are you sure you want to remove this {itemToDelete?.type} from your records?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button 
+              variant="destructive"
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={confirmDeleteStep1}
+            >
+              Yes, I'm sure
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={() => setIsDeleteModal1Open(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Invoice Dialog */}
       <Dialog open={isAddInvoiceOpen} onOpenChange={setIsAddInvoiceOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px] rounded-[32px] border-4 p-8 bg-card">
           <DialogHeader>
-            <DialogTitle className="font-display font-bold text-xl">Create New Invoice</DialogTitle>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tight">Create Invoice</DialogTitle>
+            <DialogDescription className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Generate a new billable item for a client.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="client">Client Name</Label>
-              <Input id="client" placeholder="e.g. Acme Corp" className="rounded-xl" />
+          <div className="grid gap-6 py-6">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest px-1">Client Name</Label>
+              <Input 
+                placeholder="e.g. Acme Corp" 
+                className="rounded-xl h-12 border-2" 
+                value={newInvoice.client}
+                onChange={(e) => setNewInvoice({ ...newInvoice, client: e.target.value })}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="amount">Amount</Label>
-                <Input id="amount" placeholder="$0.00" className="rounded-xl" />
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest px-1">Amount ($)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="0.00" 
+                  className="rounded-xl h-12 border-2" 
+                  value={newInvoice.amount || ""}
+                  onChange={(e) => setNewInvoice({ ...newInvoice, amount: parseFloat(e.target.value) })}
+                />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="due">Due Date</Label>
-                <Input id="due" type="date" className="rounded-xl" />
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest px-1">Status</Label>
+                <Select value={newInvoice.status} onValueChange={(v) => setNewInvoice({ ...newInvoice, status: v })}>
+                  <SelectTrigger className="rounded-xl h-12 border-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                    <SelectItem value="Overdue">Overdue</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddInvoiceOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={() => {
-              setInvoices(prev => [{ id: `INV-00${prev.length + 1}`, client: "New Client", amount: "$0.00", date: "2024-04-01", status: "Pending", icon: Building2 }, ...prev]);
-              setIsAddInvoiceOpen(false);
-              toast({ title: "Invoice Created" });
-            }} className="rounded-xl">Create Invoice</Button>
+          <DialogFooter className="flex-col sm:flex-col gap-3">
+            <Button className="w-full h-12 rounded-2xl font-black uppercase tracking-widest shadow-glow" onClick={handleCreateInvoice}>Create Invoice</Button>
+            <Button variant="ghost" className="w-full h-12 rounded-2xl font-black uppercase tracking-widest" onClick={() => setIsAddInvoiceOpen(false)}>Cancel</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Add Expense Dialog */}
       <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px] rounded-[32px] border-4 p-8 bg-card">
           <DialogHeader>
-            <DialogTitle className="font-display font-bold text-xl">Log Expense</DialogTitle>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tight">Log Expense</DialogTitle>
+            <DialogDescription className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Record a new business expenditure.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="category">Category</Label>
-              <Select>
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="office">Office Rent</SelectItem>
-                  <SelectItem value="travel">Travel</SelectItem>
-                  <SelectItem value="software">Software/SaaS</SelectItem>
-                  <SelectItem value="marketing">Marketing</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="exp-amount">Amount</Label>
-              <Input id="exp-amount" placeholder="$0.00" className="rounded-xl" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddExpenseOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={() => {
-              setExpenses(prev => [{ id: `EXP-00${prev.length + 1}`, category: "New Expense", amount: "$0.00", date: "2024-03-25", status: "Pending" }, ...prev]);
-              setIsAddExpenseOpen(false);
-              toast({ title: "Expense Logged" });
-            }} className="rounded-xl">Save Expense</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isAddPayrollOpen} onOpenChange={setIsAddPayrollOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="font-display font-bold text-xl">Run Payroll</DialogTitle>
-          </DialogHeader>
-          <div className="py-6 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-primary">
-              <CreditCard className="w-8 h-8" />
-            </div>
-            <div className="space-y-1">
-              <p className="font-bold text-foreground">Confirm Payroll Execution</p>
-              <p className="text-sm text-muted-foreground">This will process payments for all 24 active employees.</p>
-            </div>
-            <div className="p-4 rounded-xl bg-secondary/20 border border-border text-left">
-              <div className="flex justify-between text-xs mb-2">
-                <span className="text-muted-foreground">Total Gross:</span>
-                <span className="font-bold">$142,500.00</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Est. Taxes:</span>
-                <span className="font-bold">$34,200.00</span>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddPayrollOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={() => {
-              setPayroll(prev => prev.map(p => ({ ...p, status: 'Paid' })));
-              setIsAddPayrollOpen(false);
-              toast({ title: "Payroll Executed", description: "All employee payments have been initiated." });
-            }} className="rounded-xl bg-primary text-white">Confirm & Process</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isAddAssetOpen} onOpenChange={setIsAddAssetOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="font-display font-bold text-xl">Add New Asset</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="asset-name">Asset Name</Label>
-              <Input id="asset-name" placeholder="e.g. MacBook Pro" className="rounded-xl" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="asset-value">Value</Label>
-              <Input id="asset-value" placeholder="$0.00" className="rounded-xl" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddAssetOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={() => {
-              setInventory(prev => [{ id: `AST-00${prev.length + 1}`, item: "New Device", serial: "SN-PENDING", value: "$0.00", status: "Available" }, ...prev]);
-              setIsAddAssetOpen(false);
-              toast({ title: "Asset Added" });
-            }} className="rounded-xl">Add to Inventory</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isAddTimeEntryOpen} onOpenChange={setIsAddTimeEntryOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="font-display font-bold text-xl">Log Time</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="emp-name">Employee</Label>
-              <Input id="emp-name" placeholder="Search employee..." className="rounded-xl" />
+          <div className="grid gap-6 py-6">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest px-1">Category</Label>
+              <Input 
+                placeholder="e.g. Software, Travel, Marketing" 
+                className="rounded-xl h-12 border-2" 
+                value={newExpense.category}
+                onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="hours">Hours</Label>
-                <Input id="hours" type="number" placeholder="0.0" className="rounded-xl" />
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest px-1">Amount ($)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="0.00" 
+                  className="rounded-xl h-12 border-2" 
+                  value={newExpense.amount || ""}
+                  onChange={(e) => setNewExpense({ ...newExpense, amount: parseFloat(e.target.value) })}
+                />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="date">Date</Label>
-                <Input id="date" type="date" className="rounded-xl" />
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest px-1">Status</Label>
+                <Select value={newExpense.status} onValueChange={(v) => setNewExpense({ ...newExpense, status: v })}>
+                  <SelectTrigger className="rounded-xl h-12 border-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Approved">Approved</SelectItem>
+                    <SelectItem value="Rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddTimeEntryOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={() => {
-              setTimeEntries(prev => [{ id: `TME-00${prev.length + 1}`, employee: "Current User", project: "General Work", hours: "1.0", date: "2024-03-23", status: "Pending" }, ...prev]);
-              setIsAddTimeEntryOpen(false);
-              toast({ title: "Time Logged" });
-            }} className="rounded-xl">Save Log</Button>
+          <DialogFooter className="flex-col sm:flex-col gap-3">
+            <Button className="w-full h-12 rounded-2xl font-black uppercase tracking-widest shadow-glow" onClick={handleCreateExpense}>Log Expense</Button>
+            <Button variant="ghost" className="w-full h-12 rounded-2xl font-black uppercase tracking-widest" onClick={() => setIsAddExpenseOpen(false)}>Cancel</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+      {/* Delete Confirmation Modal 2 */}
+      <Dialog open={isDeleteModal2Open} onOpenChange={setIsDeleteModal2Open}>
+        <DialogContent className="sm:max-w-[400px] rounded-[32px] border-4 p-8 bg-card border-destructive">
           <DialogHeader>
-            <DialogTitle className="font-display font-bold text-xl">Process Payment</DialogTitle>
+            <div className="w-12 h-12 rounded-2xl bg-destructive flex items-center justify-center text-white mb-4 animate-pulse">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight text-destructive">Final Confirmation</DialogTitle>
+            <DialogDescription className="text-sm font-bold text-destructive/80 uppercase tracking-widest">
+              This action is irreversible. Are you absolutely certain?
+            </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="pay-method">Payment Method</Label>
-              <Select>
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Select method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="stripe">Stripe</SelectItem>
-                  <SelectItem value="bank">Bank Transfer</SelectItem>
-                  <SelectItem value="paypal">PayPal</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="pay-amount">Amount</Label>
-              <Input id="pay-amount" placeholder="$0.00" className="rounded-xl" />
-            </div>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button 
+              variant="destructive"
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-destructive/20"
+              onClick={finalizeDelete}
+            >
+              Permanently Delete
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={() => setIsDeleteModal2Open(false)}
+            >
+              I changed my mind
+            </Button>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddPaymentOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={() => {
-              setPayments(prev => [{ id: `TRX-00${prev.length + 1}`, method: "Stripe", amount: "$0.00", date: "2024-03-23", status: "Processing", type: "Inbound" }, ...prev]);
-              setIsAddPaymentOpen(false);
-              toast({ title: "Payment Initiated" });
-            }} className="rounded-xl">Execute Payment</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isAddCurrencyOpen} onOpenChange={setIsAddCurrencyOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="font-display font-bold text-xl">Add Currency</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="curr-code">Currency Code</Label>
-              <Input id="curr-code" placeholder="e.g. JPY" className="rounded-xl" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="curr-rate">Exchange Rate (to USD)</Label>
-              <Input id="curr-rate" placeholder="0.00" className="rounded-xl" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddCurrencyOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={() => {
-              setCurrencies(prev => [...prev, { code: "NEW", name: "New Currency", rate: "1.00", status: "Active" }]);
-              setIsAddCurrencyOpen(false);
-              toast({ title: "Currency Added" });
-            }} className="rounded-xl">Save Currency</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isAddIntegrationOpen} onOpenChange={setIsAddIntegrationOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="font-display font-bold text-xl">Add Integration</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4 text-center">
-            <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto text-primary">
-              <Zap className="w-8 h-8" />
-            </div>
-            <p className="text-sm text-muted-foreground">Select a financial service to integrate with Cynda.</p>
-            <div className="grid grid-cols-2 gap-2 mt-4">
-              {['Xero', 'Sage', 'FreshBooks', 'Stripe', 'Square', 'Adyen'].map(s => (
-                <Button key={s} variant="outline" className="h-10 text-xs rounded-xl" onClick={() => {
-                  setIntegrations(prev => [...prev, { id: `INT-00${prev.length + 1}`, name: s, category: "Financial Service", status: "Connected", icon: Zap }]);
-                  setIsAddIntegrationOpen(false);
-                  toast({ title: `${s} Connected` });
-                }}>{s}</Button>
-              ))}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isAddDocumentOpen} onOpenChange={setIsAddDocumentOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="font-display font-bold text-xl">Upload Document</DialogTitle>
-          </DialogHeader>
-          <div className="py-8 border-2 border-dashed border-border rounded-2xl text-center bg-secondary/5 group hover:bg-secondary/10 transition-colors cursor-pointer">
-            <Download className="w-10 h-10 text-muted-foreground/50 mx-auto mb-4 group-hover:text-primary transition-colors" />
-            <p className="text-sm font-bold text-foreground">Click to upload or drag & drop</p>
-            <p className="text-[10px] text-muted-foreground uppercase font-bold mt-1">PDF, XLSX, or ZIP (max 50MB)</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDocumentOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={() => {
-              setDocuments(prev => [{ id: `DOC-00${prev.length + 1}`, name: "Uploaded_Document.pdf", type: "General", size: "0.5 MB", date: "2024-03-23" }, ...prev]);
-              setIsAddDocumentOpen(false);
-              toast({ title: "Document Uploaded" });
-            }} className="rounded-xl">Done</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

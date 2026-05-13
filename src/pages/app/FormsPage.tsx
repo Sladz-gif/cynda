@@ -7,10 +7,11 @@ import {
   Hash, Layout, Palette, Image as ImageIcon, Zap, Filter, SortAsc, 
   Link as LinkIcon, Database, Grid, Kanban, Calendar as CalendarIcon, 
   GalleryVertical, Eye, FileSpreadsheet, ExternalLink, Code, Save,
-  X, CheckCircle2, ChevronRight, Search, Columns, Rows
+  X, CheckCircle2, ChevronRight, Search, Columns, Rows, Shield, ShieldCheck, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useIndustryStore } from "@/lib/industry-store";
 import {
   Dialog,
   DialogContent,
@@ -61,6 +62,12 @@ interface Question {
   };
 }
 
+interface AccessControl {
+  userId: string;
+  name: string;
+  role: 'Owner' | 'Editor' | 'Viewer';
+}
+
 interface Form {
   id: string;
   title: string;
@@ -73,6 +80,7 @@ interface Form {
     headerImage?: string;
   };
   responses: any[];
+  access: AccessControl[];
 }
 
 type FieldType = 'text' | 'number' | 'date' | 'attachment' | 'checkbox' | 'dropdown' | 'link';
@@ -105,6 +113,7 @@ interface Base {
   id: string;
   name: string;
   tables: Table[];
+  access: AccessControl[];
 }
 
 // --- Mock Initial Data ---
@@ -123,7 +132,8 @@ const INITIAL_FORMS: Form[] = [
     theme: { primaryColor: "#3b82f6", font: "Inter" },
     responses: [
       { id: "r1", data: { q1: "Logo Redesign", q2: "We need a fresh look.", q3: "High" }, submittedAt: "2024-03-20" },
-    ]
+    ],
+    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }]
   },
   {
     id: "2",
@@ -136,7 +146,8 @@ const INITIAL_FORMS: Form[] = [
       { id: "q3", type: "file_upload", title: "Screenshot", required: false },
     ],
     theme: { primaryColor: "#ef4444", font: "Inter" },
-    responses: []
+    responses: [],
+    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }]
   }
 ];
 
@@ -144,6 +155,7 @@ const INITIAL_BASES: Base[] = [
   {
     id: "b1",
     name: "Marketing CRM",
+    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }],
     tables: [
       {
         id: "t1",
@@ -192,6 +204,68 @@ const FormsPage = () => {
     { id: "sharing", label: "Sharing", icon: Share2 },
   ];
 
+  const [shareSearchQuery, setShareSearchQuery] = useState("");
+  const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
+  const { currentUser, adminProfile, staffList } = useIndustryStore();
+  const activeUser = currentUser || adminProfile;
+
+  const isDeptHead = activeUser?.role === 'Super Admin' || activeUser?.role?.includes('Director') || activeUser?.role?.includes('Manager');
+
+  const visibleForms = useMemo(() => {
+    if (isDeptHead) return forms;
+    return forms.filter(f => 
+      f.access.some(a => a.userId === activeUser?.id || a.userId === 'admin')
+    );
+  }, [forms, isDeptHead, activeUser]);
+
+  const visibleBases = useMemo(() => {
+    if (isDeptHead) return bases;
+    return bases.filter(b => 
+      b.access.some(a => a.userId === activeUser?.id || a.userId === 'admin')
+    );
+  }, [bases, isDeptHead, activeUser]);
+
+  const handleGrantAccess = (id: string, staff: any) => {
+    if (activeTab === 'databases') {
+      setBases(prev => prev.map(b => {
+        if (b.id === id) {
+          if (b.access.find(a => a.userId === staff.id)) return b;
+          return { ...b, access: [...b.access, { userId: staff.id, name: staff.name, role: 'Editor' }] };
+        }
+        return b;
+      }));
+    } else {
+      setForms(prev => prev.map(f => {
+        if (f.id === id) {
+          if (f.access.find(a => a.userId === staff.id)) return f;
+          return { ...f, access: [...f.access, { userId: staff.id, name: staff.name, role: 'Editor' }] };
+        }
+        return f;
+      }));
+    }
+    setShareSearchQuery("");
+    toast({ title: "Access Granted", description: `${staff.name} can now access this ${activeTab === 'databases' ? 'database' : 'form'}.` });
+  };
+
+  const handleRevokeAccess = (id: string, userId: string) => {
+    if (activeTab === 'databases') {
+      setBases(prev => prev.map(b => {
+        if (b.id === id) {
+          return { ...b, access: b.access.filter(a => a.userId !== userId) };
+        }
+        return b;
+      }));
+    } else {
+      setForms(prev => prev.map(f => {
+        if (f.id === id) {
+          return { ...f, access: f.access.filter(a => a.userId !== userId) };
+        }
+        return f;
+      }));
+    }
+    toast({ title: "Access Revoked" });
+  };
+
   // --- Form Builder Logic ---
 
   const handleCreateForm = () => {
@@ -203,7 +277,8 @@ const FormsPage = () => {
       status: "Draft",
       questions: [],
       theme: { primaryColor: "#3b82f6", font: "Inter" },
-      responses: []
+      responses: [],
+      access: [{ userId: activeUser?.id || 'current', name: activeUser?.name || "User", role: 'Owner' }]
     };
     setForms(prev => [form, ...prev]);
     setSelectedForm(form);
@@ -222,28 +297,85 @@ const FormsPage = () => {
       required: false,
       options: ['multiple_choice', 'checkboxes', 'dropdown'].includes(type) ? ["Option 1"] : undefined
     };
-    setForms(prev => prev.map(f => f.id === selectedForm.id ? { ...f, questions: [...f.questions, newQuestion] } : f));
-    setSelectedForm(prev => prev ? { ...prev, questions: [...prev.questions, newQuestion] } : null);
+    const updatedForm = { ...selectedForm, questions: [...selectedForm.questions, newQuestion] };
+    setForms(prev => prev.map(f => f.id === selectedForm.id ? updatedForm : f));
+    setSelectedForm(updatedForm);
     toast({ title: "Question Added" });
   };
 
+  // Two-step Delete Confirmation
+  const [isDeleteModal1Open, setIsDeleteModal1Open] = useState(false);
+  const [isDeleteModal2Open, setIsDeleteModal2Open] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'question' | 'record' | 'form' | 'base' } | null>(null);
+
+  const handleDelete = (id: string, type: 'question' | 'record' | 'form' | 'base') => {
+    setItemToDelete({ id, type });
+    setIsDeleteModal1Open(true);
+  };
+
+  const confirmDeleteStep1 = () => {
+    setIsDeleteModal1Open(false);
+    setIsDeleteModal2Open(true);
+  };
+
+  const finalizeDelete = () => {
+    if (itemToDelete) {
+      const { id, type } = itemToDelete;
+      if (type === 'question' && selectedForm) {
+        const updatedForm = { ...selectedForm, questions: selectedForm.questions.filter(q => q.id !== id) };
+        setForms(prev => prev.map(f => f.id === selectedForm.id ? updatedForm : f));
+        setSelectedForm(updatedForm);
+        toast({ title: "Question Deleted" });
+      } else if (type === 'record' && selectedBase && selectedTable) {
+        setBases(prev => prev.map(b => b.id === selectedBase.id ? {
+          ...b,
+          tables: b.tables.map(t => t.id === selectedTable.id ? {
+            ...t,
+            records: t.records.filter(r => r.id !== id)
+          } : t)
+        } : b));
+        setSelectedTable(prev => prev ? {
+          ...prev,
+          records: prev.records.filter(r => r.id !== id)
+        } : null);
+        toast({ title: "Record Deleted" });
+      }
+      setIsDeleteModal2Open(false);
+      setItemToDelete(null);
+    }
+  };
+
   const deleteQuestion = (qId: string) => {
-    if (!selectedForm) return;
-    setForms(prev => prev.map(f => f.id === selectedForm.id ? { ...f, questions: f.questions.filter(q => q.id !== qId) } : f));
-    setSelectedForm(prev => prev ? { ...prev, questions: prev.questions.filter(q => q.id !== qId) } : null);
-    toast({ title: "Question Deleted", variant: "destructive" });
+    handleDelete(qId, 'question');
   };
 
   const updateQuestion = (qId: string, updates: Partial<Question>) => {
     if (!selectedForm) return;
-    setForms(prev => prev.map(f => f.id === selectedForm.id ? { 
-      ...f, 
-      questions: f.questions.map(q => q.id === qId ? { ...q, ...updates } : q) 
-    } : f));
-    setSelectedForm(prev => prev ? { 
-      ...prev, 
-      questions: prev.questions.map(q => q.id === qId ? { ...q, ...updates } : q) 
-    } : null);
+    const updatedForm = { 
+      ...selectedForm, 
+      questions: selectedForm.questions.map(q => q.id === qId ? { ...q, ...updates } : q) 
+    };
+    setForms(prev => prev.map(f => f.id === selectedForm.id ? updatedForm : f));
+    setSelectedForm(updatedForm);
+  };
+
+  const duplicateQuestion = (qId: string) => {
+    if (!selectedForm) return;
+    const question = selectedForm.questions.find(q => q.id === qId);
+    if (!question) return;
+    const newQuestion = { ...question, id: Math.random().toString(36).substr(2, 9), title: `${question.title} (Copy)` };
+    const updatedForm = { ...selectedForm, questions: [...selectedForm.questions, newQuestion] };
+    setForms(prev => prev.map(f => f.id === selectedForm.id ? updatedForm : f));
+    setSelectedForm(updatedForm);
+    toast({ title: "Question Duplicated" });
+  };
+
+  const simulateSubmission = () => {
+    if (!selectedForm) return;
+    toast({ 
+      title: "New Response Received", 
+      description: "A new submission was just recorded. File uploads have been automatically synced to the Files Database." 
+    });
   };
 
   // --- Database Logic ---
@@ -372,16 +504,30 @@ const FormsPage = () => {
               className="space-y-8"
             >
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {forms.map((form) => (
+                {visibleForms.map((form) => (
                   <Card key={form.id} className="group hover:border-primary/30 transition-all cursor-pointer shadow-sm overflow-hidden" onClick={() => { setSelectedForm(form); setActiveTab("builder"); }}>
                     <CardHeader className="pb-4">
                       <div className="flex items-start justify-between">
                         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                           <ClipboardList className="w-5 h-5" />
                         </div>
-                        <Badge variant={form.status === 'Active' ? 'default' : 'secondary'} className="text-[9px] font-bold uppercase tracking-wider px-1.5">
-                          {form.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setSelectedForm(form); 
+                              setIsAccessDialogOpen(true); 
+                            }}
+                          >
+                            <Share2 className="w-4 h-4" />
+                          </Button>
+                          <Badge variant={form.status === 'Active' ? 'default' : 'secondary'} className="text-[9px] font-bold uppercase tracking-wider px-1.5">
+                            {form.status}
+                          </Badge>
+                        </div>
                       </div>
                       <CardTitle className="text-lg mt-4">{form.title}</CardTitle>
                       <CardDescription className="text-xs line-clamp-1">{form.description}</CardDescription>
@@ -390,9 +536,9 @@ const FormsPage = () => {
                       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-4">
                         {form.responses.length} Submissions
                       </p>
-                      <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest text-primary mt-4">
-                        Edit <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest text-primary mt-4" onClick={(e) => { e.stopPropagation(); setSelectedForm(form); setActiveTab("builder"); }}>
+                      Edit <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                    </Button>
                     </CardContent>
                   </Card>
                 ))}
@@ -413,14 +559,28 @@ const FormsPage = () => {
                   <Database className="w-4 h-4 text-primary" /> Active Databases
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {bases.map(base => (
+                  {visibleBases.map(base => (
                     <div 
                       key={base.id} 
                       className="p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-colors cursor-pointer group"
                       onClick={() => { setSelectedBase(base); setSelectedTable(base.tables[0]); setActiveTab("databases"); }}
                     >
-                      <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center mb-3 group-hover:bg-primary/10 transition-colors">
-                        <Grid className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                          <Grid className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setSelectedBase(base); 
+                            setIsAccessDialogOpen(true); 
+                          }}
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </Button>
                       </div>
                       <h4 className="font-bold text-sm">{base.name}</h4>
                       <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">{base.tables.length} Tables</p>
@@ -533,7 +693,7 @@ const FormsPage = () => {
                                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Required</Label>
                                 <Switch checked={q.required} onCheckedChange={(val) => updateQuestion(q.id, { required: val })} size="sm" />
                               </div>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => addQuestion(q.type)}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => duplicateQuestion(q.id)}>
                                 <Copy className="w-4 h-4" />
                               </Button>
                               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => deleteQuestion(q.id)}>
@@ -655,8 +815,8 @@ const FormsPage = () => {
                       <Button size="sm" className="h-9 rounded-xl text-xs font-bold uppercase tracking-widest" onClick={() => toast({ title: "Form view created" })}>
                         <Layout className="w-4 h-4 mr-2" /> Create Form View
                       </Button>
-                      <Button size="sm" variant="outline" className="h-9 rounded-xl text-xs font-bold uppercase tracking-widest" onClick={() => toast({ title: "Sharing base..." })}>
-                        <Share2 className="w-4 h-4 mr-2" /> Share
+                      <Button size="sm" variant="outline" className="h-9 rounded-xl text-xs font-bold uppercase tracking-widest" onClick={() => setIsAccessDialogOpen(true)}>
+                        <Share2 className="w-4 h-4 mr-2" /> Manage Access
                       </Button>
                     </div>
                   </div>
@@ -749,20 +909,7 @@ const FormsPage = () => {
                                 </td>
                               ))}
                               <td className="px-4 py-3">
-                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={() => {
-                                  setBases(prev => prev.map(b => b.id === selectedBase.id ? {
-                                    ...b,
-                                    tables: b.tables.map(t => t.id === selectedTable.id ? {
-                                      ...t,
-                                      records: t.records.filter(r => r.id !== record.id)
-                                    } : t)
-                                  } : b));
-                                  setSelectedTable(prev => prev ? {
-                                    ...prev,
-                                    records: prev.records.filter(r => r.id !== record.id)
-                                  } : null);
-                                  toast({ title: "Record Deleted", variant: "destructive" });
-                                }}>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={() => handleDelete(record.id, 'record')}>
                                   <Trash2 className="w-3 h-3" />
                                 </Button>
                               </td>
@@ -802,9 +949,14 @@ const FormsPage = () => {
                       <CardTitle className="text-lg">Recent Responses</CardTitle>
                       <CardDescription className="text-xs">Summary of all form submissions across the platform.</CardDescription>
                     </div>
-                    <Button variant="outline" size="sm" className="rounded-xl h-8 text-[10px] font-bold uppercase tracking-widest">
-                      <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> View Spreadsheet
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="rounded-xl h-8 text-[10px] font-bold uppercase tracking-widest" onClick={simulateSubmission}>
+                        <Zap className="w-3.5 h-3.5 mr-1.5 text-primary" /> Simulate Response
+                      </Button>
+                      <Button variant="outline" size="sm" className="rounded-xl h-8 text-[10px] font-bold uppercase tracking-widest">
+                        <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> View Spreadsheet
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -963,6 +1115,110 @@ const FormsPage = () => {
       </div>
 
       {/* Dialogs */}
+      <Dialog open={isAccessDialogOpen} onOpenChange={setIsAccessDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] rounded-[24px] p-0 overflow-hidden border-none shadow-2xl">
+          <DialogHeader className="p-8 border-b border-border bg-muted/30">
+            <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-primary mb-4">
+              <Shield className="w-3.5 h-3.5" />
+              <span>Permission Control</span>
+            </div>
+            <DialogTitle className="font-black text-2xl text-foreground uppercase tracking-tight">MANAGE ACCESS</DialogTitle>
+            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
+              Grant staff members access to this {activeTab === 'databases' ? 'database' : 'form'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="p-8 space-y-8 bg-background">
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">Add people</h4>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input 
+                    placeholder="Search by name or email..." 
+                    className="w-full h-12 rounded-xl bg-muted/30 border-none text-xs font-bold pl-10 focus:ring-2 focus:ring-primary/20"
+                    value={shareSearchQuery}
+                    onChange={(e) => setShareSearchQuery(e.target.value)}
+                  />
+                </div>
+                <Button className="rounded-xl h-12 px-6 font-black uppercase tracking-widest text-[9px] bg-primary text-white shadow-lg">Search</Button>
+              </div>
+              
+              <AnimatePresence>
+                {shareSearchQuery.length > 1 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                    className="border-2 border-border rounded-2xl overflow-hidden"
+                  >
+                    <ScrollArea className="h-[150px]">
+                      <div className="divide-y divide-border">
+                        {staffList.filter(s => s.name.toLowerCase().includes(shareSearchQuery.toLowerCase())).map((staff) => (
+                          <button 
+                            key={staff.id} 
+                            className="w-full p-3 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                            onClick={() => handleGrantAccess(selectedForm?.id || "temp", staff)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-[10px] font-black">{staff.name.charAt(0)}</div>
+                              <div className="text-left">
+                                <p className="text-xs font-black uppercase tracking-tight">{staff.name}</p>
+                                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{staff.role}</p>
+                              </div>
+                            </div>
+                            <Plus className="w-4 h-4 text-primary" />
+                          </button>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[#222220]">Who has access</h4>
+              <div className="space-y-3">
+                {(activeTab === 'databases' ? selectedBase : selectedForm)?.access.map((acc) => (
+                  <div key={acc.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#F8F8F5] border border-[#EBEBE6]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg border-2 border-white shadow-sm bg-primary/10 flex items-center justify-center text-primary text-[10px] font-black">
+                        {acc.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-tight text-[#222220]">{acc.name}</p>
+                        <p className="text-[9px] font-bold text-[#888880] uppercase tracking-widest">{acc.role}</p>
+                      </div>
+                    </div>
+                      {acc.role !== 'Owner' && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                          onClick={() => handleRevokeAccess((activeTab === 'databases' ? selectedBase : selectedForm)?.id!, acc.userId)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="p-8 border-t border-border bg-muted/30">
+            <div className="flex items-center gap-3 w-full">
+              <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+              </div>
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">
+                Changes to permissions take effect immediately. Department heads retain master access.
+              </p>
+            </div>
+            <Button variant="outline" className="rounded-xl h-10 px-8 font-black uppercase tracking-widest text-[9px] border-border bg-card text-muted-foreground" onClick={() => setIsAccessDialogOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isCreateFormOpen} onOpenChange={setIsCreateFormOpen}>
         <DialogContent className="sm:max-w-[425px] rounded-2xl">
           <DialogHeader>
@@ -985,6 +1241,70 @@ const FormsPage = () => {
             <Button variant="outline" className="rounded-xl" onClick={() => setIsCreateFormOpen(false)}>Cancel</Button>
             <Button className="rounded-xl" onClick={handleCreateForm}>Create & Continue</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal 1 */}
+      <Dialog open={isDeleteModal1Open} onOpenChange={setIsDeleteModal1Open}>
+        <DialogContent className="sm:max-w-[400px] rounded-[32px] border-4 p-8 bg-card">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive mb-4">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">
+              Delete {itemToDelete?.type.charAt(0).toUpperCase() + itemToDelete?.type.slice(1)}?
+            </DialogTitle>
+            <DialogDescription className="text-sm font-medium text-muted-foreground">
+              Are you sure you want to remove this {itemToDelete?.type} from your workspace?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button 
+              variant="destructive"
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={confirmDeleteStep1}
+            >
+              Yes, I'm sure
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={() => setIsDeleteModal1Open(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal 2 */}
+      <Dialog open={isDeleteModal2Open} onOpenChange={setIsDeleteModal2Open}>
+        <DialogContent className="sm:max-w-[400px] rounded-[32px] border-4 p-8 bg-card border-destructive">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-2xl bg-destructive flex items-center justify-center text-white mb-4 animate-pulse">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight text-destructive">Final Confirmation</DialogTitle>
+            <DialogDescription className="text-sm font-bold text-destructive/80 uppercase tracking-widest">
+              This action is irreversible. Are you absolutely certain?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button 
+              variant="destructive"
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-destructive/20"
+              onClick={finalizeDelete}
+            >
+              Permanently Delete
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={() => setIsDeleteModal2Open(false)}
+            >
+              I changed my mind
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

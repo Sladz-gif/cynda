@@ -5,24 +5,23 @@ import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+    <section className="pt-48 pb-32 px-4 md:px-8 relative overflow-hidden bg-background">
       {/* Subtle gradient orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full bg-accent/5 blur-3xl" />
       </div>
 
-      <div className="container relative z-10">
+      <div className="container mx-auto relative z-10">
         <div className="max-w-4xl mx-auto text-center">
-          {/* Badge */}
+          {/* Eyebrow */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 mb-8"
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-bold uppercase tracking-widest mb-8 border border-primary/20"
           >
-            <Zap className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs font-medium text-muted-foreground">AI-powered Work OS</span>
+            <Zap className="w-4 h-4" /> Introducing Cynda
           </motion.div>
 
           {/* Headline */}
@@ -32,9 +31,9 @@ const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] mb-6"
           >
-            One system.{" "}
-            <span className="text-gradient-primary">Total control</span>{" "}
-            of work.
+            One workspace.{" "}
+            <span className="text-gradient-primary">100%</span>{" "}
+            of your business.
           </motion.h1>
 
           {/* Subtext */}
@@ -42,9 +41,9 @@ const HeroSection = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed"
+            className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed font-medium"
           >
-            Replace your scattered tools with one intelligent platform. Messaging, projects, CRM, finance, HR — unified and powered by AI.
+            Cynda brings your projects, clients, finances, and team into a single workspace.
           </motion.p>
 
           {/* CTAs */}
@@ -52,14 +51,25 @@ const HeroSection = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
+            className="flex flex-col items-center justify-center gap-6 mb-16"
           >
-            <Button variant="hero" size="lg" className="text-base px-8 h-12 relative z-20" asChild>
-              <Link to="/onboarding">Start Free <ArrowRight className="w-4 h-4 ml-1" /></Link>
-            </Button>
-            <Button variant="hero-outline" size="lg" className="text-base px-8 h-12" asChild>
-              <a href="#product">See How It Works</a>
-            </Button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Button variant="hero" size="lg" className="px-8 h-12 relative z-20 font-black uppercase tracking-widest text-[11px]" asChild>
+                <Link to="/signup" className="flex items-center justify-center gap-2">
+                  Start free trial 
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+              <Button variant="hero-outline" size="lg" className="px-8 h-12 font-black uppercase tracking-widest text-[11px]" asChild>
+                <a href="#how" className="flex items-center justify-center">See how it works</a>
+              </Button>
+            </div>
+            
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                Free for 3 days · No card required · Cancel anytime
+              </p>
+            </div>
           </motion.div>
 
           {/* Product Preview */}
@@ -74,7 +84,7 @@ const HeroSection = () => {
               <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
                 <div className="w-3 h-3 rounded-full bg-destructive/60" />
                 <div className="w-3 h-3 rounded-full bg-primary/40" />
-                <div className="w-3 h-3 rounded-full bg-accent/40" />
+                <div className="w-3 h-3 rounded-full bg-primary/20" />
                 <div className="ml-4 h-6 flex-1 max-w-xs rounded-md bg-secondary" />
               </div>
 

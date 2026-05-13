@@ -1,16 +1,22 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Plus, Search, MapPin, ChevronRight, X, Mail, Phone, Calendar, Clock, 
   CheckCircle2, XCircle, AlertCircle, LayoutDashboard, Users, UserPlus, 
-  Briefcase, Coffee, CreditCard, BarChart3, FileText, Bell, Sparkles,
+  Briefcase, Coffee, CreditCard, BarChart3, FileText, Bell, 
   TrendingUp, TrendingDown, Cake, PartyPopper, UserCheck, UserMinus,
   MessageSquare, Kanban, List, Filter, MoreHorizontal, Star, Award, 
-  Zap, ArrowRight, ShieldCheck, Download, Globe, Bot
+  Zap, ArrowRight, ShieldCheck, Download, Globe, Bot, Eye,
+  Network as Sitemap, Users2, Network, GitBranch, Layers, FileUp, MoreVertical,
+  Settings as SettingsIcon, Trash2, PlusCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import PhoneInput from "@/components/ui/PhoneInput";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from "recharts";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useIndustryStore, DEPARTMENTS } from "@/lib/industry-store";
 import {
   Dialog,
   DialogContent,
@@ -36,11 +42,21 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { useLocation, useNavigate } from "react-router-dom";
 
 // --- Types ---
 
-type HRTool = 'dashboard' | 'directory' | 'hiring' | 'onboarding' | 'time-off' | 'time-tracking' | 'payroll' | 'performance' | 'analytics';
+type HRTool = 'dashboard' | 'directory' | 'hiring' | 'onboarding' | 'time-off' | 'time-tracking' | 'payroll' | 'performance' | 'analytics' | 'surveillance' | 'teams' | 'org-chart';
+
+type Team = {
+  id: string;
+  name: string;
+  lead: string;
+  members: string[]; // IDs
+  description: string;
+  icon: any;
+  color: string;
+};
 
 type Employee = {
   id: string;
@@ -109,57 +125,253 @@ const MOCK_LEAVE_REQUESTS: LeaveRequest[] = [
   { id: "3", employee: "Elena Rodriguez", type: "Personal", startDate: "2024-05-02", endDate: "2024-05-02", status: "Pending", reason: "Family matter" },
 ];
 
+const MOCK_TEAMS: Team[] = [
+  { id: "1", name: "Product Design", lead: "Alex Rivera", members: ["1", "4", "5"], description: "Core product design and user research team.", icon: LayoutDashboard, color: "text-blue-500" },
+  { id: "2", name: "Platform Engineering", lead: "Sarah Chen", members: ["2", "3", "6"], description: "Infrastructure, scalability, and internal tools.", icon: Zap, color: "text-primary" },
+  { id: "3", name: "Growth Marketing", lead: "David Kim", members: ["5", "1", "3"], description: "User acquisition and conversion optimization.", icon: TrendingUp, color: "text-green-500" },
+];
+
+const MOCK_SURVEILLANCE: any[] = [
+  { id: "1", staff: "Marcus Johnson", action: "Updated Deal Stage", tool: "CRM", detail: "Acme Corp -> Negotiation", time: "2 mins ago", status: "success" },
+  { id: "2", staff: "Sarah Chen", action: "Approved Payroll", tool: "Finance", detail: "Batch #8821", time: "15 mins ago", status: "warning" },
+  { id: "3", staff: "Alex Rivera", action: "Created Task", tool: "Projects", detail: "UI/UX Audit", time: "45 mins ago", status: "success" },
+  { id: "4", staff: "Elena Rodriguez", action: "Viewed Salary Report", tool: "HR", detail: "Confidential Access", time: "1 hour ago", status: "info" },
+  { id: "5", staff: "David Kim", action: "Sent Email", tool: "Marketing", detail: "Spring Campaign", time: "2 hours ago", status: "success" },
+  { id: "6", staff: "Jordan Smith", action: "Deleted Workflow", tool: "Automation", detail: "Legacy Cleanup", time: "3 hours ago", status: "destructive" },
+];
+
 const HRPage = () => {
-  const [activeTool, setActiveTool] = useState<HRTool>('dashboard');
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
-  const [isPostJobOpen, setIsPostJobOpen] = useState(false);
-  const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
-  const [isGiveRecognitionOpen, setIsGiveRecognitionOpen] = useState(false);
-  const [isPerformanceHistoryOpen, setIsPerformanceHistoryOpen] = useState(false);
-  const [isMessageOpen, setIsMessageOpen] = useState(false);
-  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-  const [isActivityLogOpen, setIsActivityLogOpen] = useState(false);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [isApplicantsOpen, setIsApplicantsOpen] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [isPaystubOpen, setIsPaystubOpen] = useState(false);
-  const [isExportOpen, setIsExportOpen] = useState(false);
-  const [isClockedIn, setIsClockedIn] = useState(false);
-  const [clockInTime, setClockInTime] = useState<Date | null>(null);
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(MOCK_LEAVE_REQUESTS);
-  const [onboardingTasks, setOnboardingTasks] = useState([
-    { id: '1', title: "Set up hardware", completed: true },
-    { id: '2', title: "Access to Slack/Email", completed: true },
-    { id: '3', title: "Initial 1:1 with Mentor", completed: false },
-    { id: '4', title: "Security Training", completed: false },
-    { id: '5', title: "Product Deep Dive", completed: false },
-  ]);
-  const [isReviewCycleOpen, setIsReviewCycleOpen] = useState(false);
-  const [isRunPayrollOpen, setIsRunPayrollOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<{ title: string; date: string; icon: any; color: string } | null>(null);
+  const { userType, selectedModules = [], adminProfile, currentUser } = useIndustryStore();
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const filteredEmployees = useMemo(() => {
-    return MOCK_EMPLOYEES.filter(emp => 
-      emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.department.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [searchQuery]);
+  const activeUser = currentUser || adminProfile;
+  const isAdmin = activeUser?.role === 'Super Admin' || userType === 'solo';
 
-  const tools = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  // Two-step Delete Confirmation
+  const [isDeleteModal1Open, setIsDeleteModal1Open] = useState(false);
+  const [isDeleteModal2Open, setIsDeleteModal2Open] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'staff' | 'leave-request' } | null>(null);
+
+  const handleDeleteStaff = (staffId: string) => {
+    setItemToDelete({ id: staffId, type: 'staff' });
+    setIsDeleteModal1Open(true);
+  };
+
+  const handleDeleteLeaveRequest = (requestId: string) => {
+    setItemToDelete({ id: requestId, type: 'leave-request' });
+    setIsDeleteModal1Open(true);
+  };
+
+  const confirmDeleteStep1 = () => {
+    setIsDeleteModal1Open(false);
+    setIsDeleteModal2Open(true);
+  };
+
+  const finalizeDelete = () => {
+    if (itemToDelete) {
+      if (itemToDelete.type === 'staff') {
+        // Logic for deleting staff (mock for now as per original code)
+        toast({ title: "Staff member deleted", description: "The staff member has been permanently removed." });
+      } else if (itemToDelete.type === 'leave-request') {
+        setLeaveRequests(prev => prev.filter(r => r.id !== itemToDelete.id));
+        toast({ title: "Request deleted", description: "The leave request has been removed." });
+      }
+      setIsDeleteModal2Open(false);
+      setItemToDelete(null);
+    }
+  };
+
+  const hrNavigationTools = [
+    { id: 'hr-dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'directory', label: 'Directory', icon: Users },
+    { id: 'departments', label: 'Departments', icon: Sitemap },
     { id: 'hiring', label: 'Hiring', icon: UserPlus },
     { id: 'onboarding', label: 'Onboarding', icon: Briefcase },
     { id: 'time-off', label: 'Time Off', icon: Coffee },
-    { id: 'time-tracking', label: 'Tracking', icon: Clock },
-    { id: 'payroll', label: 'Payroll', icon: CreditCard },
+    { id: 'hr-time-tracking', label: 'Tracking', icon: Clock },
+    { id: 'hr-payroll', label: 'Payroll', icon: CreditCard },
     { id: 'performance', label: 'Performance', icon: BarChart3 },
-    { id: 'analytics', label: 'Analytics', icon: FileText },
+    { id: 'hr-analytics', label: 'Analytics', icon: FileText },
+    { id: 'surveillance', label: 'Surveillance', icon: Eye },
+    { id: 'teams', label: 'Teams', icon: Users2 },
   ];
+
+  const tools = useMemo(() => {
+    const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
+    if (userType === 'enterprise' || userType === 'large-business') return hrNavigationTools;
+    
+    const filtered = hrNavigationTools.filter(item => safeModules.includes(item.id));
+    
+    if (filtered.length === 0) {
+      return [hrNavigationTools[0]]; // Default to dashboard
+    }
+    return filtered;
+  }, [selectedModules, userType]);
+
+  const [activeTool, setActiveTool] = useState<string>(tools[0]?.id || 'hr-dashboard');
+
+  // Sync active tool if selection changes
+  useEffect(() => {
+    if (tools.length > 0 && !tools.find(i => i.id === activeTool)) {
+      setActiveTool(tools[0].id);
+    }
+  }, [tools, activeTool]);
+
+  // Drive active tool from the URL so each tool has a dedicated page.
+  useEffect(() => {
+    const raw = location.pathname.split("/app/")[1] || "dashboard";
+    const segment = raw.split("/")[0] || "dashboard";
+    const fromRoute = segment === "hr" ? "hr-dashboard" : segment;
+    if (hrNavigationTools.some((t) => t.id === fromRoute) && fromRoute !== activeTool) {
+      setActiveTool(fromRoute);
+    }
+  }, [location.pathname, activeTool]);
+
+  const goToTool = (id: string) => {
+    const url = id === "hr-dashboard" ? "/app/hr" : `/app/${id}`;
+    navigate(url);
+  };
+
+  const [searchQuery, setSearchQuery] = useState("");
+   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const [newStaffData, setNewStaffData] = useState({
+    name: "",
+    email: "",
+    role: "Employee",
+    department: "",
+    manager: "Sarah Chen",
+    tools: [] as string[],
+    customFields: {} as Record<string, string>
+  });
+  const [isCreatingDept, setIsCreatingDept] = useState(false);
+  const [newDeptName, setNewDeptName] = useState("");
+  const { staffCustomFields, setStaffCustomFields, customDepartments, addCustomDepartment } = useIndustryStore();
+  const [isCreateDeptModalOpen, setIsCreateDeptModalOpen] = useState(false);
+  const [newDeptConfig, setNewDeptConfig] = useState({ name: "", tools: [] as string[] });
+
+  const handleCreateDepartment = () => {
+    if (!newDeptConfig.name) {
+      toast({ title: "Error", description: "Department name is required." });
+      return;
+    }
+    addCustomDepartment(newDeptConfig);
+    setIsCreateDeptModalOpen(false);
+    setNewDeptConfig({ name: "", tools: [] });
+    toast({ title: "Department Created", description: `${newDeptConfig.name} is now available with ${newDeptConfig.tools.length} assigned tools.` });
+  };
+
+  const toggleDeptTool = (toolId: string) => {
+    setNewDeptConfig(prev => ({
+      ...prev,
+      tools: prev.tools.includes(toolId)
+        ? prev.tools.filter(id => id !== toolId)
+        : [...prev.tools, toolId]
+    }));
+  };
+
+  const allTools = useMemo(() => Object.values(DEPARTMENTS).flatMap(d => d.tools), []);
+
+  const handleAddStaff = () => {
+    if (!newStaffData.name || !newStaffData.email || !newStaffData.role) {
+      toast({ title: "Error", description: "Name, Email, and Role are required", variant: "destructive" });
+      return;
+    }
+    
+    const finalDept = isCreatingDept ? newDeptName : newStaffData.department;
+    
+    addStaff({
+      id: Math.random().toString(),
+      name: newStaffData.name,
+      email: newStaffData.email,
+      role: newStaffData.role as any,
+      department: finalDept,
+      tools: newStaffData.tools,
+      customFields: newStaffData.customFields
+    });
+
+    setIsAddStaffOpen(false);
+    setNewStaffData({ name: "", email: "", role: "", department: "", manager: "Sarah Chen", tools: [], customFields: {} });
+    setIsCreatingDept(false);
+    setNewDeptName("");
+    toast({ title: "Staff Added", description: `${newStaffData.name} has been added and tools assigned.` });
+  };
+
+  // AI Tool Suggestions based on Role and Department
+  useEffect(() => {
+    if (newStaffData.role && (newStaffData.department || newDeptName)) {
+      const role = newStaffData.role.toLowerCase();
+      const dept = (isCreatingDept ? newDeptName : newStaffData.department).toLowerCase();
+      
+      let suggestedTools: string[] = [];
+      
+      if (role.includes('engineer') || dept.includes('engineering')) {
+        suggestedTools = ['tasks', 'chat', 'notes', 'files', 'crm-dashboard'];
+      } else if (role.includes('design') || dept.includes('design')) {
+        suggestedTools = ['tasks', 'chat', 'notes', 'files'];
+      } else if (role.includes('marketing') || dept.includes('marketing')) {
+        suggestedTools = ['marketing', 'crm-dashboard', 'chat', 'tasks'];
+      } else if (role.includes('sales') || dept.includes('sales')) {
+        suggestedTools = ['crm-dashboard', 'chat', 'tasks', 'marketing'];
+      } else {
+        suggestedTools = ['tasks', 'chat', 'notes'];
+      }
+
+      setNewStaffData(prev => ({ ...prev, tools: [...new Set([...prev.tools, ...suggestedTools])] }));
+      
+      if (newStaffData.role.length > 3) {
+        toast({ 
+          title: "AI Tool Suggestions", 
+          description: `Cyndi has suggested ${suggestedTools.length} tools based on the role and department.`,
+          duration: 3000
+        });
+      }
+    }
+  }, [newStaffData.role, newStaffData.department, isCreatingDept, newDeptName]);
+
+  const toggleStaffTool = (toolId: string) => {
+    setNewStaffData(prev => ({
+      ...prev,
+      tools: prev.tools.includes(toolId)
+        ? prev.tools.filter(id => id !== toolId)
+        : [...prev.tools, toolId]
+    }));
+  };
+   const [isPostJobOpen, setIsPostJobOpen] = useState(false);
+   const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
+   const [isGiveRecognitionOpen, setIsGiveRecognitionOpen] = useState(false);
+   const [isPerformanceHistoryOpen, setIsPerformanceHistoryOpen] = useState(false);
+   const [isMessageOpen, setIsMessageOpen] = useState(false);
+   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+   const [isActivityLogOpen, setIsActivityLogOpen] = useState(false);
+   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+   const [isApplicantsOpen, setIsApplicantsOpen] = useState(false);
+   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+   const [isPaystubOpen, setIsPaystubOpen] = useState(false);
+   const [isExportOpen, setIsExportOpen] = useState(false);
+   const [isClockedIn, setIsClockedIn] = useState(false);
+   const [clockInTime, setClockInTime] = useState<Date | null>(null);
+   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(MOCK_LEAVE_REQUESTS);
+   const [onboardingTasks, setOnboardingTasks] = useState([
+     { id: '1', title: "Set up hardware", completed: true },
+     { id: '2', title: "Access to Slack/Email", completed: true },
+     { id: '3', title: "Initial 1:1 with Mentor", completed: false },
+     { id: '4', title: "Security Training", completed: false },
+     { id: '5', title: "Product Deep Dive", completed: false },
+   ]);
+   const [isReviewCycleOpen, setIsReviewCycleOpen] = useState(false);
+   const [isRunPayrollOpen, setIsRunPayrollOpen] = useState(false);
+   const [selectedEvent, setSelectedEvent] = useState<{ title: string; date: string; icon: any; color: string } | null>(null);
+
+   const filteredEmployees = useMemo(() => {
+     return MOCK_EMPLOYEES.filter(emp => 
+       emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       emp.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       emp.department.toLowerCase().includes(searchQuery.toLowerCase())
+     );
+   }, [searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -173,11 +385,16 @@ const HRPage = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button variant="outline" size="sm" className="rounded-xl border-primary/20 text-primary hover:bg-primary/5" onClick={() => navigate('/app/hr/onboarding')}>
+                <UserPlus className="w-4 h-4 mr-1.5" /> Staff Onboarding
+              </Button>
+            )}
             <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setIsExportOpen(true)}>
               <Download className="w-4 h-4 mr-1.5" /> Export
             </Button>
             <Button size="sm" className="rounded-xl" onClick={() => setIsAddStaffOpen(true)}>
-              <Plus className="w-4 h-4 mr-1.5" /> Add Staff
+              <Plus className="w-4 h-4 mr-1.5" /> Quick Add
             </Button>
           </div>
         </div>
@@ -189,7 +406,7 @@ const HRPage = () => {
             return (
               <button
                 key={tool.id}
-                onClick={() => setActiveTool(tool.id as HRTool)}
+                onClick={() => goToTool(tool.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-widest transition-all relative whitespace-nowrap ${
                   activeTool === tool.id ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -209,7 +426,7 @@ const HRPage = () => {
       <div className="min-h-[600px]">
         <div className="py-4">
           <AnimatePresence mode="wait">
-            {activeTool === 'dashboard' && (
+            {activeTool === 'hr-dashboard' && (
               <motion.div 
                 key="dashboard"
                 initial={{ opacity: 0, y: 10 }}
@@ -221,7 +438,7 @@ const HRPage = () => {
                   {[
                     { label: "Headcount", value: MOCK_EMPLOYEES.length.toString(), change: "+2", icon: Users, color: "text-blue-500" },
                     { label: "Active Now", value: MOCK_EMPLOYEES.filter(e => e.status === 'Active').length.toString(), change: "75%", icon: UserCheck, color: "text-green-500" },
-                    { label: "Open Roles", value: MOCK_JOBS.filter(j => j.status === 'Open').length.toString(), change: "+1", icon: UserPlus, color: "text-orange-500" },
+                    { label: "Open Roles", value: MOCK_JOBS.filter(j => j.status === 'Open').length.toString(), change: "+1", icon: UserPlus, color: "text-primary" },
                     { label: "Retention", value: "98%", change: "+0.5%", icon: TrendingUp, color: "text-primary" },
                   ].map((stat) => {
                     const StatIcon = stat.icon;
@@ -377,7 +594,7 @@ const HRPage = () => {
                     <div className="space-y-4">
                       {[
                         { title: "Alex Rivera's Birthday", date: "Tomorrow", icon: Cake, color: "text-pink-500" },
-                        { title: "Quarterly Review", date: "March 28", icon: BarChart3, color: "text-orange-500" },
+                        { title: "Quarterly Review", date: "March 28", icon: BarChart3, color: "text-primary" },
                         { title: "Team Lunch", date: "April 2", icon: Coffee, color: "text-blue-500" },
                       ].map((event, i) => (
                         <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30">
@@ -436,7 +653,7 @@ const HRPage = () => {
                           <div className="relative">
                             <img src={emp.avatar} alt={emp.name} className="w-12 h-12 rounded-xl object-cover" />
                             <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-card ${
-                              emp.status === 'Active' ? 'bg-green-500' : emp.status === 'On Leave' ? 'bg-orange-500' : 'bg-blue-500'
+                              emp.status === 'Active' ? 'bg-green-500' : emp.status === 'On Leave' ? 'bg-primary' : 'bg-blue-500'
                             }`} />
                           </div>
                           <div>
@@ -556,7 +773,7 @@ const HRPage = () => {
                           </div>
                           <div className="text-right">
                             <div className="flex items-center gap-1 justify-end">
-                              <Sparkles className="w-3 h-3 text-primary" />
+                              <Bot className="w-3 h-3 text-primary" />
                               <span className="text-xs font-bold">{app.score}</span>
                             </div>
                             <p className="text-[10px] font-bold text-primary uppercase tracking-wider mt-0.5">{app.status}</p>
@@ -606,7 +823,7 @@ const HRPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {[
                     { label: "Annual Leave", value: "14 days", sub: "Available", icon: Coffee, color: "text-blue-500" },
-                    { label: "Sick Leave", value: "8 days", sub: "Available", icon: AlertCircle, color: "text-red-500" },
+                    { label: "Sick Leave", value: "8 days", sub: "Available", icon: AlertCircle, color: "text-destructive" },
                     { label: "Personal Days", value: "2 days", sub: "Available", icon: Star, color: "text-primary" },
                   ].map((stat) => (
                     <div key={stat.label} className="p-5 rounded-xl border border-border bg-card shadow-sm">
@@ -645,36 +862,30 @@ const HRPage = () => {
                           <div className="flex items-center gap-4">
                             <div className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
                               req.status === 'Approved' ? 'bg-green-500/10 text-green-600' : 
-                              req.status === 'Pending' ? 'bg-orange-500/10 text-orange-600' : 'bg-red-500/10 text-red-600'
+                              req.status === 'Pending' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'
                             }`}>
                               {req.status}
                             </div>
-                            {req.status === 'Pending' && (
-                              <div className="flex items-center gap-1">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 rounded-lg text-green-600 hover:bg-green-500/10" 
-                                  onClick={() => {
-                                    setLeaveRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'Approved' } : r));
-                                    toast({ title: "Request Approved", description: `Leave for ${req.employee} has been approved.` });
-                                  }}
-                                >
-                                  <CheckCircle2 className="w-4 h-4" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 rounded-lg text-red-600 hover:bg-red-500/10" 
-                                  onClick={() => {
-                                    setLeaveRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'Rejected' } : r));
-                                    toast({ title: "Request Rejected", description: `Leave for ${req.employee} has been declined.` });
-                                  }}
-                                >
-                                  <XCircle className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            )}
+                          <div className="flex items-center gap-2">
+                            <Select defaultValue={req.status}>
+                              <SelectTrigger className="h-7 border-none bg-transparent text-[9px] font-black uppercase tracking-widest focus:ring-0">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-xl border-2">
+                                <SelectItem value="Approved" className="text-[9px] font-black uppercase">Approved</SelectItem>
+                                <SelectItem value="Pending" className="text-[9px] font-black uppercase">Pending</SelectItem>
+                                <SelectItem value="Rejected" className="text-[9px] font-black uppercase">Rejected</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 rounded-lg text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeleteLeaveRequest(req.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                           </div>
                         </div>
                       ))}
@@ -696,6 +907,79 @@ const HRPage = () => {
               </motion.div>
             )}
 
+            {activeTool === 'departments' && (
+              <motion.div 
+                key="departments"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-xl font-black uppercase tracking-tight">Organisational Departments</h3>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest mt-1 opacity-70">
+                      Manage department structures and their default workspace tools.
+                    </p>
+                  </div>
+                  <Button 
+                    className="rounded-xl h-10 px-6 font-black uppercase tracking-widest text-[10px] gap-2 bg-primary text-white shadow-glow"
+                    onClick={() => setIsCreateDeptModalOpen(true)}
+                  >
+                    <Plus className="w-4 h-4" /> Create Department
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Default Departments */}
+                  {['Engineering', 'Design', 'Marketing', 'People', 'Sales'].map((deptName) => (
+                    <div key={deptName} className="p-6 rounded-[2rem] border-2 border-border bg-card hover:border-primary/30 transition-all group">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center text-primary group-hover:bg-primary/10 transition-colors">
+                          <Briefcase className="w-6 h-6" />
+                        </div>
+                        <Badge variant="secondary" className="text-[8px] font-black uppercase tracking-widest">System Default</Badge>
+                      </div>
+                      <h4 className="text-lg font-black uppercase tracking-tight mb-2">{deptName}</h4>
+                      <p className="text-xs text-muted-foreground font-medium mb-6">
+                        {MOCK_EMPLOYEES.filter(e => e.department === deptName).length} Team Members
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 pt-4 border-t border-border/50">
+                        {/* Mock default tools for system depts */}
+                        {['tasks', 'chat', 'notes'].map(toolId => (
+                          <Badge key={toolId} className="bg-secondary/50 text-muted-foreground border-none text-[8px] font-black uppercase tracking-tight">
+                            {toolId}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Custom Departments from Store */}
+                  {customDepartments.map((dept, i) => (
+                    <div key={i} className="p-6 rounded-[2rem] border-2 border-primary/20 bg-primary/5 hover:border-primary/50 transition-all group">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                          <Sitemap className="w-6 h-6" />
+                        </div>
+                        <Badge className="bg-primary text-white border-none text-[8px] font-black uppercase tracking-widest">Custom</Badge>
+                      </div>
+                      <h4 className="text-lg font-black uppercase tracking-tight mb-2">{dept.name}</h4>
+                      <p className="text-xs text-muted-foreground font-medium mb-6">
+                        {MOCK_EMPLOYEES.filter(e => e.department === dept.name).length} Team Members
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 pt-4 border-t border-primary/10">
+                        {dept.tools.map(toolId => (
+                          <Badge key={toolId} className="bg-primary/10 text-primary border-none text-[8px] font-black uppercase tracking-tight">
+                            {toolId}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {activeTool === 'onboarding' && (
               <motion.div 
                 key="onboarding"
@@ -703,12 +987,13 @@ const HRPage = () => {
                 animate={{ opacity: 1, x: 0 }}
                 className="space-y-6"
               >
+                {/* Onboarding Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   {[
-                    { label: "New Hires", value: "3", sub: "This month", icon: UserPlus, color: "text-blue-500" },
-                    { label: "Avg. Time", value: "12 days", sub: "To complete", icon: Clock, color: "text-green-500" },
-                    { label: "Completion", value: "88%", sub: "Rate", icon: CheckCircle2, color: "text-primary" },
-                    { label: "Active", value: "5", sub: "Workflows", icon: Zap, color: "text-orange-500" },
+                    { label: "Total Staff", value: MOCK_EMPLOYEES.length.toString(), sub: "Workspace members", icon: Users, color: "text-blue-500" },
+                    { label: "Active", value: MOCK_EMPLOYEES.filter(e => e.status === 'Active').length.toString(), sub: "Currently working", icon: UserCheck, color: "text-green-500" },
+                    { label: "Pending Invitations", value: "2", sub: "Awaiting activation", icon: Mail, color: "text-primary" },
+                    { label: "Onboarding In Progress", value: "3", sub: "Currently in wizard", icon: Clock, color: "text-orange-500" },
                   ].map((stat) => (
                     <div key={stat.label} className="p-5 rounded-xl border border-border bg-card shadow-sm">
                       <div className="flex items-center gap-3 mb-3">
@@ -723,33 +1008,109 @@ const HRPage = () => {
                   ))}
                 </div>
 
+                {/* Onboarding Methods */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div 
+                    className="p-8 rounded-[2rem] border-2 border-dashed border-border bg-card hover:border-primary/50 transition-all cursor-pointer group text-center"
+                    onClick={() => navigate('/app/hr/onboarding')}
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                      <FileUp className="w-8 h-8 text-primary" />
+                    </div>
+                    <h3 className="font-display font-black text-xl uppercase tracking-tight mb-2">Upload File</h3>
+                    <p className="text-xs text-muted-foreground font-medium max-w-xs mx-auto mb-6">
+                      Let Cyndi read your .csv, .xlsx, or .pdf and map your team details automatically.
+                    </p>
+                    <Button variant="outline" className="rounded-xl h-10 px-6 font-black uppercase tracking-widest text-[10px] border-2">
+                      Start AI Import
+                    </Button>
+                  </div>
+
+                  <div 
+                    className="p-8 rounded-[2rem] border-2 border-dashed border-border bg-card hover:border-primary/50 transition-all cursor-pointer group text-center"
+                    onClick={() => setIsAddStaffOpen(true)}
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                      <UserPlus className="w-8 h-8 text-muted-foreground group-hover:text-primary" />
+                    </div>
+                    <h3 className="font-display font-black text-xl uppercase tracking-tight mb-2">Add Manually</h3>
+                    <p className="text-xs text-muted-foreground font-medium max-w-xs mx-auto mb-6">
+                      Input staff details individually for immediate workspace invitation.
+                    </p>
+                    <Button variant="outline" className="rounded-xl h-10 px-6 font-black uppercase tracking-widest text-[10px] border-2">
+                      Open Staff Form
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2 p-6 rounded-2xl border border-border bg-card shadow-sm">
-                    <h3 className="font-display font-bold mb-6">Current Onboarding</h3>
-                    <div className="space-y-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="font-display font-bold">Onboarding Processes</h3>
+                      <div className="flex gap-2">
+                        {['All', 'Pending', 'In Progress', 'Complete'].map(f => (
+                          <Button key={f} variant="ghost" size="sm" className="text-[9px] font-black uppercase tracking-widest h-7 px-2 rounded-lg hover:bg-primary/10 hover:text-primary">
+                            {f}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-4">
                       {[
-                        { name: "Jordan Smith", role: "Junior Developer", progress: 65, tasks: "8/12", mentor: "Marcus Johnson", avatar: "https://i.pravatar.cc/150?u=6" },
-                        { name: "Sopia Miller", role: "Product Designer", progress: 25, tasks: "3/12", mentor: "Alex Rivera", avatar: "https://i.pravatar.cc/150?u=11" },
+                        { name: "Jordan Smith", role: "Junior Developer", status: "Onboarding In Progress", progress: 65, avatar: "https://i.pravatar.cc/150?u=6", type: "Small Business" },
+                        { name: "Sopia Miller", role: "Product Designer", status: "Account Created", progress: 25, avatar: "https://i.pravatar.cc/150?u=11", type: "Large Business" },
+                        { name: "Liam Wilson", role: "Senior Engineer", status: "Pending Invitation", progress: 0, avatar: "https://i.pravatar.cc/150?u=12", type: "Large Business" },
+                        { name: "Emma Davis", role: "Product Manager", status: "Onboarding Complete", progress: 100, avatar: "https://i.pravatar.cc/150?u=13", type: "Small Business" },
                       ].map((hire, i) => (
-                        <div key={i} className="space-y-3">
-                          <div className="flex items-center justify-between">
+                        <div key={i} className="p-4 rounded-xl border border-border bg-secondary/10 hover:bg-secondary/20 transition-colors">
+                          <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
                               <img src={hire.avatar} alt={hire.name} className="w-10 h-10 rounded-xl object-cover" />
                               <div>
                                 <p className="text-sm font-bold">{hire.name}</p>
-                                <p className="text-[10px] text-muted-foreground">{hire.role} • Mentor: {hire.mentor}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{hire.role} • {hire.type}</p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-xs font-bold">{hire.progress}%</p>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{hire.tasks} tasks</p>
+                            <div className="text-right flex flex-col items-end gap-2">
+                              <div className="flex gap-1">
+                                <div className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+                                  hire.status === 'Onboarding Complete' ? 'bg-green-500/10 text-green-600' :
+                                  hire.status === 'Pending Invitation' ? 'bg-primary/10 text-primary' :
+                                  'bg-blue-500/10 text-blue-600'
+                                }`}>
+                                  {hire.status}
+                                </div>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-4 w-4 rounded-md hover:bg-secondary">
+                                      <MoreVertical className="w-3 h-3" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-48 p-2 rounded-xl shadow-xl border-2 border-border bg-card">
+                                    <div className="space-y-1">
+                                      {hire.status === 'Pending Invitation' && (
+                                        <Button variant="ghost" size="sm" className="w-full justify-start text-[9px] font-black uppercase tracking-widest h-8 rounded-lg text-primary hover:bg-primary/5">
+                                          <Mail className="w-3 h-3 mr-2" /> Resend Activation
+                                        </Button>
+                                      )}
+                                      <Button variant="ghost" size="sm" className="w-full justify-start text-[9px] font-black uppercase tracking-widest h-8 rounded-lg hover:bg-secondary">
+                                        <SettingsIcon className="w-3 h-3 mr-2" /> Edit Modules
+                                      </Button>
+                                      <Button variant="ghost" size="sm" className="w-full justify-start text-[9px] font-black uppercase tracking-widest h-8 rounded-lg text-destructive hover:bg-destructive/5">
+                                        <Trash2 className="w-3 h-3 mr-2" /> Deactivate
+                                      </Button>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+                              <p className="text-[10px] font-bold text-muted-foreground">{hire.progress}% Complete</p>
                             </div>
                           </div>
-                          <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                          <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
                             <motion.div 
                               initial={{ width: 0 }}
                               animate={{ width: `${hire.progress}%` }}
-                              className="h-full bg-primary"
+                              className={`h-full ${hire.status === 'Onboarding Complete' ? 'bg-green-500' : 'bg-primary'}`}
                             />
                           </div>
                         </div>
@@ -757,45 +1118,50 @@ const HRPage = () => {
                     </div>
                   </div>
                   <div className="p-6 rounded-2xl border border-border bg-card shadow-sm">
-                    <h3 className="font-display font-bold mb-6">Onboarding Tasks</h3>
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="font-display font-bold">Recent Activity</h3>
+                      <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase tracking-widest h-7">History</Button>
+                    </div>
                     <div className="space-y-4">
-                      {onboardingTasks.map((task) => (
-                        <div key={task.id} className="flex items-center gap-3 group">
-                          <button 
-                            className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-colors ${
-                              task.completed ? 'bg-primary border-primary text-primary-foreground' : 'border-border hover:border-primary/50'
-                            }`}
-                            onClick={() => {
-                              const newStatus = !task.completed;
-                              setOnboardingTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: newStatus } : t));
-                              toast({ title: "Task Updated", description: `Task "${task.title}" has been marked as ${newStatus ? 'completed' : 'incomplete'}.` });
-                            }}
-                          >
-                            {task.completed && <CheckCircle2 className="w-3.5 h-3.5" />}
-                          </button>
-                          <span className={`text-xs ${task.completed ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                            {task.title}
-                          </span>
+                      {[
+                        { hire: "Jordan Smith", action: "Completed Profile Setup", time: "2h ago", icon: UserCheck, color: "text-green-500" },
+                        { hire: "Sopia Miller", action: "Assigned to Engineering", time: "5h ago", icon: GitBranch, color: "text-blue-500" },
+                        { hire: "Liam Wilson", action: "Invitation Sent", time: "1d ago", icon: Mail, color: "text-primary" },
+                        { hire: "Emma Davis", action: "Onboarding Finalized", time: "2d ago", icon: CheckCircle2, color: "text-green-600" },
+                      ].map((item, i) => (
+                        <div key={i} className="flex gap-4 relative">
+                          {i !== 3 && <div className="absolute left-[13px] top-8 w-px h-6 bg-border" />}
+                          <div className={`mt-1 p-1.5 rounded-lg bg-secondary/50 ${item.color} z-10`}>
+                            <item.icon className="w-3 h-3" />
+                          </div>
+                          <div>
+                            <p className="text-[11px]">
+                              <span className="font-bold">{item.hire}</span> <span className="text-muted-foreground">{item.action}</span>
+                            </p>
+                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">{item.time}</p>
+                          </div>
                         </div>
                       ))}
                     </div>
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-6 rounded-xl text-xs h-9 border-dashed" 
-                      onClick={() => {
-                        const newTask = { id: Math.random().toString(), title: "New Custom Task", completed: false };
-                        setOnboardingTasks(prev => [...prev, newTask]);
-                        toast({ title: "Task Added", description: "A new onboarding task has been created." });
-                      }}
-                    >
-                      <Plus className="w-3.5 h-3.5 mr-2" /> Add Custom Task
-                    </Button>
+                    
+                    <div className="mt-8 p-4 rounded-xl bg-primary/5 border border-primary/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Bot className="w-4 h-4 text-primary" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Cyndi's Insights</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground font-medium leading-relaxed">
+                        "Liam Wilson's invitation expires in 2 days. Consider resending the activation link to ensure they land before their start date."
+                      </p>
+                      <Button variant="link" className="p-0 h-auto text-[10px] font-black uppercase tracking-widest text-primary mt-2">
+                        Resend Invite
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </motion.div>
             )}
 
-            {activeTool === 'time-tracking' && (
+            {activeTool === 'hr-time-tracking' && (
               <motion.div 
                 key="time-tracking"
                 initial={{ opacity: 0, x: 10 }}
@@ -812,7 +1178,7 @@ const HRPage = () => {
                       <Download className="w-4 h-4 mr-2" /> Timesheet
                     </Button>
                     <Button 
-                      className={`rounded-xl h-9 text-xs ${isClockedIn ? 'bg-red-500 hover:bg-red-600' : ''}`} 
+                      className={`rounded-xl h-9 text-xs ${isClockedIn ? 'bg-destructive hover:bg-destructive/90 text-white shadow-glow' : ''}`} 
                       onClick={() => {
                         if (!isClockedIn) {
                           setIsClockedIn(true);
@@ -833,7 +1199,7 @@ const HRPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
                     { label: "Total Hours", value: "1,240", sub: "This week", icon: Clock, color: "text-blue-500" },
-                    { label: "Overtime", value: "42h", sub: "This week", icon: AlertCircle, color: "text-orange-500" },
+                    { label: "Overtime", value: "42h", sub: "This week", icon: AlertCircle, color: "text-primary" },
                     { label: "Punctuality", value: "94%", sub: "Avg. arrival", icon: UserCheck, color: "text-green-500" },
                     { label: "Utilization", value: "82%", sub: "Billable time", icon: BarChart3, color: "text-primary" },
                   ].map((stat) => (
@@ -856,7 +1222,7 @@ const HRPage = () => {
                         <div className="w-2 h-2 rounded-full bg-green-500" /> Active
                       </div>
                       <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
-                        <div className="w-2 h-2 rounded-full bg-orange-500" /> Break
+                        <div className="w-2 h-2 rounded-full bg-primary" /> Break
                       </div>
                       <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
                         <div className="w-2 h-2 rounded-full bg-slate-300" /> Offline
@@ -896,7 +1262,7 @@ const HRPage = () => {
               </motion.div>
             )}
 
-            {activeTool === 'payroll' && (
+            {activeTool === 'hr-payroll' && (
               <motion.div 
                 key="payroll"
                 initial={{ opacity: 0, x: 10 }}
@@ -1048,14 +1414,228 @@ const HRPage = () => {
                       ))}
                     </div>
                     <Button variant="ghost" className="w-full mt-6 rounded-xl text-xs h-9 text-primary hover:bg-primary/5" onClick={() => setIsGiveRecognitionOpen(true)}>
-                      <Sparkles className="w-3.5 h-3.5 mr-2" /> Give Recognition
+                      <Bot className="w-3.5 h-3.5 mr-2" /> Give Recognition
                     </Button>
                   </div>
                 </div>
               </motion.div>
             )}
 
-            {activeTool === 'analytics' && (
+            {activeTool === 'teams' && (
+              <motion.div 
+                key="teams"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <h3 className="font-display font-bold text-xl uppercase tracking-tight">Departmental Teams</h3>
+                    <div className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest">{MOCK_TEAMS.length} Active</div>
+                  </div>
+                  <Button className="rounded-xl h-10 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20">
+                    <Plus className="w-4 h-4 stroke-[3px]" /> Create Team
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {MOCK_TEAMS.map((team) => {
+                    const TeamIcon = team.icon;
+                    return (
+                      <motion.div 
+                        key={team.id}
+                        whileHover={{ y: -4 }}
+                        className="group p-6 rounded-[24px] border-2 border-border bg-card shadow-sm hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all cursor-pointer relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors" />
+                        
+                        <div className="flex items-center gap-4 mb-6 relative">
+                          <div className={`w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center ${team.color} group-hover:scale-110 transition-transform`}>
+                            <TeamIcon className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h4 className="font-black text-lg uppercase tracking-tight text-[#222220]">{team.name}</h4>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Team Lead: {team.lead}</p>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-muted-foreground font-medium leading-relaxed mb-6 line-clamp-2">
+                          {team.description}
+                        </p>
+
+                        <div className="flex items-center justify-between pt-6 border-t border-border/50">
+                          <div className="flex -space-x-3">
+                            {team.members.map((memberId, i) => {
+                              const emp = MOCK_EMPLOYEES.find(e => e.id === memberId);
+                              return (
+                                <div key={i} className="w-8 h-8 rounded-full border-2 border-card bg-secondary ring-2 ring-transparent group-hover:ring-primary/20 transition-all overflow-hidden">
+                                  {emp ? <img src={emp.avatar} alt={emp.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold">?</div>}
+                                </div>
+                              );
+                            })}
+                            <div className="w-8 h-8 rounded-full border-2 border-card bg-primary/10 flex items-center justify-center text-[10px] font-black text-primary z-10">
+                              +{team.members.length}
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary group/btn">
+                            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                          </Button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTool === 'org-chart' && (
+              <motion.div 
+                key="org-chart"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h3 className="font-display font-black text-2xl uppercase tracking-tight text-[#222220]">Organizational Chart</h3>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Hierarchical structure of Cynda AI</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center bg-secondary/30 p-1 rounded-xl border border-border">
+                      <Button variant="ghost" size="sm" className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white shadow-sm">Tree View</Button>
+                      <Button variant="ghost" size="sm" className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest text-muted-foreground">Grid View</Button>
+                    </div>
+                    <Button variant="outline" className="rounded-xl h-10 gap-2 border-2">
+                      <Download className="w-4 h-4" /> Export Chart
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="relative p-12 bg-[#F8F8F5] rounded-[32px] border-2 border-dashed border-border/60 overflow-x-auto min-h-[600px] flex flex-col items-center">
+                  {/* CEO Node */}
+                  <div className="flex flex-col items-center relative mb-20">
+                    <motion.div 
+                      whileHover={{ scale: 1.05 }}
+                      className="p-6 rounded-[28px] border-4 border-primary bg-card shadow-2xl shadow-primary/10 w-64 text-center z-10 relative group"
+                    >
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded-full">CEO & FOUNDER</div>
+                      <Avatar className="w-16 h-16 rounded-2xl mx-auto mb-4 border-2 border-border shadow-sm">
+                        <AvatarFallback className="bg-primary/10 text-primary font-black text-xl">JW</AvatarFallback>
+                      </Avatar>
+                      <h4 className="font-black text-lg uppercase tracking-tight text-[#222220]">James Wilson</h4>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Executive Leadership</p>
+                    </motion.div>
+                    <div className="absolute bottom-0 left-1/2 w-0.5 h-20 bg-primary/20 translate-y-full" />
+                  </div>
+
+                  {/* VPs Level */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-32 relative">
+                    <div className="absolute top-[-40px] left-1/2 -translate-x-1/2 w-[calc(100%+128px)] h-0.5 bg-primary/20" />
+                    
+                    {/* Engineering VP */}
+                    <div className="flex flex-col items-center relative">
+                      <div className="absolute top-[-40px] left-1/2 w-0.5 h-10 bg-primary/20" />
+                      <motion.div 
+                        whileHover={{ scale: 1.05 }}
+                        className="p-5 rounded-[24px] border-2 border-border bg-card shadow-lg w-56 text-center z-10 hover:border-primary/40 transition-all"
+                      >
+                        <Avatar className="w-12 h-12 rounded-xl mx-auto mb-3 border-2 border-border">
+                          <AvatarFallback className="bg-blue-500/10 text-blue-600 font-black">SC</AvatarFallback>
+                        </Avatar>
+                        <h4 className="font-black text-base uppercase tracking-tight text-[#222220]">Sarah Chen</h4>
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">VP of Engineering</p>
+                      </motion.div>
+                      <div className="absolute bottom-0 left-1/2 w-0.5 h-16 bg-primary/20 translate-y-full" />
+                      
+                      {/* Engineering Direct Reports */}
+                      <div className="grid grid-cols-2 gap-8 mt-16">
+                        {[
+                          { name: "Marcus Johnson", role: "Software Engineer", initial: "MJ" },
+                          { name: "Jordan Smith", role: "Junior Dev", initial: "JS" },
+                        ].map((emp, i) => (
+                          <div key={i} className="flex flex-col items-center relative">
+                            <div className="absolute top-[-20px] left-1/2 w-0.5 h-5 bg-primary/20" />
+                            <div className="absolute top-[-20px] left-0 w-full h-0.5 bg-primary/20" />
+                            <motion.div 
+                              whileHover={{ y: -2 }}
+                              className="p-3 rounded-2xl border border-border bg-card shadow-sm w-40 text-center hover:border-primary/30 transition-all"
+                            >
+                              <Avatar className="w-8 h-8 rounded-lg mx-auto mb-2 border border-border">
+                                <AvatarFallback className="bg-secondary text-muted-foreground font-black text-[10px]">{emp.initial}</AvatarFallback>
+                              </Avatar>
+                              <h5 className="font-black text-[11px] uppercase tracking-tight truncate">{emp.name}</h5>
+                              <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">{emp.role}</p>
+                            </motion.div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* HR/Marketing Level */}
+                    <div className="flex flex-col items-center relative">
+                      <div className="absolute top-[-40px] left-1/2 w-0.5 h-10 bg-primary/20" />
+                      <motion.div 
+                        whileHover={{ scale: 1.05 }}
+                        className="p-5 rounded-[24px] border-2 border-border bg-card shadow-lg w-56 text-center z-10 hover:border-primary/40 transition-all"
+                      >
+                        <Avatar className="w-12 h-12 rounded-xl mx-auto mb-3 border-2 border-border">
+                          <AvatarFallback className="bg-green-500/10 text-green-600 font-black">ER</AvatarFallback>
+                        </Avatar>
+                        <h4 className="font-black text-base uppercase tracking-tight text-[#222220]">Elena Rodriguez</h4>
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">HR Manager</p>
+                      </motion.div>
+                      <div className="absolute bottom-0 left-1/2 w-0.5 h-16 bg-primary/20 translate-y-full" />
+
+                      {/* HR/Marketing Reports */}
+                      <div className="grid grid-cols-2 gap-8 mt-16">
+                        {[
+                          { name: "Alex Rivera", role: "Product Designer", initial: "AR" },
+                          { name: "David Kim", role: "Marketing Lead", initial: "DK" },
+                        ].map((emp, i) => (
+                          <div key={i} className="flex flex-col items-center relative">
+                            <div className="absolute top-[-20px] left-1/2 w-0.5 h-5 bg-primary/20" />
+                            <div className="absolute top-[-20px] left-0 w-full h-0.5 bg-primary/20" />
+                            <motion.div 
+                              whileHover={{ y: -2 }}
+                              className="p-3 rounded-2xl border border-border bg-card shadow-sm w-40 text-center hover:border-primary/30 transition-all"
+                            >
+                              <Avatar className="w-8 h-8 rounded-lg mx-auto mb-2 border border-border">
+                                <AvatarFallback className="bg-secondary text-muted-foreground font-black text-[10px]">{emp.initial}</AvatarFallback>
+                              </Avatar>
+                              <h5 className="font-black text-[11px] uppercase tracking-tight truncate">{emp.name}</h5>
+                              <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">{emp.role}</p>
+                            </motion.div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-2xl border border-border bg-primary/5 flex items-center justify-between">
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded bg-primary" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Executive</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded bg-blue-500" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Engineering</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded bg-green-500" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">People & Growth</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Bot className="w-4 h-4 text-primary animate-bounce" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground italic">"AI detected 2 optimal team formations based on current skills."</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTool === 'hr-analytics' && (
               <motion.div 
                 key="analytics"
                 initial={{ opacity: 0, x: 10 }}
@@ -1216,7 +1796,107 @@ const HRPage = () => {
               </motion.div>
             )}
 
-            {!['dashboard', 'directory', 'hiring', 'time-off', 'onboarding', 'time-tracking', 'payroll', 'performance', 'analytics'].includes(activeTool) && (
+            {activeTool === 'surveillance' && (
+              <motion.div 
+                key="surveillance"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <h3 className="font-display font-bold">Live Activity Surveillance</h3>
+                    <div className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 text-[10px] font-bold animate-pulse">LIVE FEED</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                      <Input placeholder="Search by staff or action..." className="pl-9 h-9 w-[250px] text-xs rounded-xl" />
+                    </div>
+                    <Button variant="outline" size="sm" className="rounded-xl h-9 text-xs">
+                      <Filter className="w-3.5 h-3.5 mr-2" /> Filter
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                  <div className="lg:col-span-3 space-y-3">
+                    {MOCK_SURVEILLANCE.map((log) => (
+                      <div key={log.id} className="p-4 rounded-2xl border border-border bg-card shadow-sm hover:border-primary/30 transition-all group">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                              log.status === 'success' ? 'bg-green-500/10 text-green-600' :
+                              log.status === 'warning' ? 'bg-orange-500/10 text-orange-600' :
+                              log.status === 'destructive' ? 'bg-red-500/10 text-red-600' : 'bg-blue-500/10 text-blue-600'
+                            }`}>
+                              <Bot className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black uppercase tracking-tight">{log.staff}</span>
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">• {log.time}</span>
+                              </div>
+                              <p className="text-xs mt-0.5">
+                                <span className="text-muted-foreground">{log.action}:</span> <span className="font-bold">{log.detail}</span>
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="px-2.5 py-1 rounded-lg bg-secondary/50 text-[10px] font-black uppercase tracking-widest text-primary">
+                              {log.tool}
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                              <ArrowRight className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="p-5 rounded-2xl border border-border bg-card shadow-sm">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">Activity Heatmap</h4>
+                      <div className="grid grid-cols-7 gap-1">
+                        {Array.from({ length: 28 }).map((_, i) => (
+                          <div 
+                            key={i} 
+                            className={`aspect-square rounded-sm ${
+                              i % 5 === 0 ? 'bg-primary' : i % 3 === 0 ? 'bg-primary/60' : i % 2 === 0 ? 'bg-primary/30' : 'bg-secondary'
+                            }`} 
+                          />
+                        ))}
+                      </div>
+                      <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-4 text-center">Last 24 Hours Engagement</p>
+                    </div>
+
+                    <div className="p-5 rounded-2xl border border-border bg-card shadow-sm">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">Top Contributors</h4>
+                      <div className="space-y-4">
+                        {[
+                          { name: "Marcus Johnson", score: 98, color: "bg-green-500" },
+                          { name: "Sarah Chen", score: 85, color: "bg-primary" },
+                          { name: "Alex Rivera", score: 72, color: "bg-blue-500" },
+                        ].map((user, i) => (
+                          <div key={i} className="space-y-1.5">
+                            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+                              <span>{user.name}</span>
+                              <span>{user.score}</span>
+                            </div>
+                            <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
+                              <div className={`h-full ${user.color}`} style={{ width: `${user.score}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {!['hr-dashboard', 'directory', 'hiring', 'time-off', 'onboarding', 'hr-time-tracking', 'hr-payroll', 'performance', 'hr-analytics', 'surveillance'].includes(activeTool) && (
               <motion.div 
                 key={activeTool}
                 initial={{ opacity: 0, x: 10 }}
@@ -1239,55 +1919,218 @@ const HRPage = () => {
 
       {/* Add Staff Dialog */}
       <Dialog open={isAddStaffOpen} onOpenChange={setIsAddStaffOpen}>
-        <DialogContent className="sm:max-w-[500px] rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Add New Staff Member</DialogTitle>
-            <DialogDescription>
-              Enter the details of the new employee to add them to the directory.
+        <DialogContent className="sm:max-w-[650px] rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
+          <DialogHeader className="p-8 border-b-2 border-border bg-muted/30">
+            <DialogTitle className="text-2xl font-black uppercase tracking-tight">Add New Staff Member</DialogTitle>
+            <DialogDescription className="text-[10px] font-black uppercase tracking-widest mt-1 text-primary">
+              Manual staff configuration and workspace setup
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="p-8 max-h-[60vh] overflow-y-auto space-y-8 custom-scrollbar">
+            <div className="grid grid-cols-1 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" placeholder="John Doe" className="rounded-xl" />
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Full Name <span className="text-primary">*</span></Label>
+                <Input 
+                  placeholder="John Doe" 
+                  className="rounded-xl h-14 border-2 font-bold uppercase tracking-tight" 
+                  value={newStaffData.name}
+                  onChange={e => setNewStaffData({...newStaffData, name: e.target.value})}
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="john@cynda.ai" className="rounded-xl" />
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Email <span className="text-primary">*</span></Label>
+                <Input 
+                  type="email" 
+                  placeholder="john@cynda.ai" 
+                  className="rounded-xl h-14 border-2 font-bold" 
+                  value={newStaffData.email}
+                  onChange={e => setNewStaffData({...newStaffData, email: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Role <span className="text-primary">*</span></Label>
+                <Input 
+                  placeholder="Software Engineer" 
+                  className="rounded-xl h-14 border-2 font-bold uppercase tracking-tight" 
+                  value={newStaffData.role}
+                  onChange={e => setNewStaffData({...newStaffData, role: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Department</Label>
+                {isCreatingDept ? (
+                  <div className="flex gap-2">
+                    <Input 
+                      placeholder="Enter new dept..." 
+                      className="rounded-xl h-14 border-2 font-bold uppercase tracking-tight flex-1"
+                      value={newDeptName}
+                      onChange={e => setNewDeptName(e.target.value)}
+                      autoFocus
+                    />
+                    <Button variant="ghost" size="icon" className="h-14 w-14 rounded-xl border-2" onClick={() => setIsCreatingDept(false)}><X className="w-4 h-4" /></Button>
+                  </div>
+                ) : (
+                  <Select value={newStaffData.department} onValueChange={(v) => {
+                    if (v === 'new') setIsCreatingDept(true);
+                    else setNewStaffData({...newStaffData, department: v});
+                  }}>
+                    <SelectTrigger className="rounded-xl h-14 border-2 font-bold uppercase tracking-tight">
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="Engineering">Engineering</SelectItem>
+                      <SelectItem value="Design">Design</SelectItem>
+                      <SelectItem value="Marketing">Marketing</SelectItem>
+                      <SelectItem value="People">People</SelectItem>
+                      <SelectItem value="Sales">Sales</SelectItem>
+                      {customDepartments.map((dept, i) => (
+                        <SelectItem key={i} value={dept.name}>{dept.name}</SelectItem>
+                      ))}
+                      <SelectItem value="new" className="text-primary font-black">+ Create New</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Reporting Manager</Label>
+                <Input 
+                  placeholder="Sarah Chen" 
+                  className="rounded-xl h-14 border-2 font-bold uppercase tracking-tight" 
+                  value={newStaffData.manager}
+                  onChange={e => setNewStaffData({...newStaffData, manager: e.target.value})}
+                />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Input id="role" placeholder="Software Engineer" className="rounded-xl" />
+
+            <div className="space-y-4 pt-4 border-t-2 border-border/50">
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-primary">Assign Workspace Tools</Label>
+                <Button variant="link" className="text-[9px] font-black uppercase p-0 h-auto" onClick={() => setNewStaffData({...newStaffData, tools: allTools.map(t => t.id)})}>Select All</Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="dept">Department</Label>
-                <Select>
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="eng">Engineering</SelectItem>
-                    <SelectItem value="des">Design</SelectItem>
-                    <SelectItem value="mkt">Marketing</SelectItem>
-                    <SelectItem value="peo">People</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex flex-col gap-2">
+                {allTools.map(tool => {
+                  const selected = newStaffData.tools.includes(tool.id);
+                  const Icon = tool.icon;
+                  return (
+                    <button
+                      key={tool.id}
+                      onClick={() => toggleStaffTool(tool.id)}
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left",
+                        selected ? "bg-primary/5 border-primary shadow-sm" : "bg-card border-border hover:border-primary/30"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn("p-2 rounded-xl", selected ? "bg-primary text-white" : "bg-secondary text-muted-foreground")}>
+                          <Icon className="w-4 h-4 shrink-0" />
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-tight truncate">{tool.label}</span>
+                      </div>
+                      {selected && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="manager">Reporting Manager</Label>
-              <Input id="manager" placeholder="Sarah Chen" className="rounded-xl" />
+
+            <div className="pt-6 border-t-2 border-border/50 space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Custom Information</h4>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary"
+                  onClick={() => {
+                    const newField = { 
+                      id: Math.random().toString(), 
+                      label: 'New Field', 
+                      type: 'text' as const, 
+                      required: false 
+                    };
+                    setStaffCustomFields([...staffCustomFields, newField]);
+                  }}
+                >
+                  <PlusCircle className="w-3 h-3 mr-1.5" /> Add New Box
+                </Button>
+              </div>
+              
+              <div className="flex flex-col gap-6">
+                {staffCustomFields.map((field, idx) => (
+                  <div key={field.id} className="p-5 rounded-2xl border-2 border-border bg-card/50 space-y-4 group relative">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1">
+                        <Input 
+                          className="border-none bg-transparent font-black uppercase tracking-tight h-8 p-0 focus-visible:ring-0 text-xs text-primary"
+                          value={field.label}
+                          onChange={e => {
+                            const newFields = [...staffCustomFields];
+                            newFields[idx].label = e.target.value;
+                            setStaffCustomFields(newFields);
+                          }}
+                          placeholder="Field Title (e.g. LinkedIn Profile)"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Select 
+                          value={field.type} 
+                          onValueChange={(v: any) => {
+                            const newFields = [...staffCustomFields];
+                            newFields[idx].type = v;
+                            setStaffCustomFields(newFields);
+                          }}
+                        >
+                          <SelectTrigger className="h-8 border-2 rounded-lg text-[9px] font-black uppercase w-28 bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="text" className="text-[10px] font-bold uppercase">Short Text</SelectItem>
+                            <SelectItem value="textarea" className="text-[10px] font-bold uppercase">Long Text</SelectItem>
+                            <SelectItem value="number" className="text-[10px] font-bold uppercase">Number</SelectItem>
+                            <SelectItem value="date" className="text-[10px] font-bold uppercase">Date</SelectItem>
+                            <SelectItem value="email" className="text-[10px] font-bold uppercase">Email</SelectItem>
+                            <SelectItem value="tel" className="text-[10px] font-bold uppercase">Phone</SelectItem>
+                            <SelectItem value="url" className="text-[10px] font-bold uppercase">Website/URL</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => setStaffCustomFields(staffCustomFields.filter(f => f.id !== field.id))}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {field.type === 'textarea' ? (
+                      <Textarea 
+                        placeholder={`Enter ${field.label}...`}
+                        className="rounded-xl border-2 font-medium text-sm min-h-[100px] bg-background"
+                        onChange={e => setNewStaffData({
+                          ...newStaffData, 
+                          customFields: { ...newStaffData.customFields, [field.id]: e.target.value }
+                        })}
+                      />
+                    ) : (
+                      <Input 
+                        type={field.type === 'textarea' ? 'text' : field.type}
+                        placeholder={`Enter ${field.label}...`}
+                        className="rounded-xl h-14 border-2 font-bold text-sm bg-background"
+                        onChange={e => setNewStaffData({
+                          ...newStaffData, 
+                          customFields: { ...newStaffData.customFields, [field.id]: e.target.value }
+                        })}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" className="rounded-xl" onClick={() => setIsAddStaffOpen(false)}>Cancel</Button>
-            <Button className="rounded-xl" onClick={() => {
-              setIsAddStaffOpen(false);
-              toast({ title: "Staff Added", description: "The new employee has been added to the system." });
-            }}>Add Employee</Button>
+          <DialogFooter className="p-8 bg-muted/30 border-t-2 border-border">
+            <Button variant="ghost" className="rounded-xl h-12 px-8 font-black uppercase tracking-widest text-[10px]" onClick={() => setIsAddStaffOpen(false)}>Cancel</Button>
+            <Button className="rounded-xl h-12 px-10 font-black uppercase tracking-widest text-[10px] bg-primary text-white shadow-glow" onClick={handleAddStaff}>Add Employee</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1624,10 +2467,10 @@ const HRPage = () => {
                   </ResponsiveContainer>
                 </div>
                 <div className="space-y-4">
-                  <h4 className="text-sm font-bold uppercase tracking-widest">Recent Feedback</h4>
+                  <h4 className="text-sm font-bold uppercase tracking-widest">Feedback History</h4>
                   {[
-                    { date: 'Jan 15, 2024', reviewer: 'Sarah Chen', feedback: 'Alex consistently delivers high-quality work and is a great team player.', rating: 4.8 },
-                    { date: 'Oct 10, 2023', reviewer: 'James Wilson', feedback: 'Strong technical skills, looking to see more leadership in the next quarter.', rating: 4.4 },
+                    { date: 'Jan 15, 2024', reviewer: 'Sarah Chen', feedback: 'Consistently delivers high-quality work and is a strong team contributor.', rating: 4.8 },
+                    { date: 'Oct 10, 2023', reviewer: 'James Wilson', feedback: 'Technical proficiency is evident; focusing on leadership growth for the next quarter.', rating: 4.4 },
                   ].map((f, i) => (
                     <div key={i} className="p-4 rounded-xl bg-secondary/30 border border-border">
                       <div className="flex justify-between mb-2">
@@ -1637,7 +2480,7 @@ const HRPage = () => {
                           <span className="text-xs font-bold">{f.rating}</span>
                         </div>
                       </div>
-                      <p className="text-xs italic text-muted-foreground">"{f.feedback}"</p>
+                      <p className="text-xs text-muted-foreground">{f.feedback}</p>
                     </div>
                   ))}
                 </div>
@@ -1712,10 +2555,10 @@ const HRPage = () => {
                     <Label htmlFor="edit-email">Email</Label>
                     <Input id="edit-email" defaultValue={selectedEmployee.email} className="rounded-xl" />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-phone">Phone</Label>
-                    <Input id="edit-phone" defaultValue={selectedEmployee.phone} className="rounded-xl" />
-                  </div>
+                  <PhoneInput 
+                    label="Phone"
+                    value={selectedEmployee.phone} 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-loc">Location</Label>
@@ -1771,6 +2614,59 @@ const HRPage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Create Department Dialog */}
+      <Dialog open={isCreateDeptModalOpen} onOpenChange={setIsCreateDeptModalOpen}>
+        <DialogContent className="sm:max-w-[600px] rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
+          <DialogHeader className="p-8 border-b-2 border-border bg-muted/30">
+            <DialogTitle className="text-2xl font-black uppercase tracking-tight">Create New Department</DialogTitle>
+            <DialogDescription className="text-[10px] font-black uppercase tracking-widest mt-1 text-primary">
+              Define a new organisational unit and its default workspace tools.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-8 max-h-[70vh] overflow-y-auto scrollbar-hide space-y-8">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Department Name <span className="text-primary">*</span></Label>
+              <Input 
+                placeholder="e.g. Research & Development" 
+                className="rounded-xl h-12 border-2 font-bold uppercase tracking-tight" 
+                value={newDeptConfig.name}
+                onChange={e => setNewDeptConfig({...newDeptConfig, name: e.target.value})}
+              />
+            </div>
+
+            <div className="space-y-4 pt-4 border-t-2 border-border/50">
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-primary">Assign Default Tools</Label>
+                <Button variant="link" className="text-[9px] font-black uppercase p-0 h-auto" onClick={() => setNewDeptConfig({...newDeptConfig, tools: allTools.map(t => t.id)})}>Select All</Button>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {allTools.map(tool => {
+                  const selected = newDeptConfig.tools.includes(tool.id);
+                  const Icon = tool.icon;
+                  return (
+                    <button
+                      key={tool.id}
+                      onClick={() => toggleDeptTool(tool.id)}
+                      className={cn(
+                        "flex items-center gap-2 p-3 rounded-xl border-2 transition-all text-left",
+                        selected ? "bg-primary text-white border-primary shadow-glow" : "bg-muted/30 border-transparent hover:border-border"
+                      )}
+                    >
+                      <Icon className="w-3 h-3 shrink-0" />
+                      <span className="text-[9px] font-black uppercase tracking-tight truncate">{tool.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="p-8 bg-muted/30 border-t-2 border-border">
+            <Button variant="ghost" className="rounded-xl h-12 px-8 font-black uppercase tracking-widest text-[10px]" onClick={() => setIsCreateDeptModalOpen(false)}>Cancel</Button>
+            <Button className="rounded-xl h-12 px-10 font-black uppercase tracking-widest text-[10px] bg-primary text-white shadow-glow" onClick={handleCreateDepartment}>Create Department</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Applicants Dialog */}
       <Dialog open={isApplicantsOpen} onOpenChange={setIsApplicantsOpen}>
         <DialogContent className="sm:max-w-[600px] rounded-2xl">
@@ -1799,7 +2695,7 @@ const HRPage = () => {
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <div className="flex items-center gap-1 justify-end">
-                          <Sparkles className="w-3 h-3 text-primary" />
+                          <Bot className="w-3 h-3 text-primary" />
                           <span className="text-xs font-bold">{app.score}</span>
                         </div>
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">AI Score</p>
@@ -1965,6 +2861,70 @@ const HRPage = () => {
             <Button variant="ghost" className="rounded-xl" onClick={() => setIsFiltersOpen(false)}>Clear All</Button>
             <Button className="rounded-xl" onClick={() => setIsFiltersOpen(false)}>Apply Filters</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal 1 */}
+      <Dialog open={isDeleteModal1Open} onOpenChange={setIsDeleteModal1Open}>
+        <DialogContent className="sm:max-w-[400px] rounded-[32px] border-4 p-8 bg-card">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive mb-4">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">
+              Delete {itemToDelete?.type === 'staff' ? 'Staff Member' : 'Leave Request'}?
+            </DialogTitle>
+            <DialogDescription className="text-sm font-medium text-muted-foreground">
+              Are you sure you want to remove this {itemToDelete?.type === 'staff' ? 'staff member' : 'request'} from your records?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button 
+              variant="destructive"
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={confirmDeleteStep1}
+            >
+              Yes, I'm sure
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={() => setIsDeleteModal1Open(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal 2 */}
+      <Dialog open={isDeleteModal2Open} onOpenChange={setIsDeleteModal2Open}>
+        <DialogContent className="sm:max-w-[400px] rounded-[32px] border-4 p-8 bg-card border-destructive">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-2xl bg-destructive flex items-center justify-center text-white mb-4 animate-pulse">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight text-destructive">Final Confirmation</DialogTitle>
+            <DialogDescription className="text-sm font-bold text-destructive/80 uppercase tracking-widest">
+              This action is irreversible. Are you absolutely certain?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button 
+              variant="destructive"
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-destructive/20"
+              onClick={finalizeDelete}
+            >
+              Permanently Delete
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={() => setIsDeleteModal2Open(false)}
+            >
+              I changed my mind
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

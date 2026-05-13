@@ -53,7 +53,13 @@ const SidebarProvider = React.forwardRef<
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen);
+  const [_open, _setOpen] = React.useState(() => {
+    // On mobile, always start with closed state to avoid disorientation on reload
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return false;
+    }
+    return defaultOpen;
+  });
   const open = openProp ?? _open;
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
@@ -64,10 +70,12 @@ const SidebarProvider = React.forwardRef<
         _setOpen(openState);
       }
 
-      // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+      // This sets the cookie to keep the sidebar state, but only on desktop
+      if (!isMobile) {
+        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+      }
     },
-    [setOpenProp, open],
+    [setOpenProp, open, isMobile],
   );
 
   // Helper to toggle the sidebar.

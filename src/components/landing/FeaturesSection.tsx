@@ -1,24 +1,11 @@
 import { motion } from "framer-motion";
-import {
-  MessageSquare,
-  Kanban,
-  Users,
-  Receipt,
-  UserCheck,
-  FileText,
-  CheckSquare,
-  BarChart3,
-} from "lucide-react";
+import { Kanban, Users, Receipt, UserCheck } from "lucide-react";
 
 const features = [
-  { icon: MessageSquare, title: "Messaging", description: "DMs, channels, threads, and file sharing in one unified inbox." },
-  { icon: Kanban, title: "Projects", description: "Kanban, list, and calendar views with tasks, deadlines, and dependencies." },
-  { icon: Users, title: "CRM", description: "Lead tracking, pipelines, and contact management with smart automation." },
-  { icon: Receipt, title: "Finance", description: "Invoicing, expenses, payroll, and real-time revenue analytics." },
-  { icon: UserCheck, title: "HR", description: "Employee records, attendance, leave management, and performance reviews." },
-  { icon: FileText, title: "Notes & Docs", description: "Smart documentation linked to tasks, searchable and always accessible." },
-  { icon: CheckSquare, title: "To-Do", description: "Lightweight personal and team task tracking that stays out of your way." },
-  { icon: BarChart3, title: "Analytics", description: "Dashboards with predictive insights powered by AI across all modules." },
+  { icon: Kanban, title: "Projects", description: "Tasks, boards, deadlines, and dependencies in one place." },
+  { icon: Users, title: "Clients", description: "Contacts, pipelines, and interaction history automatically logged." },
+  { icon: Receipt, title: "Finance", description: "Invoices, expenses, and payroll directly linked to your work." },
+  { icon: UserCheck, title: "People", description: "Onboarding, leave requests, and directory management." },
 ];
 
 const container = {
@@ -42,14 +29,15 @@ const FeaturesSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <span className="text-xs font-semibold uppercase tracking-widest text-primary mb-4 block">
-            Modules
+          <span className="text-[10px] font-black uppercase tracking-widest text-primary mb-4 block">
+            The solution
           </span>
-          <h2 className="font-display text-4xl sm:text-5xl font-bold tracking-tight mb-4">
-            Everything you need. Nothing you don't.
+          <h2 className="font-display text-4xl sm:text-5xl font-black tracking-tight mb-4 text-foreground leading-[1.1]">
+            Everything connected.<br/>
+            Nothing missing.
           </h2>
-          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            Eight powerful modules that replace your entire tool stack — unified, intelligent, and beautifully simple.
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto font-medium">
+            Cynda is the last app you will ever need to set up for your business.
           </p>
         </motion.div>
 

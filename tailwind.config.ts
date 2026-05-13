@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -80,6 +81,8 @@ export default {
         'md': 'var(--shadow-md)',
         'lg': 'var(--shadow-lg)',
         'glow': 'var(--shadow-glow)',
+        'glow-sm': 'var(--shadow-glow-sm)',
+        'glow-lg': 'var(--shadow-glow-lg)',
       },
       keyframes: {
         "accordion-down": {
@@ -107,5 +110,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;

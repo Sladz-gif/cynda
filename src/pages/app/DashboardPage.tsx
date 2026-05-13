@@ -1,212 +1,386 @@
-import { 
-  BarChart3, CheckCircle2, Clock, MessageSquare, TrendingUp, Users, Zap, 
-  ArrowRight, Sparkles, Calendar, Plus, List, Bell, Filter, MoreHorizontal,
-  CheckCircle, LayoutDashboard, Activity, UserPlus, Shield, Eye, Trophy,
-  FileUp, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Check
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import React, { useMemo, useState } from "react";
+import { ArrowRight, Bot, HardDrive, Lock, Mail, Plus, ShieldCheck, Sparkles, Trophy, Users2, Zap } from "lucide-react";
+import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { useIndustryStore, DEPARTMENTS } from "@/lib/industry-store";
-import React, { useState, useMemo, useEffect } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { DEPARTMENTS, useIndustryStore, Staff, TRIAL_ALLOWED_TOOLS } from "@/lib/industry-store";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+
+const DEPT_HREF: Record<string, string> = {
+  crm: "/app/crm",
+  finance: "/app/finance",
+  projects: "/app/projects",
+  hr: "/app/hr",
+  other: "/app/chat",
+};
 
 const DashboardPage = () => {
-  const { userType = 'solo', adminProfile, staffList = [], addStaff, selectedModules = [], customDepartments = [], addCustomDepartment, teams = [], addTeam } = useIndustryStore();
   const { toast } = useToast();
+  const {
+    adminProfile,
+    currentUser,
+    selectedModules = [],
+    setCyndiOpen,
+    setCyndiDraft,
+    crmDeals = [],
+    tasks = [],
+    notifications = [],
+    staffList = [],
+    addTask,
+    subscriptionTier,
+  } = useIndustryStore();
+
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [taskTitle, setTaskTitle] = useState("");
 
-  // Safe data access
-  const safeUserType = userType || 'solo';
-  const safeStaffList = Array.isArray(staffList) ? staffList : [];
-  const safeSelectedModules = Array.isArray(selectedModules) ? selectedModules : [];
+  const activeUser = currentUser || adminProfile;
+  const isStaff = !!(currentUser && "tools" in currentUser);
+  const isTrial = subscriptionTier === "trial";
 
-  const [upcomingTasks, setUpcomingTasks] = useState([
-    { id: "1", title: "Review brand guidelines", project: "Marketing", due: "Today", priority: "high", completed: false },
-    { id: "2", title: "Update CRM leads", project: "Sales", due: "Today", priority: "medium", completed: false },
-  ]);
+  const effectiveTools = useMemo(() => {
+    return isStaff 
+      ? (Array.isArray((currentUser as Staff).tools) ? (currentUser as Staff).tools : [])
+      : (Array.isArray(selectedModules) ? selectedModules : []);
+  }, [isStaff, currentUser, selectedModules]);
 
-  const [newTask, setNewTask] = useState({ title: "", project: "", due: "", priority: "Medium" });
+  const allowedTools = useMemo(() => {
+    if (isTrial) {
+      return effectiveTools.filter(t => TRIAL_ALLOWED_TOOLS.includes(t));
+    }
+    return effectiveTools;
+  }, [effectiveTools, isTrial]);
 
-  const navItems = [
-    { id: "overview", label: "Overview", icon: LayoutDashboard },
-    { id: "activity", label: "Activity", icon: Activity },
-  ];
+  const premiumTools = useMemo(() => {
+    if (!isTrial) return [];
+    return effectiveTools.filter(t => !TRIAL_ALLOWED_TOOLS.includes(t));
+  }, [effectiveTools, isTrial]);
 
-  const handleMarkComplete = (id: string) => {
-    setUpcomingTasks(prev => prev.map(t => t.id === id ? { ...t, completed: true } : t));
-    toast({ title: "Task Completed" });
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 18) return "Good afternoon";
+    return "Good evening";
+  }, []);
+
+  const openDeals = useMemo(
+    () => crmDeals.filter((d) => d.stage !== "Closed Won" && d.stage !== "Closed Lost").length,
+    [crmDeals]
+  );
+  const activeTasks = useMemo(
+    () => tasks.filter((t) => t.status !== "completed").length,
+    [tasks]
+  );
+  const unreadNotifications = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
+  const teamCount = staffList.length;
+
+  const deptHasAccess = (deptKey: keyof typeof DEPARTMENTS) => {
+    const dept = DEPARTMENTS[deptKey];
+    return dept.tools.some((t) => allowedTools.includes(t.id));
+  };
+
+  const deptIsPremium = (deptKey: keyof typeof DEPARTMENTS) => {
+    if (!isTrial) return false;
+    const dept = DEPARTMENTS[deptKey];
+    return dept.tools.some((t) => premiumTools.includes(t.id)) && !deptHasAccess(deptKey);
+  };
+
+  const handleLetCyndiHandleIt = () => {
+    setIsCreateTaskOpen(false);
+    setCyndiDraft("I want to create a task. Here's what I need…");
+    setCyndiOpen(true);
   };
 
   const handleCreateTask = () => {
-    if (!newTask.title) return;
-    const task = {
-      id: Math.random().toString(36).substr(2, 9),
-      title: newTask.title,
-      project: newTask.project || "General",
-      due: "Today",
-      priority: newTask.priority.toLowerCase() as "high" | "medium" | "low",
-      completed: false
-    };
-    setUpcomingTasks(prev => [task, ...prev]);
+    const title = taskTitle.trim();
+    if (!title) {
+      toast({ title: "Add a title", description: "Give your task a short name.", variant: "destructive" });
+      return;
+    }
+    addTask({
+      id: `t-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      title,
+      project: "General",
+      due: new Date().toISOString().split("T")[0],
+      priority: "medium",
+      status: "todo",
+      assignees: activeUser?.name ? [activeUser.name] : [],
+    });
+    setTaskTitle("");
     setIsCreateTaskOpen(false);
-    setNewTask({ title: "", project: "", due: "", priority: "Medium" });
-    toast({ title: "Task Created" });
+    toast({ title: "Task created", description: "It’s on your workspace list." });
   };
 
-  return (
-    <div className="space-y-8 pb-20">
-      {/* Header */}
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-display text-3xl font-black tracking-tight text-foreground uppercase">Good morning, {adminProfile?.name || "User"}</h2>
-            <p className="text-xs text-muted-foreground mt-1 uppercase font-bold tracking-[0.2em] opacity-60">
-              Workspace Mode: <span className="text-primary">{safeUserType.replace('-', ' ')}</span>
-            </p>
-          </div>
-          <Button onClick={() => setIsCreateTaskOpen(true)} className="rounded-xl shadow-glow h-12 px-6 uppercase font-black tracking-widest text-[10px]">
-            <Plus className="w-4 h-4 mr-2" /> New Task
-          </Button>
-        </div>
+  const statCards = [
+    { label: "Pipeline deals", value: String(openDeals), href: "/app/crm", hint: "Clients" },
+    { label: "Active tasks", value: String(activeTasks), href: "/app/projects", hint: "Projects" },
+    { label: "Unread alerts", value: String(unreadNotifications), href: "/app/inbox", hint: "Inbox" },
+    { label: "Team (directory)", value: String(teamCount), href: "/app/hr", hint: "People" },
+  ];
 
-        <div className="flex items-center gap-1 border-b border-border overflow-x-auto scrollbar-hide">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex items-center gap-2 px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative whitespace-nowrap ${
-                activeTab === item.id ? "text-primary" : "text-muted-foreground hover:text-foreground"
-              }`}
+  return (
+    <div className="space-y-6 sm:space-y-10 pb-24 max-w-6xl mx-auto w-full min-w-0 overflow-x-hidden px-4 sm:px-6 lg:px-8">
+      <header className="space-y-6">
+        <div className="space-y-2 min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">
+            Cynda · Work OS
+          </p>
+          <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-foreground uppercase leading-tight">
+            {greeting}, {activeUser?.name?.split(" ")[0] ?? "there"}.
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground max-w-xl leading-relaxed">
+            One place for clients, finance, projects, people, and day‑to‑day tools — with{" "}
+            <span className="text-primary font-semibold">Cyndi</span> woven through the stack.
+          </p>
+        </div>
+      </header>
+
+      {isTrial && (
+        <motion.section
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="rounded-3xl border-2 border-primary/30 bg-primary/5 p-6 md:p-8 relative overflow-hidden group shadow-glow-sm"
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-primary/10 transition-all" />
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
+            <div className="space-y-4 text-center md:text-left">
+              <div className="flex flex-col md:flex-row items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black uppercase tracking-tight">Unlock Full Power</h2>
+                  <p className="text-muted-foreground font-medium uppercase tracking-widest text-[10px]">You're currently experiencing the Trial Edition</p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-xl">
+                You're seeing just a fraction of what Cynda can do. Upgrade to a paid plan to unlock 
+                <span className="text-foreground font-bold"> Advanced Automations</span>, 
+                <span className="text-foreground font-bold"> Enterprise Finance</span>, 
+                and the full <span className="text-foreground font-bold"> HR Surveillance Suite</span>.
+              </p>
+            </div>
+            <Button size="lg" className="h-14 px-10 rounded-2xl font-black uppercase tracking-widest shadow-glow shrink-0 w-full md:w-auto" asChild>
+              <Link to="/billing/select-plan">Upgrade Now</Link>
+            </Button>
+          </div>
+        </motion.section>
+      )}
+
+      <section aria-label="Snapshot">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {statCards.map((s, i) => (
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
             >
-              <item.icon className="w-3.5 h-3.5" />
-              {item.label}
-              {activeTab === item.id && (
-                <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />
-              )}
-            </button>
+              <Link
+                to={s.href}
+                className="flex flex-col rounded-2xl border-2 border-border bg-card p-4 sm:p-5 hover:border-primary/35 transition-colors h-full min-h-[110px]"
+              >
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{s.label}</span>
+                <span className="mt-2 font-display text-2xl sm:text-3xl font-black text-foreground tabular-nums">{s.value}</span>
+                <span className="mt-auto text-[9px] font-bold text-primary uppercase tracking-tight pt-2 flex items-center gap-1">
+                  {s.hint} <ArrowRight className="w-3 h-3" />
+                </span>
+              </Link>
+            </motion.div>
           ))}
         </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          {/* Quick Tasks */}
-          <div className="rounded-3xl border-2 border-border bg-card shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b-2 border-border bg-secondary/20 flex items-center justify-between">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground opacity-60">Upcoming Tasks</h3>
-              <Badge variant="secondary" className="rounded-lg font-black text-[9px] uppercase tracking-widest">{upcomingTasks.filter(t => !t.completed).length} Pending</Badge>
-            </div>
-            <div className="divide-y-2 divide-border">
-              {upcomingTasks.filter(t => !t.completed).map((task) => (
-                <div key={task.id} className="px-6 py-5 flex items-center gap-4 hover:bg-secondary/10 transition-colors group">
-                  <button onClick={() => handleMarkComplete(task.id)} className="w-7 h-7 rounded-xl border-2 border-border hover:border-primary flex items-center justify-center transition-all active:scale-90 bg-background">
-                    <Check className="w-4 h-4 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-black text-foreground truncate uppercase tracking-tight">{task.title}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest">{task.project}</span>
-                      <span className="w-1 h-1 rounded-full bg-border" />
-                      <span className="text-[9px] text-primary font-black uppercase tracking-widest">{task.due}</span>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className={`text-[9px] uppercase font-black px-2 py-1 rounded-lg border-2 ${
-                    task.priority === 'high' ? 'border-destructive/20 text-destructive bg-destructive/5' : 
-                    task.priority === 'medium' ? 'border-primary/20 text-primary bg-primary/5' : 
-                    'border-muted-foreground/20 text-muted-foreground bg-muted/5'
-                  }`}>{task.priority}</Badge>
-                </div>
-              ))}
-              {upcomingTasks.filter(t => !t.completed).length === 0 && (
-                <div className="p-16 text-center">
-                  <div className="w-16 h-16 rounded-3xl bg-secondary/50 flex items-center justify-center mx-auto mb-4 border-2 border-border">
-                    <CheckCircle2 className="w-8 h-8 text-muted-foreground/40" />
-                  </div>
-                  <p className="text-xs text-muted-foreground font-black uppercase tracking-[0.2em]">No pending tasks</p>
-                </div>
-              )}
-            </div>
-          </div>
+      <section aria-label="Departments" className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="font-display text-lg font-black uppercase tracking-tight text-foreground">Your departments</h2>
         </div>
-
-        <div className="space-y-8">
-          <div className="rounded-3xl border-2 border-border bg-card p-8 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-              <Zap className="w-24 h-24 text-primary" />
-            </div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground opacity-60 mb-8">Workspace Intelligence</h3>
-            <div className="space-y-8">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border-2 border-primary/5 shadow-glow-sm">
-                    <Zap className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground font-black uppercase text-[9px] tracking-[0.2em] block mb-0.5">Active Tools</span>
-                    <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">Across {DEPARTMENTS ? Object.keys(DEPARTMENTS).length : 0} Depts</span>
-                  </div>
-                </div>
-                <span className="font-black text-foreground text-3xl tracking-tighter">{safeSelectedModules.length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center border-2 border-accent/5">
-                    <Users className="w-5 h-5 text-accent" />
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground font-black uppercase text-[9px] tracking-[0.2em] block mb-0.5">Team Size</span>
-                    <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">Managed by you</span>
-                  </div>
-                </div>
-                <span className="font-black text-foreground text-3xl tracking-tighter">{safeStaffList.length + 1}</span>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {(Object.keys(DEPARTMENTS) as (keyof typeof DEPARTMENTS)[]).map((key, index) => {
+            const dept = DEPARTMENTS[key];
+            const active = deptHasAccess(key);
+            const premium = deptIsPremium(key);
+            const href = premium ? "/app/settings?tab=billing" : (DEPT_HREF[dept.id] ?? "/app/dashboard");
+            const previewTools = dept.tools.slice(0, 4);
             
-            <div className="mt-10 pt-8 border-t-2 border-border">
-              <Button variant="outline" className="w-full rounded-xl border-2 h-12 uppercase font-black tracking-widest text-[9px]" asChild>
-                <Link to="/app/settings">Workspace Settings <ArrowRight className="w-3.5 h-3.5 ml-2" /></Link>
-              </Button>
+            return (
+              <motion.div
+                key={dept.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.08 + index * 0.05 }}
+                className={cn(
+                  "rounded-3xl border-2 bg-card p-6 flex flex-col gap-4 transition-all relative group",
+                  active ? "border-border hover:border-primary/30" : premium ? "border-primary/20 bg-primary/[0.02] shadow-sm" : "border-dashed border-border/70 opacity-80"
+                )}
+              >
+                {premium && (
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-primary/10 text-primary px-2 py-1 rounded-full border border-primary/20">
+                    <Lock className="w-3 h-3" />
+                    <span className="text-[8px] font-black uppercase tracking-widest">Premium</span>
+                  </div>
+                )}
+                
+                <div className="flex items-start justify-between gap-3 pr-16">
+                  <div>
+                    <h3 className="font-display text-sm font-black uppercase tracking-tight text-foreground">{dept.label}</h3>
+                    <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                      {key === "CRM" && "Lifecycle, pipeline, campaigns, and sales automation."}
+                      {key === "Finance" && "Cash position, invoicing, expenses, and payroll."}
+                      {key === "Projects" && "Tasks, boards, calendar, timeline, and resourcing."}
+                      {key === "HR" && "Directory, hiring, onboarding, and time off."}
+                      {key === "Other" && "Messaging, email, notes, automations, forms, and files."}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {previewTools.map((t) => {
+                    const isToolAllowed = allowedTools.includes(t.id);
+                    const isToolPremium = isTrial && !TRIAL_ALLOWED_TOOLS.includes(t.id);
+                    
+                    return (
+                      <span
+                        key={t.id}
+                        className={cn(
+                          "text-[9px] font-black uppercase tracking-tight px-2 py-1 rounded-lg border flex items-center gap-1",
+                          isToolAllowed
+                            ? "border-primary/30 bg-primary/5 text-foreground font-bold"
+                            : isToolPremium 
+                              ? "border-primary/10 bg-primary/[0.03] text-primary/60"
+                              : "border-border/80 bg-secondary/30 text-muted-foreground"
+                        )}
+                      >
+                        {isToolPremium && <Lock className="w-2.5 h-2.5" />}
+                        {t.label}
+                      </span>
+                    );
+                  })}
+                  {dept.tools.length > 4 ? (
+                    <span className="text-[9px] font-bold text-muted-foreground px-2 py-1">+ more</span>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button 
+                    size="sm" 
+                    className={cn(
+                      "rounded-xl uppercase font-black text-[9px] tracking-widest h-9",
+                      premium ? "bg-primary text-white shadow-glow" : "bg-secondary text-foreground hover:bg-primary hover:text-white"
+                    )} 
+                    asChild
+                  >
+                    <Link to={href}>
+                      {premium ? "Unlock Department" : active ? "Go to Tools" : "Request Access"}
+                    </Link>
+                  </Button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </section>
+
+      {isTrial && (
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t-2 border-border/50">
+          <div className="md:col-span-1 space-y-4">
+            <h2 className="font-display text-xl font-black uppercase tracking-tight text-foreground">Premium Edge</h2>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Why our top-tier customers choose the full Cynda experience.
+            </p>
+          </div>
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-5 rounded-2xl border-2 border-border bg-card hover:border-primary/30 transition-colors">
+              <Zap className="w-6 h-6 text-primary mb-3" />
+              <h4 className="text-xs font-black uppercase tracking-tight mb-2">Infinite Automations</h4>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">Connect every tool in your stack with AI-powered triggers that work while you sleep.</p>
+            </div>
+            <div className="p-5 rounded-2xl border-2 border-border bg-card hover:border-primary/30 transition-colors">
+              <ShieldCheck className="w-6 h-6 text-primary mb-3" />
+              <h4 className="text-xs font-black uppercase tracking-tight mb-2">Full Surveillance</h4>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">Total visibility into staff activity, document access logs, and security compliance.</p>
+            </div>
+            <div className="p-5 rounded-2xl border-2 border-border bg-card hover:border-primary/30 transition-colors">
+              <Trophy className="w-6 h-6 text-primary mb-3" />
+              <h4 className="text-xs font-black uppercase tracking-tight mb-2">Performance Suite</h4>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">Deep analytics on employee productivity and company-wide growth metrics.</p>
+            </div>
+            <div className="p-5 rounded-2xl border-2 border-border bg-card hover:border-primary/30 transition-colors">
+              <Users2 className="w-6 h-6 text-primary mb-3" />
+              <h4 className="text-xs font-black uppercase tracking-tight mb-2">Team Collaboration</h4>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">Unlimited seats, shared workspaces, and granular permission controls for any team size.</p>
             </div>
           </div>
+        </section>
+      )}
+
+      <section
+        aria-label="Cyndi"
+        className="rounded-3xl border-2 border-primary/25 bg-primary/5 p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-6"
+      >
+        <div className="w-14 h-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-glow shrink-0">
+          <Bot className="w-8 h-8" />
         </div>
-      </div>
+        <div className="flex-1 space-y-2">
+          <h2 className="font-display text-base font-black uppercase tracking-tight text-foreground">Cyndi</h2>
+          <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
+            Document parsing, import mapping, financial snapshots, and workspace actions — open the panel anytime for an expert
+            lens on your real data.
+          </p>
+        </div>
+        <Button
+          className="rounded-xl uppercase font-black text-[10px] tracking-widest h-12 px-6 shrink-0"
+          onClick={() => {
+            setCyndiDraft("What should I focus on first today based on my workspace?");
+            setCyndiOpen(true);
+          }}
+        >
+          Open Cyndi
+        </Button>
+      </section>
 
       <Dialog open={isCreateTaskOpen} onOpenChange={setIsCreateTaskOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-[2rem] border-2 border-border p-8">
+        <DialogContent className="sm:max-w-md rounded-[2rem] border-2 border-border p-8">
           <DialogHeader>
-            <DialogTitle className="font-display font-black uppercase tracking-tight text-2xl">Create New Task</DialogTitle>
-            <DialogDescription className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground pt-1">Assign a new task to your workspace</DialogDescription>
+            <DialogTitle className="font-display font-black uppercase tracking-tight text-2xl">Create task</DialogTitle>
+            <DialogDescription className="text-xs font-medium text-muted-foreground">
+              Adds to your workspace task list — refine details anytime in Projects.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-6 py-6">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 ml-1">Task Title</Label>
-              <Input value={newTask.title} onChange={e => setNewTask({...newTask, title: e.target.value})} className="rounded-2xl h-14 border-2 focus-visible:ring-primary/20 bg-secondary/5 font-bold" placeholder="e.g. Design homepage" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 ml-1">Project Name</Label>
-              <Input value={newTask.project} onChange={e => setNewTask({...newTask, project: e.target.value})} className="rounded-2xl h-14 border-2 focus-visible:ring-primary/20 bg-secondary/5 font-bold" placeholder="e.g. Marketing" />
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Title</Label>
+              <Input
+                value={taskTitle}
+                onChange={(e) => setTaskTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateTask()}
+                className="rounded-2xl h-12 border-2 bg-background font-semibold"
+                placeholder="e.g. Send the revised proposal"
+              />
             </div>
           </div>
-          <DialogFooter>
-            <Button onClick={handleCreateTask} className="w-full rounded-2xl h-14 shadow-glow uppercase font-black tracking-widest text-xs">Create Task <Plus className="w-4 h-4 ml-2" /></Button>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-col">
+            <Button
+              variant="outline"
+              onClick={handleLetCyndiHandleIt}
+              className="w-full rounded-2xl h-12 border-2 border-primary/30 text-primary uppercase font-black text-[10px] tracking-widest gap-2"
+            >
+              <Bot className="w-4 h-4" /> Let Cyndi handle it
+            </Button>
+            <Button onClick={handleCreateTask} className="w-full rounded-2xl h-12 shadow-glow uppercase font-black text-[10px] tracking-widest">
+              Save task
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

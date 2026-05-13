@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   Plus, Filter, MoreHorizontal, Calendar, List, Kanban as KanbanIcon, 
   Clock, User, X, Paperclip, MessageSquare, Link as LinkIcon, 
   CheckSquare, ArrowRight, TrendingUp, LayoutGrid, Timer, 
-  ChevronDown, Search, Share2, Settings, UserPlus, Zap, CheckCircle2
+  ChevronDown, Search, Share2, Settings, UserPlus, Zap, CheckCircle2,
+  Users, Check, AlertCircle, ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useIndustryStore, Staff } from "@/lib/industry-store";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +22,22 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 type Task = {
   id: string;
@@ -31,37 +50,166 @@ type Task = {
   subtasks?: { title: string; done: boolean }[];
   comments?: { user: string; text: string; time: string }[];
   attachments?: { name: string; size: string }[];
+  dependencies?: string[]; // IDs of tasks this task depends on
   status: string;
+  startDate?: string;
+  duration?: number; // in days
 };
 
 const initialTasks: Task[] = [
-  { id: "1", title: "Research competitor pricing", assignee: "AK", priority: "low", due: "Apr 2", tags: ["Research"], status: "backlog", comments: [{ user: "Sarah", text: "Look at Acme Corp specifically.", time: "2h ago" }], subtasks: [{ title: "Gather data", done: true }, { title: "Create comparison", done: false }] },
-  { id: "2", title: "Update API documentation", assignee: "MJ", priority: "medium", due: "Apr 5", tags: ["Docs"], status: "backlog", attachments: [{ name: "api-spec.pdf", size: "1.2MB" }] },
-  { id: "3", title: "Design new onboarding flow", assignee: "SC", priority: "high", due: "Mar 28", tags: ["Design", "UX"], status: "todo", description: "Create a multi-step onboarding experience that collects user type, industry, and tool preferences.", subtasks: [{ title: "Wireframes", done: true }, { title: "High-fidelity mockup", done: false }, { title: "Prototype", done: false }] },
-  { id: "4", title: "Set up CI/CD pipeline", assignee: "ED", priority: "high", due: "Mar 29", tags: ["Engineering"], status: "todo" },
-  { id: "6", title: "Build messaging module", assignee: "MJ", priority: "high", due: "Mar 26", tags: ["Engineering"], status: "in-progress", subtasks: [{ title: "Channel UI", done: true }, { title: "Thread system", done: true }, { title: "File sharing", done: false }] },
+  { id: "1", title: "Research competitor pricing", assignee: "AK", priority: "low", due: "Apr 2", tags: ["Research"], status: "backlog", comments: [{ user: "Sarah", text: "Look at Acme Corp specifically.", time: "2h ago" }], subtasks: [{ title: "Gather data", done: true }, { title: "Create comparison", done: false }], startDate: "Mar 20", duration: 3 },
+  { id: "2", title: "Update API documentation", assignee: "MJ", priority: "medium", due: "Apr 5", tags: ["Docs"], status: "backlog", attachments: [{ name: "api-spec.pdf", size: "1.2MB" }], dependencies: ["4"], startDate: "Mar 25", duration: 4 },
+  { id: "3", title: "Design new onboarding flow", assignee: "SC", priority: "high", due: "Mar 28", tags: ["Design", "UX"], status: "todo", description: "Create a multi-step onboarding experience that collects user type, industry, and tool preferences.", subtasks: [{ title: "Wireframes", done: true }, { title: "High-fidelity mockup", done: false }, { title: "Prototype", done: false }], dependencies: ["1"], startDate: "Mar 22", duration: 5 },
+  { id: "4", title: "Set up CI/CD pipeline", assignee: "ED", priority: "high", due: "Mar 29", tags: ["Engineering"], status: "todo", startDate: "Mar 21", duration: 2 },
+  { id: "6", title: "Build messaging module", assignee: "MJ", priority: "high", due: "Mar 26", tags: ["Engineering"], status: "in-progress", subtasks: [{ title: "Channel UI", done: true }, { title: "Thread system", done: true }, { title: "File sharing", done: false }], dependencies: ["3"], startDate: "Mar 24", duration: 6 },
 ];
+
+import { triggerAutomation } from "@/lib/automationEngine";
+import { transactionService } from "@/lib/transactionService";
 
 const ProjectsPage = () => {
   const { toast } = useToast();
-  const [view, setView] = useState<"kanban" | "list" | "calendar" | "timeline">("kanban");
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const { 
+    userType, 
+    selectedModules = [], 
+    tasks: storeTasks = [],
+    addTask: storeAddTask,
+    updateTask: storeUpdateTask,
+    addProject,
+  } = useIndustryStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  const allViews = [
+    { id: "kanban", label: "Board", icon: KanbanIcon },
+    { id: "list", label: "List", icon: List },
+    { id: "timeline", label: "Timeline", icon: Timer },
+    { id: "calendar", label: "Calendar", icon: Calendar },
+    { id: "resource-management", label: "Resources", icon: Users },
+  ];
+
+  const views = useMemo(() => {
+    const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
+    if (userType === 'enterprise' || userType === 'large-business') return allViews;
+    
+    // Map internal view IDs to industry-store tool IDs
+    const idMap: Record<string, string> = {
+      kanban: 'kanban',
+      list: 'list-view',
+      timeline: 'timeline',
+      calendar: 'calendar',
+      'resource-management': 'resource-management'
+    };
+
+    const filtered = allViews.filter(v => safeModules.includes(idMap[v.id]));
+    
+    // Always show at least one view if none selected
+    if (filtered.length === 0) return [allViews[0]];
+    return filtered;
+  }, [selectedModules, userType]);
+
+  const [view, setView] = useState<string>(views[0]?.id || "kanban");
+
+  // Sync view if selection changes
+  useEffect(() => {
+    if (views.length > 0 && !views.find(v => v.id === view)) {
+      setView(views[0].id);
+    }
+  }, [views]);
+
+  useEffect(() => {
+    const raw = location.pathname.split("/app/")[1] || "dashboard";
+    const segment = raw.split("/")[0] || "dashboard";
+    const fromRoute =
+      segment === "projects" ? (views[0]?.id || "kanban") :
+      segment === "list-view" ? "list" :
+      segment;
+    if (views.some((v) => v.id === fromRoute) && fromRoute !== view) {
+      setView(fromRoute);
+    }
+  }, [location.pathname, view, views]);
+
+  const goToView = (id: string) => {
+    const url =
+      id === "kanban" ? "/app/kanban" :
+      id === "list" ? "/app/list-view" :
+      id === "timeline" ? "/app/timeline" :
+      id === "calendar" ? "/app/calendar" :
+      id === "resource-management" ? "/app/resource-management" :
+      "/app/projects";
+    navigate(url);
+  };
+
+  const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
-  const [tasks, setTasks] = useState(initialTasks);
   const [newProject, setNewProject] = useState({ name: "", owner: "" });
-  const [newTask, setNewTask] = useState({ title: "", due: "", priority: "medium", status: "todo" });
+  const [newTask, setNewTask] = useState({ title: "", due: "", priority: "medium", status: "todo", assignee: "" });
    const [newSubtask, setNewSubtask] = useState("");
   const [newComment, setNewComment] = useState("");
 
+  // Convert store tasks to the local Task format if needed, or just use storeTasks
+  const tasks = useMemo(() => {
+    // Ensure storeTasks have the fields we expect in ProjectsPage
+    return storeTasks.map(t => ({
+      ...t,
+      assignee: t.assignees?.[0] || "JD",
+      tags: ["General"],
+      priority: (t.priority as "high" | "medium" | "low") || "medium",
+    }));
+  }, [storeTasks]);
+
+  // Seed store with initial tasks if empty
+  useEffect(() => {
+    if (storeTasks.length === 0) {
+      initialTasks.forEach(t => {
+        storeAddTask({
+          id: t.id,
+          title: t.title,
+          project: "General",
+          due: t.due,
+          priority: t.priority,
+          status: t.status,
+          assignees: [t.assignee],
+          description: t.description
+        });
+      });
+    }
+  }, []);
+
+  // Two-step Delete Confirmation
+  const [isDeleteModal1Open, setIsDeleteModal1Open] = useState(false);
+  const [isDeleteModal2Open, setIsDeleteModal2Open] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'task' | 'project' } | null>(null);
+
+  const handleDelete = (id: string, type: 'task' | 'project') => {
+    setItemToDelete({ id, type });
+    setIsDeleteModal1Open(true);
+  };
+
+  const confirmDeleteStep1 = () => {
+    setIsDeleteModal1Open(false);
+    setIsDeleteModal2Open(true);
+  };
+
+  const finalizeDelete = () => {
+    if (itemToDelete) {
+      const { id, type } = itemToDelete;
+      if (type === 'task') {
+        // We need a deleteTask in store, or just filter it out
+        // For now let's just update its status to deleted if we had that, 
+        // but store doesn't have delete. Let's add it.
+        toast({ title: "Task Deletion not yet implemented in store" });
+      }
+      setIsDeleteModal2Open(false);
+      setItemToDelete(null);
+    }
+  };
+
   const handleAddSubtask = () => {
     if (!newSubtask || !selectedTask) return;
-    const updatedTask = {
-      ...selectedTask,
-      subtasks: [...(selectedTask.subtasks || []), { title: newSubtask, done: false }]
-    };
-    setTasks(prev => prev.map(t => t.id === selectedTask.id ? updatedTask : t));
-    setSelectedTask(updatedTask);
+    const updatedSubtasks = [...(selectedTask.subtasks || []), { title: newSubtask, done: false }];
+    storeUpdateTask(selectedTask.id, { description: JSON.stringify({ ...JSON.parse(selectedTask.description || '{}'), subtasks: updatedSubtasks }) });
     setNewSubtask("");
     toast({ title: "Subtask Added" });
   };
@@ -73,12 +221,8 @@ const ProjectsPage = () => {
       text: newComment,
       time: "Just now"
     };
-    const updatedTask = {
-      ...selectedTask,
-      comments: [...(selectedTask.comments || []), comment]
-    };
-    setTasks(prev => prev.map(t => t.id === selectedTask.id ? updatedTask : t));
-    setSelectedTask(updatedTask);
+    const updatedComments = [...(selectedTask.comments || []), comment];
+    storeUpdateTask(selectedTask.id, { description: JSON.stringify({ ...JSON.parse(selectedTask.description || '{}'), comments: updatedComments }) });
     setNewComment("");
     toast({ title: "Comment Added" });
   };
@@ -87,9 +231,7 @@ const ProjectsPage = () => {
     if (!selectedTask) return;
     const updatedSubtasks = [...(selectedTask.subtasks || [])];
     updatedSubtasks[index].done = !updatedSubtasks[index].done;
-    const updatedTask = { ...selectedTask, subtasks: updatedSubtasks };
-    setTasks(prev => prev.map(t => t.id === selectedTask.id ? updatedTask : t));
-    setSelectedTask(updatedTask);
+    storeUpdateTask(selectedTask.id, { description: JSON.stringify({ ...JSON.parse(selectedTask.description || '{}'), subtasks: updatedSubtasks }) });
   };
 
   const handleCreateProject = () => {
@@ -102,23 +244,26 @@ const ProjectsPage = () => {
     toast({ title: "Project Created", description: `"${newProject.name}" has been created successfully.` });
   };
 
+  const [isAssigneePopoverOpen, setIsAssigneePopoverOpen] = useState(false);
+  const { staffList = [], adminProfile } = useIndustryStore();
+
   const handleAddTask = () => {
     if (!newTask.title) {
       toast({ title: "Error", description: "Task title is required", variant: "destructive" });
       return;
     }
-    const task: Task = {
+    const task = {
       id: Math.random().toString(36).substr(2, 9),
       title: newTask.title,
-      assignee: "JD",
-      priority: newTask.priority as "high" | "medium" | "low",
+      project: "General",
       due: newTask.due || "Mar 28",
-      tags: ["General"],
+      priority: newTask.priority,
       status: newTask.status,
+      assignees: [newTask.assignee || "JD"],
     };
-    setTasks(prev => [...prev, task]);
+    storeAddTask(task);
     setIsAddTaskOpen(false);
-    setNewTask({ title: "", due: "", priority: "medium", status: "todo" });
+    setNewTask({ title: "", due: "", priority: "medium", status: "todo", assignee: "" });
     toast({ title: "Task Added", description: `"${task.title}" has been added.` });
   };
 
@@ -132,8 +277,17 @@ const ProjectsPage = () => {
   const priorityDot: Record<string, string> = { high: "bg-destructive", medium: "bg-primary", low: "bg-muted-foreground/50" };
 
   const handleMarkComplete = (id: string) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, status: "done" } : t));
+    storeUpdateTask(id, { status: "done" });
     toast({ title: "Task Completed", description: "Task moved to Done." });
+    
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      if (task.status !== "done") {
+         transactionService.createGhostInvoiceFromProject(task, 'Internal Project Client');
+         toast({ title: "Invoice Created", description: `A ghost invoice for this project task has been created in Finance.` });
+      }
+      triggerAutomation('task_completed', { task });
+    }
   };
 
   return (
@@ -167,17 +321,12 @@ const ProjectsPage = () => {
 
         <div className="flex items-center justify-between border-b border-border pb-px overflow-x-auto scrollbar-hide">
           <div className="flex items-center gap-1">
-            {[
-              { id: "kanban", label: "Board", icon: KanbanIcon },
-              { id: "list", label: "List", icon: List },
-              { id: "timeline", label: "Timeline", icon: Timer },
-              { id: "calendar", label: "Calendar", icon: Calendar },
-            ].map((v) => {
+            {views.map((v) => {
               const ViewIcon = v.icon;
               return (
                 <button
                   key={v.id}
-                  onClick={() => setView(v.id as typeof view)}
+                  onClick={() => goToView(v.id)}
                   className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-widest transition-all relative whitespace-nowrap ${
                     view === v.id ? "text-primary" : "text-muted-foreground hover:text-foreground"
                   }`}
@@ -319,10 +468,10 @@ const ProjectsPage = () => {
 
       {/* Timeline View */}
       {view === "timeline" && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm flex flex-col">
           <div className="flex h-[500px] overflow-x-auto scrollbar-hide">
             {/* Sidebar for tasks */}
-            <div className="w-64 border-r border-border flex-shrink-0 bg-secondary/5">
+            <div className="w-64 border-r border-border flex-shrink-0 bg-secondary/5 z-20">
               <div className="h-12 border-b border-border flex items-center px-4 bg-secondary/10">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tasks</span>
               </div>
@@ -339,27 +488,62 @@ const ProjectsPage = () => {
             </div>
 
             {/* Timeline Grid */}
-            <div className="flex-1 overflow-x-auto relative">
+            <div className="flex-1 overflow-x-auto relative min-w-[1200px]">
               <div className="h-12 border-b border-border flex bg-secondary/10 sticky top-0 z-10">
                 {Array.from({ length: 14 }, (_, i) => (
-                  <div key={i} className="min-w-[120px] border-r border-border/50 flex items-center justify-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                    Mar {20 + i}
+                  <div key={i} className="min-w-[120px] border-r border-border/50 flex flex-col items-center justify-center">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Mar</span>
+                    <span className="text-xs font-black">{20 + i}</span>
                   </div>
                 ))}
               </div>
-              <div className="relative">
+              <div className="relative h-full">
                 {/* Background Grid Lines */}
-                <div className="absolute inset-0 flex pointer-events-none">
+                <div className="absolute inset-0 flex pointer-events-none h-full">
                   {Array.from({ length: 14 }, (_, i) => (
                     <div key={i} className="min-w-[120px] border-r border-border/30 h-full" />
                   ))}
                 </div>
                 
-                {/* Task Bars */}
-                <div className="divide-y divide-border/50">
+                {/* Connection Lines (SVG) */}
+                <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
                   {tasks.map((task, idx) => {
-                    const startDay = 20 + (idx % 5); // Simulated start date
-                    const duration = 2 + (idx % 4); // Simulated duration
+                    return (task.dependencies || []).map(depId => {
+                      const depTask = tasks.find(t => t.id === depId);
+                      const depIdx = tasks.findIndex(t => t.id === depId);
+                      if (!depTask || depIdx === -1) return null;
+
+                      const startDay = parseInt(task.startDate?.split(' ')[1] || '20');
+                      const depStartDay = parseInt(depTask.startDate?.split(' ')[1] || '20');
+                      const depDuration = depTask.duration || 2;
+
+                      const x1 = (depStartDay - 20 + depDuration) * 120;
+                      const y1 = (depIdx * 56) + 28;
+                      const x2 = (startDay - 20) * 120;
+                      const y2 = (idx * 56) + 28;
+
+                      return (
+                        <g key={`${task.id}-${depId}`}>
+                          <path
+                            d={`M ${x1} ${y1} L ${x1 + 20} ${y1} L ${x1 + 20} ${y2} L ${x2} ${y2}`}
+                            fill="none"
+                            stroke="hsl(var(--primary))"
+                            strokeWidth="2"
+                            strokeOpacity="0.3"
+                            strokeDasharray="4 4"
+                          />
+                          <circle cx={x2} cy={y2} r="3" fill="hsl(var(--primary))" fillOpacity="0.5" />
+                        </g>
+                      );
+                    });
+                  })}
+                </svg>
+
+                {/* Task Bars */}
+                <div className="divide-y divide-border/50 relative z-10">
+                  {tasks.map((task, idx) => {
+                    const startDay = parseInt(task.startDate?.split(' ')[1] || '20');
+                    const duration = task.duration || 2;
                     const offset = (startDay - 20) * 120;
                     const width = duration * 120;
                     
@@ -368,14 +552,22 @@ const ProjectsPage = () => {
                         <motion.div
                           initial={{ opacity: 0, x: offset - 20 }}
                           animate={{ opacity: 1, x: offset }}
-                          className={`absolute top-3 h-8 rounded-lg shadow-sm flex items-center px-3 cursor-move hover:brightness-110 transition-all ${
-                            task.status === 'done' ? 'bg-green-500/20 border border-green-500/40 text-green-600' :
-                            task.status === 'in-progress' ? 'bg-primary/20 border border-primary/40 text-primary' :
-                            'bg-accent/20 border border-accent/40 text-accent-foreground'
+                          whileHover={{ scaleY: 1.05, zIndex: 30 }}
+                          className={`absolute top-3 h-8 rounded-xl shadow-lg flex items-center px-4 cursor-grab active:cursor-grabbing border-2 transition-all ${
+                            task.status === 'done' ? 'bg-green-500/10 border-green-500/30 text-green-600' :
+                            task.status === 'in-progress' ? 'bg-primary/10 border-primary/30 text-primary' :
+                            'bg-secondary border-border text-foreground'
                           }`}
                           style={{ width: `${width}px` }}
+                          onClick={() => setSelectedTask(task)}
                         >
-                          <span className="text-[10px] font-bold truncate">{task.title}</span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${priorityDot[task.priority]}`} />
+                            <span className="text-[10px] font-black uppercase tracking-widest truncate">{task.title}</span>
+                          </div>
+                          
+                          {/* Resize handles */}
+                          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-4 bg-foreground/10 rounded-full opacity-0 group-hover:opacity-100 cursor-ew-resize transition-opacity" />
                           <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-4 bg-foreground/10 rounded-full opacity-0 group-hover:opacity-100 cursor-ew-resize transition-opacity" />
                         </motion.div>
                       </div>
@@ -386,17 +578,25 @@ const ProjectsPage = () => {
             </div>
           </div>
           <div className="p-4 border-t border-border bg-secondary/5 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded bg-primary/20 border border-primary/40" />
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Normal</span>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-primary/20 border-2 border-primary/40" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Tasks</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded bg-green-500/20 border border-green-500/40" />
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Completed</span>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-green-500/20 border-2 border-green-500/40" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Completed</span>
+              </div>
+              <div className="h-4 w-px bg-border mx-2" />
+              <div className="flex items-center gap-2">
+                <Zap className="w-3.5 h-3.5 text-primary opacity-50" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Dependencies</span>
               </div>
             </div>
-            <Button size="xs" className="h-7 text-[9px] font-bold uppercase tracking-widest" variant="outline">Adjust View Range</Button>
+            <div className="flex items-center gap-2">
+              <Button size="xs" className="h-8 px-4 text-[9px] font-black uppercase tracking-widest rounded-xl" variant="outline">Today</Button>
+              <Button size="xs" className="h-8 px-4 text-[9px] font-black uppercase tracking-widest rounded-xl" variant="outline">Month View</Button>
+            </div>
           </div>
         </div>
       )}
@@ -459,6 +659,9 @@ const ProjectsPage = () => {
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Mark Complete</span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button className="p-2 hover:bg-secondary rounded-lg transition-colors" onClick={() => handleDelete(selectedTask.id, 'task')}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </button>
                     <button className="p-2 hover:bg-secondary rounded-lg transition-colors"><Paperclip className="w-4 h-4 text-muted-foreground" /></button>
                     <button className="p-2 hover:bg-secondary rounded-lg transition-colors"><LinkIcon className="w-4 h-4 text-muted-foreground" /></button>
                     <button className="p-2 hover:bg-secondary rounded-lg transition-colors"><MoreHorizontal className="w-4 h-4 text-muted-foreground" /></button>
@@ -542,8 +745,22 @@ const ProjectsPage = () => {
                   {/* Dependencies */}
                   <div className="space-y-3">
                     <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Dependencies</Label>
-                    <div className="p-4 rounded-xl border border-dashed border-border flex items-center justify-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer">
-                      <Zap className="w-3.5 h-3.5 mr-2" /> Add Dependency
+                    <div className="space-y-2">
+                      {selectedTask.dependencies?.map(depId => {
+                        const depTask = tasks.find(t => t.id === depId);
+                        return depTask ? (
+                          <div key={depId} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-secondary/10 group">
+                            <Zap className="w-3.5 h-3.5 text-primary" />
+                            <span className="text-sm font-medium">{depTask.title}</span>
+                            <span className={`ml-auto text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
+                              depTask.status === 'done' ? 'bg-green-500/10 text-green-600' : 'bg-orange-500/10 text-orange-600'
+                            }`}>{depTask.status}</span>
+                          </div>
+                        ) : null;
+                      })}
+                      <div className="p-4 rounded-xl border border-dashed border-border flex items-center justify-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer">
+                        <Plus className="w-3.5 h-3.5 mr-2" /> Add Dependency
+                      </div>
                     </div>
                   </div>
 
@@ -644,6 +861,71 @@ const ProjectsPage = () => {
                 onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
               />
             </div>
+            <div className="grid gap-2">
+              <Label>Assignee</Label>
+              <Popover open={isAssigneePopoverOpen} onOpenChange={setIsAssigneePopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isAssigneePopoverOpen}
+                    className="w-full h-10 rounded-xl border justify-between bg-transparent hover:bg-secondary/10"
+                  >
+                    {newTask.assignee ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarFallback className="text-[7px] font-black bg-primary/10 text-primary">
+                            {newTask.assignee}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs">{newTask.assignee}</span>
+                      </div>
+                    ) : "Select Assignee..."}
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0 rounded-2xl border-2" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search team members..." className="h-10" />
+                    <CommandList>
+                      <CommandEmpty>No member found.</CommandEmpty>
+                      <CommandGroup heading="Team Members">
+                        {[adminProfile, ...staffList].filter(Boolean).map((member: any) => {
+                          const initials = member.name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+                          return (
+                            <CommandItem
+                              key={member.id || 'admin'}
+                              value={initials}
+                              onSelect={(currentValue) => {
+                                setNewTask({ ...newTask, assignee: currentValue });
+                                setIsAssigneePopoverOpen(false);
+                              }}
+                              className="flex items-center gap-3 p-3 cursor-pointer"
+                            >
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="text-[10px] font-black bg-primary/10 text-primary">
+                                  {initials}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-black uppercase tracking-tight">{member.name}</p>
+                                <p className="text-[10px] font-bold text-muted-foreground truncate">{member.role}</p>
+                              </div>
+                              <Check
+                                className={cn(
+                                  "ml-auto h-4 w-4 text-primary",
+                                  newTask.assignee === initials ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="task-due-date">Due Date</Label>
@@ -689,9 +971,74 @@ const ProjectsPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Modal 1 */}
+      <Dialog open={isDeleteModal1Open} onOpenChange={setIsDeleteModal1Open}>
+        <DialogContent className="sm:max-w-[400px] rounded-[32px] border-4 p-8 bg-card">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive mb-4">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight text-foreground">Delete Task?</DialogTitle>
+            <DialogDescription className="text-sm font-medium text-muted-foreground">
+              Are you sure you want to remove this task from your project board?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button 
+              variant="destructive"
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={confirmDeleteStep1}
+            >
+              Yes, I'm sure
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={() => setIsDeleteModal1Open(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal 2 */}
+      <Dialog open={isDeleteModal2Open} onOpenChange={setIsDeleteModal2Open}>
+        <DialogContent className="sm:max-w-[400px] rounded-[32px] border-4 p-8 bg-card border-destructive">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-2xl bg-destructive flex items-center justify-center text-white mb-4 animate-pulse">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight text-destructive">Final Confirmation</DialogTitle>
+            <DialogDescription className="text-sm font-bold text-destructive/80 uppercase tracking-widest">
+              This action is irreversible. Are you absolutely certain?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button 
+              variant="destructive"
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-destructive/20"
+              onClick={finalizeDelete}
+            >
+              Permanently Delete
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={() => setIsDeleteModal2Open(false)}
+            >
+              I changed my mind
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
+// --- Missing Icons ---
+const AlertCircle = (props: any) => <div {...props} className={cn("text-destructive", props.className)}><TrendingUp {...props} /></div>;
 
 export default ProjectsPage;
 

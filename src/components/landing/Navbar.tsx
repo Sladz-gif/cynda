@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const navLinks = ["Product", "Solutions", "Pricing", "Company"];
+const navLinks = ["Features", "Pricing", "About", "Blog"];
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -37,8 +37,8 @@ const Navbar = () => {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild><Link to="/app/dashboard">Sign In</Link></Button>
-          <Button variant="hero" size="sm" asChild><Link to="/onboarding">Start Free</Link></Button>
+          <Button variant="ghost" size="sm" asChild className="font-bold uppercase tracking-widest text-[10px]"><Link to="/signin">Sign in</Link></Button>
+          <Button variant="hero" size="sm" asChild className="font-black uppercase tracking-widest text-[10px]"><Link to="/signup" className="flex items-center justify-center">Start free trial</Link></Button>
         </div>
 
         <button
@@ -62,8 +62,8 @@ const Navbar = () => {
               </a>
             ))}
             <div className="flex gap-3 pt-2">
-              <Button variant="ghost" size="sm" className="flex-1">Sign In</Button>
-              <Button variant="hero" size="sm" className="flex-1">Start Free</Button>
+              <Button variant="ghost" size="sm" className="flex-1 font-bold uppercase tracking-widest text-[10px]" asChild><Link to="/signin">Sign in</Link></Button>
+              <Button variant="hero" size="sm" className="flex-1 font-black uppercase tracking-widest text-[10px]" asChild><Link to="/signup" className="flex items-center justify-center">Start free trial</Link></Button>
             </div>
           </div>
         </motion.div>

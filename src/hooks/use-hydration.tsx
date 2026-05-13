@@ -1,14 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useIndustryStore } from '@/lib/industry-store';
+import { useState, useEffect } from 'react'
 
-export const useHydration = () => {
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    const unsub = useIndustryStore.persist.onFinishHydration(() => setHydrated(true));
-    setHydrated(useIndustryStore.persist.hasHydrated());
-    return () => unsub();
-  }, []);
-
-  return hydrated;
-};
+/**
+ * Hydration hook — simplified for frontend-first build.
+ * Returns true immediately. No persist gate.
+ * Backend integration will reintroduce proper loading state.
+ */
+export function useHydration() {
+  const [hydrated, setHydrated] = useState(true)
+  return hydrated
+}

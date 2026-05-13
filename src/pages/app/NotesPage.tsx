@@ -2,17 +2,53 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from "react"
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
+// Custom styles for centering and avoiding overflow
+const editorStyles = `
+  .quill-editor .ql-container {
+    font-family: inherit;
+    font-size: 1.1rem;
+    border: none !important;
+  }
+  .quill-editor .ql-editor {
+    padding: 0 !important;
+    line-height: 1.6;
+    color: #222220;
+  }
+  .quill-editor .ql-editor p {
+    margin-bottom: 1.5rem;
+  }
+  .quill-editor .ql-editor h1, 
+  .quill-editor .ql-editor h2, 
+  .quill-editor .ql-editor h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+  }
+  .quill-editor .ql-editor img {
+    border-radius: 1rem;
+    margin: 2rem 0;
+  }
+  .quill-editor .ql-blank::before {
+    left: 0 !important;
+    font-style: normal !important;
+    color: rgba(0,0,0,0.1) !important;
+  }
+`;
+
 import { 
   Plus, Search, FileText, Star, Clock, Bold, Italic, List, Link as LinkIcon, 
   Image as ImageIcon, Hash, Code, Heading1, Heading2, Heading3, Quote, Table as TableIcon, 
-  Sparkles, MoreHorizontal, ChevronRight, ChevronDown, Folder, Trash2, 
+  Bot, MoreHorizontal, ChevronRight, ChevronDown, Folder, Trash2, 
   Share2, Pin, PinOff, Copy, ArrowUpRight, GripVertical, 
   CheckSquare, ListOrdered, Minus, Type, Layers, ExternalLink,
-  RotateCcw, Trash, Search as SearchIcon, Filter, X
+  RotateCcw, Trash, Search as SearchIcon, Filter, X, ShieldCheck, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useIndustryStore } from "@/lib/industry-store";
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from "@/components/ui/select";
@@ -23,7 +59,7 @@ import {
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription 
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 
@@ -43,10 +79,17 @@ type Block = {
   props?: any;
 };
 
+interface AccessControl {
+  userId: string;
+  name: string;
+  role: 'Owner' | 'Editor' | 'Viewer';
+}
+
 type Page = {
   id: string;
   title: string;
   icon?: string;
+  coverImage?: string;
   parentId?: string;
   folder?: string;
   content: string; // HTML content from Quill
@@ -54,6 +97,7 @@ type Page = {
   isArchived: boolean;
   updatedAt: string;
   tags: string[];
+  access: AccessControl[];
 };
 
 // --- Mock Data ---
@@ -71,16 +115,17 @@ const INITIAL_PAGES: Page[] = [
       <p>This document outlines our key brand standards for Q2 2026.</p>
       <h2>Color Palette</h2>
       <ul>
-        <li>Primary: Burning Orange (#FF7124)</li>
-        <li>Secondary: Pale Cashmere (#E8DFD5)</li>
+        <li>Primary: Cynda Orange</li>
+        <li>Secondary: Pale Cashmere</li>
       </ul>
       <hr>
-      <p><strong>Note:</strong> Always use the primary orange for main CTA buttons.</p>
+      <p><strong>Note:</strong> Always use the primary accent for main CTA buttons.</p>
     `,
     isFavorite: true,
     isArchived: false,
     updatedAt: new Date().toISOString(),
     tags: ['Design', 'Brand'],
+    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }]
   },
   {
     id: '2',
@@ -99,6 +144,7 @@ const INITIAL_PAGES: Page[] = [
     isArchived: false,
     updatedAt: new Date().toISOString(),
     tags: ['Product'],
+    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }]
   },
   {
     id: '3',
@@ -113,6 +159,7 @@ const INITIAL_PAGES: Page[] = [
     isArchived: false,
     updatedAt: new Date().toISOString(),
     tags: ['Meetings'],
+    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }]
   },
   {
     id: 'trash-1',
@@ -123,6 +170,7 @@ const INITIAL_PAGES: Page[] = [
     isArchived: true,
     updatedAt: new Date().toISOString(),
     tags: [],
+    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }]
   }
 ];
 
@@ -131,6 +179,43 @@ const NotesPage = () => {
   const [activePageId, setActivePageId] = useState<string | null>(INITIAL_PAGES[0].id);
   const [activeFolder, setActiveFolder] = useState("All Notes");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedNoteForAccess, setSelectedNoteForAccess] = useState<Page | null>(null);
+  const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
+  const [shareSearchQuery, setShareSearchQuery] = useState("");
+
+  const { currentUser, adminProfile, staffList } = useIndustryStore();
+  const activeUser = currentUser || adminProfile;
+
+  const isDeptHead = activeUser?.role === 'Super Admin' || activeUser?.role?.includes('Director') || activeUser?.role?.includes('Manager');
+
+  const visiblePages = useMemo(() => {
+    if (isDeptHead) return pages;
+    return pages.filter(p => 
+      p.access.some(a => a.userId === activeUser?.id || a.userId === 'admin')
+    );
+  }, [pages, isDeptHead, activeUser]);
+
+  const handleGrantAccess = (noteId: string, staff: any) => {
+    setPages(prev => prev.map(p => {
+      if (p.id === noteId) {
+        if (p.access.find(a => a.userId === staff.id)) return p;
+        return { ...p, access: [...p.access, { userId: staff.id, name: staff.name, role: 'Viewer' }] };
+      }
+      return p;
+    }));
+    setShareSearchQuery("");
+    toast({ title: "Access Granted", description: `${staff.name} can now view this note.` });
+  };
+
+  const handleRevokeAccess = (noteId: string, userId: string) => {
+    setPages(prev => prev.map(p => {
+      if (p.id === noteId) {
+        return { ...p, access: p.access.filter(a => a.userId !== userId) };
+      }
+      return p;
+    }));
+    toast({ title: "Access Revoked" });
+  };
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
@@ -185,24 +270,24 @@ const NotesPage = () => {
   }, [toast]);
 
   const activePage = useMemo(() => 
-    pages.find(p => p.id === activePageId) || null
-  , [pages, activePageId]);
+    visiblePages.find(p => p.id === activePageId) || null
+  , [visiblePages, activePageId]);
 
   const favoritePages = useMemo(() => 
-    pages.filter(p => p.isFavorite && !p.isArchived)
-  , [pages]);
+    visiblePages.filter(p => p.isFavorite && !p.isArchived)
+  , [visiblePages]);
 
   const rootPages = useMemo(() => {
-    let base = pages.filter(p => !p.parentId && !p.isArchived);
+    let base = visiblePages.filter(p => !p.parentId && !p.isArchived);
     if (activeFolder !== "All Notes") {
       base = base.filter(p => p.folder === activeFolder);
     }
     return base;
-  }, [pages, activeFolder]);
+  }, [visiblePages, activeFolder]);
 
   const archivedPages = useMemo(() => 
-    pages.filter(p => p.isArchived)
-  , [pages]);
+    visiblePages.filter(p => p.isArchived)
+  , [visiblePages]);
 
   // --- Actions ---
 
@@ -217,22 +302,47 @@ const NotesPage = () => {
       updatedAt: new Date().toISOString(),
       tags: [],
       parentId,
+      access: [{ userId: activeUser?.id || 'current', name: activeUser?.name || "User", role: 'Owner' }]
     };
     setPages(prev => [...prev, newPage]);
     setActivePageId(newPage.id);
     toast({ title: "New Page Created", description: "Start typing to edit your new note." });
-  }, [activeFolder, toast]);
+  }, [activeFolder, toast, activeUser]);
+
+  // Two-step Delete Confirmation
+  const [isDeleteModal1Open, setIsDeleteModal1Open] = useState(false);
+  const [isDeleteModal2Open, setIsDeleteModal2Open] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, permanently: boolean } | null>(null);
+
+  const handleDeletePage = (id: string, permanently = false) => {
+    setItemToDelete({ id, permanently });
+    setIsDeleteModal1Open(true);
+  };
+
+  const confirmDeleteStep1 = () => {
+    setIsDeleteModal1Open(false);
+    setIsDeleteModal2Open(true);
+  };
+
+  const finalizeDelete = () => {
+    if (itemToDelete) {
+      const { id, permanently } = itemToDelete;
+      if (permanently) {
+        setPages(prev => prev.filter(p => p.id !== id));
+        if (activePageId === id) setActivePageId(null);
+        toast({ title: "Page Deleted Permanently" });
+      } else {
+        setPages(prev => prev.map(p => p.id === id ? { ...p, isArchived: true } : p));
+        toast({ title: "Moved to Trash", description: "You can restore it from the archive." });
+      }
+      setIsDeleteModal2Open(false);
+      setItemToDelete(null);
+    }
+  };
 
   const deletePage = useCallback((id: string, permanently = false) => {
-    if (permanently) {
-      setPages(prev => prev.filter(p => p.id !== id));
-      if (activePageId === id) setActivePageId(null);
-      toast({ title: "Page Deleted Permanently" });
-    } else {
-      setPages(prev => prev.map(p => p.id === id ? { ...p, isArchived: true } : p));
-      toast({ title: "Moved to Trash", description: "You can restore it from the archive." });
-    }
-  }, [activePageId, toast]);
+    handleDeletePage(id, permanently);
+  }, [handleDeletePage]);
 
   const restorePage = useCallback((id: string) => {
     setPages(prev => prev.map(p => p.id === id ? { ...p, isArchived: false } : p));
@@ -278,26 +388,30 @@ const NotesPage = () => {
     }
   }, [tableConfig, toast]);
 
-  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>, target: 'editor' | 'cover' = 'editor') => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const base64 = e.target?.result as string;
-        const quill = quillRef.current?.getEditor();
-        const range = quill?.getSelection();
-        if (quill && range) {
-          quill.insertEmbed(range.index, 'image', base64);
+        if (target === 'editor') {
+          const quill = quillRef.current?.getEditor();
+          const range = quill?.getSelection();
+          if (quill && range) {
+            quill.insertEmbed(range.index, 'image', base64);
+          }
+        } else if (activePageId) {
+          updatePage(activePageId, { coverImage: base64 });
         }
       };
       reader.readAsDataURL(file);
     }
-  }, []);
+  }, [activePageId, updatePage]);
 
   // --- Components ---
 
   const PageItem = ({ page, depth = 0 }: { page: Page; depth?: number }) => {
-    const hasChildren = pages.some(p => p.parentId === page.id && !p.isArchived);
+    const hasChildren = visiblePages.some(p => p.parentId === page.id && !p.isArchived);
     const [isOpen, setIsOpen] = useState(false);
 
     return (
@@ -345,7 +459,7 @@ const NotesPage = () => {
                   <DropdownMenuSubTrigger><Layers className="w-4 h-4 mr-2" /> Move to</DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
                     <DropdownMenuItem onClick={() => updatePage(page.id, { parentId: undefined })}>Root</DropdownMenuItem>
-                    {pages.filter(p => p.id !== page.id && !p.isArchived).map(p => (
+                    {visiblePages.filter(p => p.id !== page.id && !p.isArchived).map(p => (
                       <DropdownMenuItem key={p.id} onClick={() => updatePage(page.id, { parentId: p.id })}>{p.title}</DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>
@@ -358,7 +472,7 @@ const NotesPage = () => {
             </DropdownMenu>
           </div>
         </div>
-        {isOpen && pages.filter(p => p.parentId === page.id && !p.isArchived).map(child => (
+        {isOpen && visiblePages.filter(p => p.parentId === page.id && !p.isArchived).map(child => (
           <PageItem key={child.id} page={child} depth={depth + 1} />
         ))}
       </div>
@@ -381,55 +495,43 @@ const NotesPage = () => {
           display: none;
         }
         .quill-editor {
-          background: hsl(var(--secondary) / 0.2);
-          border-radius: 1rem;
-          border: 1px dashed hsl(var(--border));
-          transition: all 0.2s;
-        }
-        .quill-editor:hover {
-          background: hsl(var(--secondary) / 0.3);
-          border-color: hsl(var(--primary) / 0.3);
+          border: none !important;
+          background: transparent !important;
         }
         .quill-editor .ql-container.ql-snow {
           border: none !important;
           font-family: inherit;
-          font-size: 0.875rem;
+          font-size: 1.125rem;
           min-height: inherit;
         }
         .quill-editor .ql-editor {
-          padding: 32px !important;
-          line-height: 1.6;
+          padding: 0 !important;
+          line-height: 1.7;
           color: hsl(var(--foreground));
           min-height: inherit;
         }
         .quill-editor .ql-editor.ql-blank::before {
           color: hsl(var(--muted-foreground));
           font-style: normal;
-          left: 32px;
-          opacity: 0.5;
+          left: 0;
+          opacity: 0.2;
         }
-        .quill-editor .ql-editor h1 { font-family: var(--font-display); font-size: 2.25rem; font-weight: 700; margin-bottom: 1rem; }
-        .quill-editor .ql-editor h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; }
-        .quill-editor .ql-editor h3 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.5rem; }
-        .quill-editor .ql-editor p { margin-bottom: 1rem; }
-        .quill-editor .ql-editor ul, .quill-editor .ql-editor ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        .quill-editor .ql-editor h1 { font-family: var(--font-display); font-size: 2.5rem; font-weight: 800; margin-bottom: 1.5rem; letter-spacing: -0.02em; }
+        .quill-editor .ql-editor h2 { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; }
+        .quill-editor .ql-editor h3 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        .quill-editor .ql-editor p { margin-bottom: 1.25rem; }
+        .quill-editor .ql-editor ul, .quill-editor .ql-editor ol { padding-left: 1.5rem; margin-bottom: 1.25rem; }
+        .quill-editor .ql-editor img { border-radius: 1rem; margin: 2rem 0; }
         .quill-editor .ql-editor table { 
           border-collapse: collapse !important; 
-          margin: 1rem 0 !important; 
+          margin: 2rem 0 !important; 
           width: 100% !important; 
-          border: 2px solid #000000 !important; 
-          table-layout: fixed !important;
+          border: 1px solid hsl(var(--border)) !important; 
         }
         .quill-editor .ql-editor td { 
-          border: 2px solid #000000 !important; 
+          border: 1px solid hsl(var(--border)) !important; 
           padding: 12px !important; 
-          vertical-align: top !important; 
-          min-width: 50px !important;
-          height: 40px !important;
         }
-        .quill-editor .ql-snow .ql-stroke { stroke: hsl(var(--muted-foreground)); }
-        .quill-editor .ql-snow .ql-fill { fill: hsl(var(--muted-foreground)); }
-        .quill-editor .ql-snow .ql-picker { color: hsl(var(--muted-foreground)); }
       `}</style>
       {/* Sidebar */}
       <div className="w-64 border-r border-border flex flex-col bg-card/50">
@@ -437,7 +539,7 @@ const NotesPage = () => {
         <div className="p-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <Bot className="w-3.5 h-3.5 text-primary" />
             </div>
             <span className="font-display font-semibold text-sm">Cynda Notes</span>
           </div>
@@ -564,7 +666,7 @@ const NotesPage = () => {
                 ))}
                 <div className="mx-2 w-px h-5 bg-border" />
                 <button className="p-1.5 rounded text-primary hover:bg-primary/5 transition-colors flex items-center gap-1" onClick={() => toast({ title: "AI Assistant", description: "Analyzing your note..." })}>
-                  <Sparkles className="w-4 h-4" />
+                  <Bot className="w-4 h-4" />
                   <span className="text-xs font-medium">AI</span>
                 </button>
               </div>
@@ -575,7 +677,16 @@ const NotesPage = () => {
                   {activePage.isFavorite ? 'Pinned' : 'Pin'}
                 </Button>
                 <div className="w-px h-4 bg-border mx-1" />
-                <Button variant="ghost" size="sm" className="h-8 rounded-lg text-xs gap-1.5 text-muted-foreground">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 rounded-lg text-xs gap-1.5 text-muted-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedNoteForAccess(activePage);
+                    setIsAccessDialogOpen(true);
+                  }}
+                >
                   <Share2 className="w-3.5 h-3.5" /> Share
                 </Button>
                 <DropdownMenu>
@@ -601,11 +712,40 @@ const NotesPage = () => {
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden">
-              <div className="w-full h-full px-12 py-16 space-y-2">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden relative group/canvas">
+              {/* Cover Image */}
+              <div className="relative w-full h-[25vh] bg-secondary/30 group/cover">
+                {activePage.coverImage ? (
+                  <img 
+                    src={activePage.coverImage} 
+                    alt="Cover" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-r from-orange-100/50 to-orange-200/50" />
+                )}
+                <div className="absolute bottom-4 right-12 opacity-0 group-hover/cover:opacity-100 transition-opacity">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="bg-white/80 backdrop-blur-sm border-none shadow-sm h-8 rounded-lg text-[10px] font-black uppercase tracking-widest gap-2"
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*';
+                      input.onchange = (e) => handleImageUpload(e as any, 'cover');
+                      input.click();
+                    }}
+                  >
+                    <ImageIcon className="w-3.5 h-3.5" /> Change Cover
+                  </Button>
+                </div>
+              </div>
+
+              <div className="w-full h-full px-4 md:px-12 py-12 space-y-2 max-w-4xl mx-auto">
                 {/* Title Section */}
-                <div className="group mb-8">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-4">
+                <div className="group mb-8 -mt-24 relative z-10">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-6 bg-white/80 backdrop-blur-sm w-fit px-3 py-1.5 rounded-full border border-white shadow-sm">
                     <Folder className="w-3 h-3" />
                     <span>Workspace</span>
                     <ChevronRight className="w-2.5 h-2.5" />
@@ -613,28 +753,45 @@ const NotesPage = () => {
                     <ChevronRight className="w-2.5 h-2.5" />
                     <span className="text-muted-foreground/60">{activePage.title || 'Untitled'}</span>
                   </div>
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center text-3xl shrink-0 group-hover:bg-primary/5 transition-colors cursor-pointer">
+                  <div className="flex flex-col md:flex-row md:items-end gap-6">
+                    <div className="w-20 h-20 rounded-3xl bg-white border-4 border-white shadow-xl flex items-center justify-center text-5xl shrink-0 group-hover:bg-primary/5 transition-colors cursor-pointer relative group/icon mx-auto md:mx-0">
                       {activePage.icon || '📄'}
+                      <div className="absolute -top-2 -right-2 opacity-0 group-hover/icon:opacity-100 transition-opacity">
+                        <Button 
+                          size="icon" 
+                          variant="secondary" 
+                          className="h-6 w-6 rounded-lg shadow-md"
+                          onClick={() => {
+                            const icons = ['📄', '📝', '🚀', '🎨', '💼', '📅', '💡', '📊', '🔧', '📦'];
+                            const currentIdx = icons.indexOf(activePage.icon || '📄');
+                            const nextIcon = icons[(currentIdx + 1) % icons.length];
+                            updatePage(activePage.id, { icon: nextIcon });
+                          }}
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </div>
-                    <input 
-                      className="flex-1 bg-transparent border-none focus:outline-none text-4xl font-display font-bold placeholder:text-muted-foreground/20"
-                      placeholder="Untitled"
-                      value={activePage.title}
-                      onChange={(e) => updatePage(activePage.id, { title: e.target.value })}
-                    />
+                    <div className="flex-1 pb-2 text-center md:text-left">
+                      <input 
+                        className="w-full bg-transparent border-none focus:outline-none text-3xl md:text-5xl font-display font-bold placeholder:text-muted-foreground/10 text-foreground tracking-tight"
+                        placeholder="Untitled Note"
+                        value={activePage.title}
+                        onChange={(e) => updatePage(activePage.id, { title: e.target.value })}
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-4 ml-16">
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-6">
                     {activePage.tags.map(tag => (
-                      <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium">{tag}</span>
+                      <span key={tag} className="text-[10px] px-2.5 py-1 rounded-lg bg-secondary/50 text-muted-foreground font-black uppercase tracking-widest border border-border/50">{tag}</span>
                     ))}
-                    <button className="text-[10px] text-muted-foreground hover:text-primary transition-colors">+ Add tag</button>
+                    <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline ml-2 transition-all">+ Add tag</button>
                   </div>
                 </div>
 
                 {/* Content Section */}
                 <div 
-                  className="w-full min-h-[calc(100vh-25rem)] cursor-text pt-8 pb-20"
+                  className="w-full min-h-[calc(100vh-25rem)] cursor-text pt-4 pb-20"
                   onClick={() => quillRef.current?.getEditor().focus()}
                 >
                   <ReactQuill 
@@ -644,24 +801,27 @@ const NotesPage = () => {
                     onChange={(content) => updatePage(activePage.id, { content })}
                     modules={{ toolbar: false }}
                     formats={editorFormats}
-                    placeholder="Start typing your note here..."
+                    placeholder="Press '/' for commands..."
                     className="quill-editor"
                   />
                   
                   {/* Backlinks Section */}
-                  <div className="pt-12 border-t border-border mt-12 space-y-4">
-                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">2 Backlinks</h4>
-                    <div className="grid grid-cols-2 gap-4 pb-20">
+                  <div className="pt-12 border-t border-border mt-12 space-y-6">
+                    <div className="flex items-center gap-3">
+                      <Layers className="w-4 h-4 text-muted-foreground/40" />
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">2 Connections Found</h4>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-20">
                       {[
-                        { title: 'Project Overview', date: 'Mar 20', icon: '📁' },
-                        { title: 'Design Review', date: 'Mar 22', icon: '🎨' },
+                        { title: 'Project Overview', date: 'Mar 20', icon: '📁', desc: 'Referenced in section 2.1' },
+                        { title: 'Design Review', date: 'Mar 22', icon: '🎨', desc: 'Asset list mentioned' },
                       ].map((link, i) => (
-                        <div key={i} className="p-3 rounded-xl border border-border bg-secondary/10 hover:bg-secondary/20 cursor-pointer transition-colors group">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs">{link.icon}</span>
-                            <span className="text-xs font-bold truncate group-hover:text-primary transition-colors">{link.title}</span>
+                        <div key={i} className="p-4 rounded-2xl border border-border bg-card/50 hover:bg-white hover:shadow-lg hover:border-primary/20 cursor-pointer transition-all group border-l-4 border-l-primary/10 hover:border-l-primary">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-lg">{link.icon}</span>
+                            <span className="text-xs font-black uppercase tracking-tight group-hover:text-primary transition-colors truncate">{link.title}</span>
                           </div>
-                          <p className="text-[10px] text-muted-foreground">Linked from "Project Roadmap"</p>
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-relaxed">{link.desc}</p>
                         </div>
                       ))}
                     </div>
@@ -820,6 +980,111 @@ const NotesPage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Access Dialog */}
+      <Dialog open={isAccessDialogOpen} onOpenChange={setIsAccessDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] rounded-[24px] p-0 overflow-hidden border-none shadow-2xl">
+          <DialogHeader className="p-8 border-b border-border bg-muted/30">
+            <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-primary mb-4">
+              <Bot className="w-3.5 h-3.5" />
+              <span>Note Permissions</span>
+            </div>
+            <DialogTitle className="font-black text-2xl text-foreground uppercase tracking-tight">SHARE NOTE</DialogTitle>
+            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
+              Grant staff members access to "{selectedNoteForAccess?.title || 'this note'}"
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="p-8 space-y-8 bg-background">
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">Add people</h4>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search by name or email..." 
+                    className="pl-10 h-12 rounded-xl bg-muted/30 border-none text-xs font-bold"
+                    value={shareSearchQuery}
+                    onChange={(e) => setShareSearchQuery(e.target.value)}
+                  />
+                </div>
+                <Button className="rounded-xl h-12 px-6 font-black uppercase tracking-widest text-[9px] bg-primary text-white shadow-lg">Search</Button>
+              </div>
+
+              <AnimatePresence>
+                {shareSearchQuery.length > 1 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                    className="border-2 border-border rounded-2xl overflow-hidden"
+                  >
+                    <ScrollArea className="h-[150px]">
+                      <div className="divide-y divide-border">
+                        {staffList.filter(s => s.name.toLowerCase().includes(shareSearchQuery.toLowerCase())).map((staff) => (
+                          <button 
+                            key={staff.id} 
+                            className="w-full p-3 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                            onClick={() => handleGrantAccess(selectedNoteForAccess?.id!, staff)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-[10px] font-black">{staff.name.charAt(0)}</div>
+                              <div className="text-left">
+                                <p className="text-xs font-black uppercase tracking-tight">{staff.name}</p>
+                                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{staff.role}</p>
+                              </div>
+                            </div>
+                            <Plus className="w-4 h-4 text-primary" />
+                          </button>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">Who has access</h4>
+              <div className="space-y-3">
+                {selectedNoteForAccess?.access.map((acc) => (
+                  <div key={acc.userId} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-lg border-2 border-white shadow-sm bg-primary/10 flex items-center justify-center text-primary text-[10px] font-black">
+                        {acc.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-tight text-foreground">{acc.name}</p>
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{acc.role}</p>
+                      </div>
+                    </div>
+                      {acc.role !== 'Owner' && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                          onClick={() => handleRevokeAccess(selectedNoteForAccess?.id!, acc.userId)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="p-8 border-t border-border bg-muted/30">
+            <div className="flex items-center gap-3 w-full">
+              <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+              </div>
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">
+                Changes to permissions take effect immediately. Department heads retain master access.
+              </p>
+            </div>
+            <Button variant="outline" className="rounded-xl h-10 px-8 font-black uppercase tracking-widest text-[9px] border-border bg-card text-muted-foreground" onClick={() => setIsAccessDialogOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Quick Search Modal */}
       <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
         <DialogContent className="sm:max-w-[600px] rounded-2xl p-0 overflow-hidden top-[20%]">
@@ -840,7 +1105,7 @@ const NotesPage = () => {
             <div className="px-3 py-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Results</span>
             </div>
-            {pages.filter(p => !p.isArchived && (p.title.toLowerCase().includes(searchQuery.toLowerCase()) || p.content.toLowerCase().includes(searchQuery.toLowerCase()))).map(page => (
+            {visiblePages.filter(p => !p.isArchived && (p.title.toLowerCase().includes(searchQuery.toLowerCase()) || p.content.toLowerCase().includes(searchQuery.toLowerCase()))).map(page => (
               <button
                 key={page.id}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary text-left group transition-colors"
@@ -865,7 +1130,75 @@ const NotesPage = () => {
               <span className="flex items-center gap-1.5"><ArrowUpRight className="w-3 h-3" /> Select</span>
               <span className="flex items-center gap-1.5"><Filter className="w-3 h-3" /> Filter by tag</span>
             </div>
-            <span>{pages.length} Pages indexed</span>
+            <span>{visiblePages.length} Pages indexed</span>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal 1 */}
+      <Dialog open={isDeleteModal1Open} onOpenChange={setIsDeleteModal1Open}>
+        <DialogContent className="sm:max-w-[400px] rounded-[32px] border-4 p-8 bg-card">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive mb-4">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">
+              {itemToDelete?.permanently ? 'Delete Page Permanently?' : 'Move to Trash?'}
+            </DialogTitle>
+            <DialogDescription className="text-sm font-medium text-muted-foreground">
+              {itemToDelete?.permanently 
+                ? 'This will remove the page and all its content forever.' 
+                : 'You can restore this page from the trash later if you change your mind.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button 
+              variant="destructive"
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={confirmDeleteStep1}
+            >
+              Yes, I'm sure
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={() => setIsDeleteModal1Open(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal 2 */}
+      <Dialog open={isDeleteModal2Open} onOpenChange={setIsDeleteModal2Open}>
+        <DialogContent className="sm:max-w-[400px] rounded-[32px] border-4 p-8 bg-card border-destructive">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-2xl bg-destructive flex items-center justify-center text-white mb-4 animate-pulse">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight text-destructive">Final Confirmation</DialogTitle>
+            <DialogDescription className="text-sm font-bold text-destructive/80 uppercase tracking-widest">
+              {itemToDelete?.permanently 
+                ? 'This action is absolutely irreversible. Proceed?' 
+                : 'Confirm moving this item to the trash archive.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button 
+              variant="destructive"
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-destructive/20"
+              onClick={finalizeDelete}
+            >
+              {itemToDelete?.permanently ? 'Permanently Delete' : 'Move to Trash'}
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]"
+              onClick={() => setIsDeleteModal2Open(false)}
+            >
+              I changed my mind
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
