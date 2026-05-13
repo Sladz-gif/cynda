@@ -2,7 +2,7 @@
 
 Cynda is a high-fidelity, dynamic Business Operating System designed to scale with your organization. It provides a "Single Source of Truth" architecture where the interface and functionality adapt in real-time based on your business needs.
 
-**Implementation note:** The app shell and routes in this repo follow this document. **Import History** is available at `/app/crm/import-history`. **Auth screens** (mock/local): `/sign-in`, `/sign-up`, `/forgot-password`. Documentation and tasks for this codebase are maintained using **Cursor** (not Trae).
+**Implementation note:** The app shell and routes in this repo follow this document. **Import History** is available at `/app/crm/import-history`. **Auth screens** (mock/local): `/sign-in`, `/sign-up`, `/forgot-password`. Documentation and tasks for this codebase are maintained using **Trae AI**.
 
 ---
 
