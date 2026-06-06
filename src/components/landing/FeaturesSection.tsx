@@ -2,10 +2,10 @@ import { motion } from "framer-motion";
 import { Kanban, Users, Receipt, UserCheck } from "lucide-react";
 
 const features = [
-  { icon: Kanban, title: "Projects", description: "Tasks, boards, deadlines, and dependencies in one place." },
-  { icon: Users, title: "Clients", description: "Contacts, pipelines, and interaction history automatically logged." },
-  { icon: Receipt, title: "Finance", description: "Invoices, expenses, and payroll directly linked to your work." },
-  { icon: UserCheck, title: "People", description: "Onboarding, leave requests, and directory management." },
+  { icon: Users, title: "CRM", description: "Your clients, pipelines, and follow-ups — in one place that actually remembers everything." },
+  { icon: Receipt, title: "Finance", description: "Invoices, expenses, payroll, and Mobile Money — built for how African businesses actually get paid." },
+  { icon: Kanban, title: "Projects", description: "Tasks, boards, and deadlines your whole team can see. No more \"I didn't know that was due.\"" },
+  { icon: UserCheck, title: "HR", description: "Onboard staff, approve leave, and manage your team without a dedicated HR department." },
 ];
 
 const container = {
@@ -30,14 +30,14 @@ const FeaturesSection = () => {
           className="text-center mb-16"
         >
           <span className="text-[10px] font-black uppercase tracking-widest text-primary mb-4 block">
-            The solution
+            THE SOLUTION
           </span>
           <h2 className="font-display text-4xl sm:text-5xl font-black tracking-tight mb-4 text-foreground leading-[1.1]">
             Everything connected.<br/>
             Nothing missing.
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto font-medium">
-            Cynda is the last app you will ever need to set up for your business.
+            Cynda replaces the stack you've been patching together since Day 1.
           </p>
         </motion.div>
 

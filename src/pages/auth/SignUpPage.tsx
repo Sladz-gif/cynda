@@ -299,7 +299,7 @@ const SignUpPage = () => {
           </div>
 
           <p className="text-lg text-muted-foreground font-medium uppercase tracking-widest opacity-60 text-center pt-8">
-            Free for 3 days. No card required.
+            3 days free. No card required.
           </p>
         </div>
       </div>
@@ -312,8 +312,8 @@ const SignUpPage = () => {
           className="w-full max-w-sm space-y-8 my-auto"
         >
           <div className="space-y-2">
-            <h2 className="text-3xl font-black uppercase tracking-tight">Create your workspace</h2>
-            <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest opacity-60">Free for 3 days. No card required.</p>
+            <h2 className="text-3xl font-black uppercase tracking-tight">Your African business, one workspace.</h2>
+            <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest opacity-60">3 days free. No card required.</p>
           </div>
 
           <form onSubmit={handleSignUp} className="space-y-6">

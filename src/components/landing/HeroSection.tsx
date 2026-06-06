@@ -21,7 +21,7 @@ const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-bold uppercase tracking-widest mb-8 border border-primary/20"
           >
-            <Zap className="w-4 h-4" /> Introducing Cynda
+            <Zap className="w-4 h-4" /> Built in Ghana. Built for Africa.
           </motion.div>
 
           {/* Headline */}
@@ -31,9 +31,7 @@ const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] mb-6"
           >
-            One workspace.{" "}
-            <span className="text-gradient-primary">100%</span>{" "}
-            of your business.
+            Your business runs on too many tabs. Fix that.
           </motion.h1>
 
           {/* Subtext */}
@@ -43,7 +41,7 @@ const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed font-medium"
           >
-            Cynda brings your projects, clients, finances, and team into a single workspace.
+            Cynda is the one workspace where African businesses manage clients, projects, money, and people — without juggling seven apps and a spreadsheet.
           </motion.p>
 
           {/* CTAs */}
@@ -56,7 +54,7 @@ const HeroSection = () => {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button variant="hero" size="lg" className="px-8 h-12 relative z-20 font-black uppercase tracking-widest text-[11px]" asChild>
                 <Link to="/signup" className="flex items-center justify-center gap-2">
-                  Start free trial 
+                  Start free — no card needed
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>

@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIndustryStore } from "@/lib/industry-store";
 
 const FEATURE_COPY =
-  "Automate your entire workflow with Cynda's intelligent automation engine. Connect different departments, trigger actions based on events, and let AI handle the repetitive tasks. Building complex workflows has never been easier.";
+  "Set it up once. Let Cynda handle the rest. Connect your departments, trigger actions automatically, and let Cyndi do the follow-up work. Built for businesses that can't afford to drop the ball.";
 
 const AutomationComingSoonPage = () => {
   const { toast } = useToast();

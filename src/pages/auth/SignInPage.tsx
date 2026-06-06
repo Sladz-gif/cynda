@@ -233,8 +233,8 @@ const SignInPage = () => {
           className="w-full max-w-sm space-y-8 my-auto"
         >
           <div className="space-y-2">
-            <h2 className="text-3xl font-black uppercase tracking-tight">Welcome back</h2>
-            <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest opacity-60">Enterprise & Solo access hub.</p>
+            <h2 className="text-3xl font-black uppercase tracking-tight">Welcome back. Let's get to work.</h2>
+            <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest opacity-60">Sign in to your Cynda workspace</p>
           </div>
 
           <form onSubmit={handleSignIn} className="space-y-6">

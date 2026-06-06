@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIndustryStore } from "@/lib/industry-store";
 
 const FEATURE_COPY =
-  "Find work. Post campaigns. Hire talent. The Cynda Marketplace connects solo professionals, teams, and companies — all backed by real verified performance data.";
+  "Find work. Post campaigns. Hire talent. Right here in Cynda. The Cynda Marketplace connects African professionals, agencies, and businesses — backed by real performance data, not vanity ratings. Coming soon to Ghana and beyond.";
 
 const MarketplaceComingSoonPage = () => {
   const { toast } = useToast();

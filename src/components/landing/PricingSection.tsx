@@ -49,14 +49,14 @@ const plans: Plan[] = [
   {
     id: "team",
     name: "Team",
-    tagline: "For businesses where everyone needs to be on the same page.",
+    tagline: "For businesses where everyone needs to stay on the same page.",
     monthlyPrice: 29,
     yearlyPrice: 24,
     basePrice: 29,
     seatPrice: 8,
     seatPriceYearly: 6.50,
-    example: "5 people = $61/month",
-    exampleYearly: "5 people = $56/month",
+    example: "10 people = $101/month",
+    exampleYearly: "10 people = $89/month",
     features: [
       "Everything in Solo",
       "Super admin control panel",
@@ -73,7 +73,7 @@ const plans: Plan[] = [
   {
     id: "organisation",
     name: "Organisation",
-    tagline: "For companies that need structure without slowing down.",
+    tagline: "For companies that need real structure without slowing down.",
     monthlyPrice: 199,
     yearlyPrice: 165,
     basePrice: 199,
@@ -115,10 +115,10 @@ const PricingSection = () => {
           className="text-center mb-16"
         >
           <h2 className="font-display text-4xl sm:text-5xl font-bold tracking-tight mb-6">
-            Simple pricing. No surprises.
+            SIMPLE PRICING
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            Pay for what you use. Scale when you're ready. Cancel when you want — we won't make it difficult.
+            Pay in a currency you understand. Cancel anytime.
           </p>
 
           {/* Annual/Monthly Toggle */}
@@ -304,7 +304,7 @@ const PricingSection = () => {
           </div>
         </motion.div>
 
-        {/* Below Pricing Cards - FAQ */}
+        {/* Below Pricing Cards - Payment Methods */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -313,7 +313,7 @@ const PricingSection = () => {
           className="text-center mb-20"
         >
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Every plan starts with a 3-day free trial. No credit card required. We'd rather you try it and love it than sign up on faith.
+            We accept Mobile Money (MTN, Vodafone, AirtelTigo), card, and bank transfer.
           </p>
         </motion.div>
 

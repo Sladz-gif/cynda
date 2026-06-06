@@ -139,7 +139,7 @@ const DashboardPage = () => {
             Cynda · Work OS
           </p>
           <h1 className="font-display text-xl sm:text-3xl lg:text-4xl font-black tracking-tight text-foreground uppercase leading-tight truncate">
-            {greeting}, {activeUser?.chatName?.split(".")[0] || activeUser?.name?.split(" ")[0] || "there"}.
+            {greeting}, {activeUser?.chatName?.split(".")[0] || activeUser?.name?.split(" ")[0] || "there"}. Here's where things stand.
           </h1>
           <div className="flex flex-wrap gap-2 mt-1 sm:mt-2">
             <p className="text-[10px] sm:text-sm text-muted-foreground max-w-xl leading-relaxed">
@@ -164,19 +164,16 @@ const DashboardPage = () => {
                   <Sparkles className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black uppercase tracking-tight">Unlock Full Power</h2>
-                  <p className="text-muted-foreground font-medium uppercase tracking-widest text-[10px]">You're currently experiencing the Trial Edition</p>
+                  <h2 className="text-2xl font-black uppercase tracking-tight">You're on the free trial</h2>
+                  <p className="text-muted-foreground font-medium uppercase tracking-widest text-[10px]">Trial Edition</p>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed max-w-xl">
-                You're seeing just a fraction of what Cynda can do. Upgrade to a paid plan to unlock 
-                <span className="text-foreground font-bold"> Advanced Automations</span>, 
-                <span className="text-foreground font-bold"> Enterprise Finance</span>, 
-                and the full <span className="text-foreground font-bold"> HR Surveillance Suite</span>.
+                You're seeing a slice of what Cynda can do. Upgrade to unlock automations, full finance tools, and team management.
               </p>
             </div>
             <Button size="lg" className="h-14 px-10 rounded-2xl font-black uppercase tracking-widest shadow-glow shrink-0 w-full md:w-auto" asChild>
-              <Link to="/billing/select-plan">Upgrade Now</Link>
+              <Link to="/billing/select-plan">Upgrade your plan</Link>
             </Button>
           </div>
         </motion.section>
@@ -208,7 +205,7 @@ const DashboardPage = () => {
 
       <section aria-label="Departments" className="space-y-4">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="font-display text-lg font-black uppercase tracking-tight text-foreground">Your departments</h2>
+          <h2 className="font-display text-lg font-black uppercase tracking-tight text-foreground">Your business at a glance</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(Object.keys(DEPARTMENTS) as (keyof typeof DEPARTMENTS)[]).map((key, index) => {
@@ -240,10 +237,10 @@ const DashboardPage = () => {
                   <div>
                     <h3 className="font-display text-sm font-black uppercase tracking-tight text-foreground">{dept.label}</h3>
                     <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                      {key === "CRM" && "Lifecycle, pipeline, campaigns, and sales automation."}
-                      {key === "Finance" && "Cash position, invoicing, expenses, and payroll."}
-                      {key === "Projects" && "Tasks, boards, calendar, timeline, and resourcing."}
-                      {key === "HR" && "Directory, hiring, onboarding, and time off."}
+                      {key === "CRM" && "Clients, pipelines, campaigns, and sales — all tracked automatically."}
+                      {key === "Finance" && "Cash position, invoices, expenses, and payroll — linked directly to your work."}
+                      {key === "Projects" && "Tasks, boards, timelines, and resources — so nothing slips."}
+                      {key === "HR" && "Directory, hiring, onboarding, and leave — managed without the paperwork."}
                       {key === "Other" && "Messaging, email, notes, automations, forms, and files."}
                     </p>
                   </div>
@@ -297,31 +294,31 @@ const DashboardPage = () => {
       {isTrial && (
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t-2 border-border/50">
           <div className="md:col-span-1 space-y-4">
-            <h2 className="font-display text-xl font-black uppercase tracking-tight text-foreground">Premium Edge</h2>
+            <h2 className="font-display text-xl font-black uppercase tracking-tight text-foreground">Why serious African businesses upgrade</h2>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Why our top-tier customers choose the full Cynda experience.
+              Unlock the full power of Cynda for your growing business.
             </p>
           </div>
           <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-5 rounded-2xl border-2 border-border bg-card hover:border-primary/30 transition-colors">
               <Zap className="w-6 h-6 text-primary mb-3" />
-              <h4 className="text-xs font-black uppercase tracking-tight mb-2">Infinite Automations</h4>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">Connect every tool in your stack with AI-powered triggers that work while you sleep.</p>
+              <h4 className="text-xs font-black uppercase tracking-tight mb-2">Automations that do the boring work</h4>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">Connect every part of your business with triggers that run while you sleep.</p>
             </div>
             <div className="p-5 rounded-2xl border-2 border-border bg-card hover:border-primary/30 transition-colors">
               <ShieldCheck className="w-6 h-6 text-primary mb-3" />
-              <h4 className="text-xs font-black uppercase tracking-tight mb-2">Full Surveillance</h4>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">Total visibility into staff activity, document access logs, and security compliance.</p>
+              <h4 className="text-xs font-black uppercase tracking-tight mb-2">Full visibility</h4>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">See who did what, when, across every department. Built for accountability.</p>
             </div>
             <div className="p-5 rounded-2xl border-2 border-border bg-card hover:border-primary/30 transition-colors">
               <Trophy className="w-6 h-6 text-primary mb-3" />
-              <h4 className="text-xs font-black uppercase tracking-tight mb-2">Performance Suite</h4>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">Deep analytics on employee productivity and company-wide growth metrics.</p>
+              <h4 className="text-xs font-black uppercase tracking-tight mb-2">Real performance data</h4>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">Know who's moving the needle and where growth is coming from.</p>
             </div>
             <div className="p-5 rounded-2xl border-2 border-border bg-card hover:border-primary/30 transition-colors">
               <Users2 className="w-6 h-6 text-primary mb-3" />
-              <h4 className="text-xs font-black uppercase tracking-tight mb-2">Team Collaboration</h4>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">Unlimited seats, shared workspaces, and granular permission controls for any team size.</p>
+              <h4 className="text-xs font-black uppercase tracking-tight mb-2">Unlimited seats, real control</h4>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">Add your whole team. Set permissions. Scale without chaos.</p>
             </div>
           </div>
         </section>
@@ -337,8 +334,7 @@ const DashboardPage = () => {
         <div className="flex-1 space-y-2">
           <h2 className="font-display text-base font-black uppercase tracking-tight text-foreground">Cyndi</h2>
           <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
-            Document parsing, import mapping, financial snapshots, and workspace actions — open the panel anytime for an expert
-            lens on your real data.
+            Cyndi reads your documents, parses your data, and takes action in your workspace. Open the panel anytime — like asking your smartest colleague a question.
           </p>
         </div>
         <Button
@@ -348,7 +344,7 @@ const DashboardPage = () => {
             setCyndiOpen(true);
           }}
         >
-          Open Cyndi
+          Ask Cyndi
         </Button>
       </section>
 

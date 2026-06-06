@@ -246,7 +246,7 @@ const CheckoutPage = () => {
           >
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg font-black uppercase tracking-tight">Payment Method</CardTitle>
+                <CardTitle className="text-lg font-black uppercase tracking-tight">How do you want to pay?</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -367,6 +367,7 @@ const CheckoutPage = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
+                      <p className="text-sm font-medium text-muted-foreground">Pay with Mobile Money (MTN, Vodafone, AirtelTigo)</p>
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Network</Label>
                         <RadioGroup value={momoNetwork} onValueChange={setMomoNetwork}>
@@ -435,6 +436,8 @@ const CheckoutPage = () => {
                           <li>3. Done! Your subscription activates</li>
                         </ol>
                       </div>
+
+                      <p className="text-xs text-muted-foreground text-center">We support GHS, NGN, KES, and USD.</p>
                     </div>
                   )}
 

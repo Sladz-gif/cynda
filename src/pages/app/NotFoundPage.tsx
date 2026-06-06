@@ -28,6 +28,11 @@ const BUSINESS_WISDOM = [
   // Project Management & IT
   { type: "Quote", source: "The Mythical Man-Month", content: "Adding manpower to a late software project makes it later. Brooks's Law reminds us that communication overhead scales faster than coding speed.", category: "IT" },
   { type: "Fun Fact", source: "Project Management", content: "The 'Planning Fallacy' means we naturally underestimate how long a project will take. Always add a 20% buffer to your estimates.", category: "Project Management" },
+
+  // African Business Context
+  { type: "Quote", source: "The Entrepreneur's Guide to African Markets", content: "Africa's informal sector is not a problem to be solved — it's the real economy. Build for how people actually do business.", category: "Business Management" },
+  { type: "Quote", source: "Africa's Business Revolution", content: "Mobile money leapfrogged traditional banking in Africa. Don't assume Western payment models apply here.", category: "Finance" },
+  { type: "Fun Fact", source: "The Entrepreneur's Guide to African Markets", content: "African consumers are early adopters of technology when it solves real problems. Focus on utility over novelty.", category: "Marketing" },
 ];
 
 const NotFoundPage = () => {
@@ -61,7 +66,7 @@ const NotFoundPage = () => {
           className="space-y-2"
         >
           <h1 className="text-6xl md:text-8xl font-black text-primary/10 select-none">404</h1>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight">You've found a placeholder...</h2>
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight">This one's still in the oven.</h2>
           <p className="text-sm md:text-base text-muted-foreground">This feature is currently under construction, but here's some wisdom while you wait.</p>
         </motion.div>
 

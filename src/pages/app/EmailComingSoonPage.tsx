@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIndustryStore } from "@/lib/industry-store";
 
 const FEATURE_COPY =
-  "Send and receive professional emails directly from your Cynda workspace. Every member gets their own @cynda.xyz address automatically. No switching tabs. No separate inbox. Everything in one place.";
+  "Your own @cynda.xyz address. No switching tabs. Send and receive professional emails directly from Cynda. Every team member gets their own address automatically. WhatsApp for client chat, Cynda for everything else.";
 
 const EmailComingSoonPage = () => {
   const { toast } = useToast();

@@ -22,10 +22,9 @@ const ForbiddenPage = () => {
       </motion.div>
       
       <h2 className="font-display text-3xl font-black uppercase tracking-tight mb-4 text-foreground">You don't have access to this.</h2>
-      
+
       <p className="text-muted-foreground max-w-sm mx-auto uppercase text-[10px] font-bold tracking-[0.2em] leading-relaxed mb-10">
-        This module hasn't been assigned to you. <br />
-        If you think that's wrong, reach out to your admin.
+        This section hasn't been opened up for you yet. Ask your admin to grant access.
       </p>
       
       <div className="flex gap-4">

@@ -294,7 +294,7 @@ const OnboardingPage = () => {
             <span className="font-display text-2xl font-bold tracking-tight text-wahoo-foreground">Cynda</span>
           </div>
           <p className="text-sm text-wahoo-foreground/60 mt-4 leading-relaxed">
-            Set up your workspace in under 60 seconds. We'll configure everything based on your choices.
+            Let's set up your workspace. Takes less than 3 minutes.
           </p>
         </div>
 
@@ -445,8 +445,8 @@ const OnboardingPage = () => {
                   </h2>
                   <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest opacity-70">
                     {userType === 'solo'
-                      ? 'Choose the tools for your workspace. You can change these anytime in Settings.'
-                      : 'Select the departments and tools your team will use.'}
+                      ? 'Which parts of your business do you want to manage in Cynda?'
+                      : 'Which parts of your business do you want to manage in Cynda?'}
                   </p>
                 </div>
 

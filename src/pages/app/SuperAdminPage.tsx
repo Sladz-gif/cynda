@@ -140,35 +140,35 @@ const SuperAdminPage = () => {
   };
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="p-4 sm:p-8 space-y-8 max-w-7xl mx-auto w-full">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 w-full">
         <div>
-          <h1 className="text-4xl font-black uppercase tracking-tighter flex items-center gap-3">
-            <Shield className="w-10 h-10 text-primary" />
+          <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tighter flex items-center gap-3">
+            <Shield className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
             Super Admin Control
           </h1>
-          <p className="text-muted-foreground font-bold uppercase tracking-widest text-xs mt-1 opacity-70">
+          <p className="text-muted-foreground font-bold uppercase tracking-widest text-[10px] sm:text-xs mt-1 opacity-70">
             Enterprise Management & Global Support System
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="ghost" className="h-12 px-4 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={handleLogout}>
-            <LogOut className="w-4 h-4" /> Logout
+        <div className="flex flex-wrap gap-3 w-full lg:w-auto">
+          <Button variant="ghost" className="h-10 sm:h-12 px-3 sm:px-4 rounded-2xl font-black uppercase tracking-widest text-[9px] sm:text-[10px] flex items-center gap-2 hover:bg-destructive/10 hover:text-destructive transition-colors flex-1 sm:flex-none" onClick={handleLogout}>
+            <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Logout
           </Button>
           <Dialog open={isCodeModalOpen} onOpenChange={setIsCodeModalOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="h-12 px-6 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 border-2">
-                <Gift className="w-4 h-4" /> Manage Codes
+              <Button variant="outline" className="h-10 sm:h-12 px-3 sm:px-6 rounded-2xl font-black uppercase tracking-widest text-[9px] sm:text-[10px] flex items-center gap-2 border-2 flex-1 sm:flex-none">
+                <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Manage Codes
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] rounded-3xl border-2">
+            <DialogContent className="w-[95vw] max-w-[500px] rounded-3xl border-2 p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-black uppercase tracking-tight">Redemption Codes</DialogTitle>
-                <DialogDescription className="font-bold uppercase tracking-widest text-[10px] opacity-60">
+                <DialogTitle className="text-xl sm:text-2xl font-black uppercase tracking-tight">Redemption Codes</DialogTitle>
+                <DialogDescription className="font-bold uppercase tracking-widest text-[9px] sm:text-[10px] opacity-60">
                   Create and manage codes for free pro access.
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleCreateCode} className="space-y-6 py-4">
+              <form onSubmit={handleCreateCode} className="space-y-4 sm:space-y-6 py-4">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Promotional Code</Label>
@@ -180,12 +180,12 @@ const SuperAdminPage = () => {
                         onChange={e => setNewCode({...newCode, code: e.target.value.toUpperCase()})}
                         required
                       />
-                      <Button type="button" variant="outline" className="h-12 rounded-xl" onClick={generateRandomCode}>
+                      <Button type="button" variant="outline" className="h-12 rounded-xl shrink-0" onClick={generateRandomCode}>
                         <RefreshCcw className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Duration (Months)</Label>
                       <Select value={newCode.duration} onValueChange={v => setNewCode({...newCode, duration: v})}>
@@ -227,22 +227,22 @@ const SuperAdminPage = () => {
             if (!open) setCreateStep(1);
           }}>
             <DialogTrigger asChild>
-              <Button className="h-12 px-6 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] shadow-glow flex items-center gap-2">
-                <UserPlus className="w-4 h-4" /> Provision New Account
+              <Button className="h-10 sm:h-12 px-3 sm:px-6 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[9px] sm:text-[10px] shadow-glow flex items-center gap-2 flex-1 sm:flex-none">
+                <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Provision Account
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] rounded-3xl border-2">
+            <DialogContent className="w-[95vw] max-w-[600px] rounded-3xl border-2 p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-black uppercase tracking-tight">
+                <DialogTitle className="text-xl sm:text-2xl font-black uppercase tracking-tight">
                   {createStep === 1 ? "Provision Account" : "Enterprise Configuration"}
                 </DialogTitle>
-                <DialogDescription className="font-bold uppercase tracking-widest text-[10px] opacity-60">
+                <DialogDescription className="font-bold uppercase tracking-widest text-[9px] sm:text-[10px] opacity-60">
                   {createStep === 1 
                     ? "Select user type and primary administrator credentials." 
                     : "Pre-configure departments, roles, and workspaces for the enterprise."}
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleCreateAccount} className="space-y-6 py-4">
+              <form onSubmit={handleCreateAccount} className="space-y-4 sm:space-y-6 py-4">
                 {createStep === 1 ? (
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -276,7 +276,7 @@ const SuperAdminPage = () => {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Admin Full Name</Label>
                         <Input 
@@ -311,7 +311,7 @@ const SuperAdminPage = () => {
                         <Button 
                           type="button" 
                           variant="outline"
-                          className="h-12 rounded-xl"
+                          className="h-12 rounded-xl shrink-0"
                           onClick={() => setNewAccount({...newAccount, tempPassword: Math.random().toString(36).slice(-8)})}
                         >
                           Regen
@@ -328,7 +328,7 @@ const SuperAdminPage = () => {
                       <Label className="text-[10px] font-black uppercase tracking-widest ml-1 flex items-center gap-2">
                         <Layers className="w-3 h-3" /> Core Departments
                       </Label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {availableDepts.map(dept => (
                           <button
                             key={dept}
@@ -390,18 +390,18 @@ const SuperAdminPage = () => {
                   </div>
                 )}
                 
-                <DialogFooter className="pt-4 border-t gap-2">
+                <DialogFooter className="pt-4 border-t gap-2 flex-col sm:flex-row">
                   {createStep === 2 && (
                     <Button 
                       type="button" 
                       variant="outline" 
-                      className="h-12 px-6 rounded-2xl font-black uppercase tracking-widest text-[10px]"
+                      className="h-12 px-6 rounded-2xl font-black uppercase tracking-widest text-[10px] w-full sm:w-auto"
                       onClick={() => setCreateStep(1)}
                     >
                       Back
                     </Button>
                   )}
-                  <Button type="submit" className="flex-1 h-12 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] shadow-glow">
+                  <Button type="submit" className="flex-1 h-12 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] shadow-glow w-full">
                     {createStep === 1 && newAccount.userType === 'enterprise' ? "Next: Configure" : "Initialize Account"}
                   </Button>
                 </DialogFooter>
@@ -411,45 +411,45 @@ const SuperAdminPage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="rounded-3xl border-2 border-primary/10 bg-primary/[0.02]">
           <CardHeader className="pb-2">
-            <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Total Accounts</CardTitle>
+            <CardTitle className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Total Accounts</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">{accounts.length}</div>
-            <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1 flex items-center gap-1">
+            <div className="text-2xl sm:text-3xl font-black">{accounts.length}</div>
+            <p className="text-[9px] sm:text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1 flex items-center gap-1">
               <ArrowUpRight className="w-3 h-3" /> No new accounts
             </p>
           </CardContent>
         </Card>
         <Card className="rounded-3xl border-2 border-blue-500/10 bg-blue-500/[0.02]">
           <CardHeader className="pb-2">
-            <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Active Users</CardTitle>
+            <CardTitle className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Active Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">0</div>
-            <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1 flex items-center gap-1">
+            <div className="text-2xl sm:text-3xl font-black">0</div>
+            <p className="text-[9px] sm:text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1 flex items-center gap-1">
               <ArrowUpRight className="w-3 h-3" /> 0% increase
             </p>
           </CardContent>
         </Card>
         <Card className="rounded-3xl border-2 border-amber-500/10 bg-amber-500/[0.02]">
           <CardHeader className="pb-2">
-            <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Open Tickets</CardTitle>
+            <CardTitle className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Open Tickets</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">{tickets.filter(t => t.status !== 'closed').length}</div>
-            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mt-1">0 Urgent priority</p>
+            <div className="text-2xl sm:text-3xl font-black">{tickets.filter(t => t.status !== 'closed').length}</div>
+            <p className="text-[9px] sm:text-[10px] font-bold text-amber-500 uppercase tracking-widest mt-1">0 Urgent priority</p>
           </CardContent>
         </Card>
         <Card className="rounded-3xl border-2 border-purple-500/10 bg-purple-500/[0.02]">
           <CardHeader className="pb-2">
-            <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Rev (ARR)</CardTitle>
+            <CardTitle className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Rev (ARR)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">$0</div>
-            <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1 flex items-center gap-1">
+            <div className="text-2xl sm:text-3xl font-black">$0</div>
+            <p className="text-[9px] sm:text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1 flex items-center gap-1">
               <ArrowUpRight className="w-3 h-3" /> $0 month
             </p>
           </CardContent>
@@ -457,119 +457,123 @@ const SuperAdminPage = () => {
       </div>
 
       <Tabs defaultValue="accounts" className="w-full">
-        <TabsList className="bg-muted/50 p-1 rounded-2xl mb-8 flex overflow-x-auto no-scrollbar justify-start md:justify-center">
-          <TabsTrigger value="accounts" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
-            <Building2 className="w-3.5 h-3.5 mr-2" /> Accounts & Users
-          </TabsTrigger>
-          <TabsTrigger value="support" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
-            <LifeBuoy className="w-3.5 h-3.5 mr-2" /> Customer Service
-          </TabsTrigger>
-          <TabsTrigger value="waitlist" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
-            <BellRing className="w-3.5 h-3.5 mr-2" /> Feature Waitlist
-          </TabsTrigger>
-          <TabsTrigger value="database" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
-            <Database className="w-3.5 h-3.5 mr-2" /> Global Database
-          </TabsTrigger>
-          <TabsTrigger value="codes" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
-            <Ticket className="w-3.5 h-3.5 mr-2" /> Redemption Codes
-          </TabsTrigger>
-          <TabsTrigger value="logs" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
-            <Clock className="w-3.5 h-3.5 mr-2" /> System Logs
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto no-scrollbar">
+          <TabsList className="bg-muted/50 p-1 rounded-2xl mb-8 inline-flex min-w-full justify-start sm:justify-center">
+            <TabsTrigger value="accounts" className="rounded-xl px-4 sm:px-6 py-2 sm:py-2.5 font-black uppercase tracking-widest text-[9px] sm:text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
+              <Building2 className="w-3.5 h-3.5 mr-2" /> Accounts
+            </TabsTrigger>
+            <TabsTrigger value="support" className="rounded-xl px-4 sm:px-6 py-2 sm:py-2.5 font-black uppercase tracking-widest text-[9px] sm:text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
+              <LifeBuoy className="w-3.5 h-3.5 mr-2" /> Support
+            </TabsTrigger>
+            <TabsTrigger value="waitlist" className="rounded-xl px-4 sm:px-6 py-2 sm:py-2.5 font-black uppercase tracking-widest text-[9px] sm:text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
+              <BellRing className="w-3.5 h-3.5 mr-2" /> Waitlist
+            </TabsTrigger>
+            <TabsTrigger value="database" className="rounded-xl px-4 sm:px-6 py-2 sm:py-2.5 font-black uppercase tracking-widest text-[9px] sm:text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
+              <Database className="w-3.5 h-3.5 mr-2" /> Database
+            </TabsTrigger>
+            <TabsTrigger value="codes" className="rounded-xl px-4 sm:px-6 py-2 sm:py-2.5 font-black uppercase tracking-widest text-[9px] sm:text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
+              <Ticket className="w-3.5 h-3.5 mr-2" /> Codes
+            </TabsTrigger>
+            <TabsTrigger value="logs" className="rounded-xl px-4 sm:px-6 py-2 sm:py-2.5 font-black uppercase tracking-widest text-[9px] sm:text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
+              <Clock className="w-3.5 h-3.5 mr-2" /> Logs
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="accounts" className="space-y-6">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="relative flex-1 w-full">
               <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input 
-                placeholder="Search companies, owners, or email addresses..." 
-                className="h-14 pl-12 rounded-2xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
+                placeholder="Search accounts..." 
+                className="h-12 sm:h-14 pl-12 rounded-2xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline" className="h-14 px-6 rounded-2xl flex items-center gap-2 font-black uppercase tracking-widest text-[10px]">
+            <Button variant="outline" className="h-12 sm:h-14 px-6 rounded-2xl flex items-center gap-2 font-black uppercase tracking-widest text-[10px] w-full sm:w-auto">
               <Filter className="w-4 h-4" /> Filter
             </Button>
           </div>
 
           <Card className="rounded-3xl border-2 overflow-hidden">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow className="border-b-2 hover:bg-transparent">
-                  <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Company / User</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Type</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Status</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Users</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Created</TableHead>
-                  <TableHead className="text-right"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAccounts.length > 0 ? filteredAccounts.map((acc) => (
-                  <TableRow key={acc.id} className="group hover:bg-muted/20 transition-colors border-b-2 last:border-0">
-                    <TableCell className="py-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center font-black text-primary">
-                          {acc.name.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="font-black text-sm">{acc.name}</div>
-                          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                            <Mail className="w-3 h-3" /> {acc.email}
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <Table className="min-w-[600px]">
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="border-b-2 hover:bg-transparent">
+                    <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Company / User</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Type</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Status</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Users</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Created</TableHead>
+                    <TableHead className="text-right"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAccounts.length > 0 ? filteredAccounts.map((acc) => (
+                    <TableRow key={acc.id} className="group hover:bg-muted/20 transition-colors border-b-2 last:border-0">
+                      <TableCell className="py-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center font-black text-primary">
+                            {acc.name.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="font-black text-sm">{acc.name}</div>
+                            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                              <Mail className="w-3 h-3" /> {acc.email}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="rounded-lg font-black uppercase tracking-widest text-[9px] px-2 py-0.5 bg-background">
-                        {acc.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">{acc.status}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-black">{acc.users}</TableCell>
-                    <TableCell className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{acc.createdAt}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-10 w-10 p-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-xl border-2 w-48">
-                          <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-50">Actions</DropdownMenuLabel>
-                          <DropdownMenuItem className="font-bold text-xs flex items-center gap-2 py-2.5 cursor-pointer">
-                            <Edit2 className="w-3.5 h-3.5" /> Edit Account
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="font-bold text-xs flex items-center gap-2 py-2.5 cursor-pointer">
-                            <Users className="w-3.5 h-3.5" /> Manage Users
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="font-bold text-xs flex items-center gap-2 py-2.5 cursor-pointer text-blue-500">
-                            <ExternalLink className="w-3.5 h-3.5" /> Login As...
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="font-bold text-xs flex items-center gap-2 py-2.5 cursor-pointer text-destructive hover:bg-destructive/10">
-                            <Trash2 className="w-3.5 h-3.5" /> Suspend Account
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                )) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">
-                      No enterprise accounts found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="rounded-lg font-black uppercase tracking-widest text-[9px] px-2 py-0.5 bg-background">
+                          {acc.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                          <span className="text-[10px] font-bold uppercase tracking-widest">{acc.status}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-black">{acc.users}</TableCell>
+                      <TableCell className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{acc.createdAt}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-10 w-10 p-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl border-2 w-48">
+                            <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-50">Actions</DropdownMenuLabel>
+                            <DropdownMenuItem className="font-bold text-xs flex items-center gap-2 py-2.5 cursor-pointer">
+                              <Edit2 className="w-3.5 h-3.5" /> Edit Account
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="font-bold text-xs flex items-center gap-2 py-2.5 cursor-pointer">
+                              <Users className="w-3.5 h-3.5" /> Manage Users
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="font-bold text-xs flex items-center gap-2 py-2.5 cursor-pointer text-blue-500">
+                              <ExternalLink className="w-3.5 h-3.5" /> Login As...
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="font-bold text-xs flex items-center gap-2 py-2.5 cursor-pointer text-destructive hover:bg-destructive/10">
+                              <Trash2 className="w-3.5 h-3.5" /> Suspend Account
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-32 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">
+                        No accounts found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </Card>
         </TabsContent>
 
@@ -578,12 +582,12 @@ const SuperAdminPage = () => {
             <div className="relative flex-1">
               <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input 
-                placeholder="Search tickets, subjects, or user names..." 
-                className="h-14 pl-12 rounded-2xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
+                placeholder="Search tickets..." 
+                className="h-12 sm:h-14 pl-12 rounded-2xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {tickets.length > 0 ? tickets.map((ticket) => (
               <Card key={ticket.id} className="rounded-3xl border-2 group hover:border-primary/30 transition-all cursor-pointer">
                 <CardHeader className="pb-3">
@@ -622,7 +626,7 @@ const SuperAdminPage = () => {
                 <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4 opacity-20">
                   <LifeBuoy className="w-8 h-8" />
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">No support tickets at this time</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">No support tickets</p>
               </div>
             )}
           </div>
@@ -633,233 +637,238 @@ const SuperAdminPage = () => {
             <div className="relative flex-1">
               <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input 
-                placeholder="Search by email, feature, or phone..." 
-                className="h-14 pl-12 rounded-2xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
+                placeholder="Search waitlist..." 
+                className="h-12 sm:h-14 pl-12 rounded-2xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
               />
             </div>
           </div>
 
           <Card className="rounded-3xl border-2 overflow-hidden">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow className="border-b-2 hover:bg-transparent">
-                  <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">User / Contact</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Feature Interested</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Method</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Joined</TableHead>
-                  <TableHead className="text-right"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {waitlist.length > 0 ? waitlist.map((entry) => (
-                  <TableRow key={entry.id} className="group hover:bg-muted/20 transition-colors border-b-2 last:border-0">
-                    <TableCell className="py-6">
-                      <div className="space-y-1">
-                        <div className="font-black text-sm">{entry.email}</div>
-                        {entry.whatsapp && (
-                          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                            <Smartphone className="w-3 h-3 text-primary" /> {entry.whatsapp}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className="rounded-lg font-black uppercase tracking-widest text-[9px] px-2 py-0.5 bg-primary/10 text-primary border-primary/20">
-                        {entry.feature}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {entry.whatsapp ? (
-                          <Badge variant="outline" className="rounded-lg font-black uppercase tracking-widest text-[9px] border-emerald-500/30 text-emerald-500 bg-emerald-500/5">WhatsApp + Email</Badge>
-                        ) : (
-                          <Badge variant="outline" className="rounded-lg font-black uppercase tracking-widest text-[9px] border-blue-500/30 text-blue-500 bg-blue-500/5">Email Only</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      {entry.createdAt}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" className="h-10 px-4 rounded-xl font-black uppercase tracking-widest text-[10px] text-primary hover:bg-primary/10">
-                        Reach Out
-                      </Button>
-                    </TableCell>
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <Table className="min-w-[600px]">
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="border-b-2 hover:bg-transparent">
+                    <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 pl-6">User / Contact</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Feature</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Method</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Joined</TableHead>
+                    <TableHead className="text-right pr-6"></TableHead>
                   </TableRow>
-                )) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">
-                      Feature waitlist is currently empty
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {waitlist.length > 0 ? waitlist.map((entry) => (
+                    <TableRow key={entry.id} className="group hover:bg-muted/20 transition-colors border-b-2 last:border-0">
+                      <TableCell className="py-6 pl-6">
+                        <div className="space-y-1">
+                          <div className="font-black text-sm">{entry.email}</div>
+                          {entry.whatsapp && (
+                            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                              <Smartphone className="w-3 h-3 text-primary" /> {entry.whatsapp}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="rounded-lg font-black uppercase tracking-widest text-[9px] px-2 py-0.5 bg-primary/10 text-primary border-primary/20">
+                          {entry.feature}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {entry.whatsapp ? (
+                            <Badge variant="outline" className="rounded-lg font-black uppercase tracking-widest text-[9px] border-emerald-500/30 text-emerald-500 bg-emerald-500/5">WhatsApp</Badge>
+                          ) : (
+                            <Badge variant="outline" className="rounded-lg font-black uppercase tracking-widest text-[9px] border-blue-500/30 text-blue-500 bg-blue-500/5">Email Only</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                        {entry.createdAt}
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <Button variant="ghost" className="h-10 px-4 rounded-xl font-black uppercase tracking-widest text-[10px] text-primary hover:bg-primary/10">
+                          Reach Out
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-32 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">
+                        Waitlist is empty
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </Card>
         </TabsContent>
 
         <TabsContent value="database" className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1">
-              <h2 className="text-xl font-black uppercase tracking-tight">Core Database Explorer</h2>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Global cross-tenant monitoring and management</p>
+              <h2 className="text-xl font-black uppercase tracking-tight">Core Database</h2>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Global monitoring</p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="h-10 rounded-xl font-black uppercase text-[9px] tracking-widest">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="sm" className="h-10 rounded-xl font-black uppercase text-[9px] tracking-widest flex-1 sm:flex-none">
                 <Settings className="w-3.5 h-3.5 mr-2" /> DB Settings
               </Button>
-              <Button size="sm" className="h-10 rounded-xl font-black uppercase text-[9px] tracking-widest bg-emerald-600 text-white">
-                <Download className="w-3.5 h-3.5 mr-2" /> Export Global CSV
+              <Button size="sm" className="h-10 rounded-xl font-black uppercase text-[9px] tracking-widest bg-emerald-600 text-white flex-1 sm:flex-none">
+                <Download className="w-3.5 h-3.5 mr-2" /> Export CSV
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <Card className="rounded-3xl border-2 bg-secondary/10">
               <CardHeader className="pb-2">
-                <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Database Health</CardTitle>
+                <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Uptime</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-lg font-black">99.9% Uptime</span>
+                  <span className="text-lg font-black">99.9%</span>
                 </div>
               </CardContent>
             </Card>
             <Card className="rounded-3xl border-2 bg-secondary/10">
               <CardHeader className="pb-2">
-                <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Records</CardTitle>
+                <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Records</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-black">12,482 Objects</div>
+                <div className="text-lg font-black">12,482</div>
               </CardContent>
             </Card>
-            <Card className="rounded-3xl border-2 bg-secondary/10">
+            <Card className="rounded-3xl border-2 bg-secondary/10 sm:col-span-2 lg:col-span-1">
               <CardHeader className="pb-2">
-                <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Connections</CardTitle>
+                <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Connections</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-black">42 Active Sessions</div>
+                <div className="text-lg font-black">42 Active</div>
               </CardContent>
             </Card>
           </div>
 
           <Card className="rounded-3xl border-2 overflow-hidden">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow className="border-b-2 hover:bg-transparent">
-                  <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 pl-6">Tenant Name</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Tier</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Usage</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Last Sync</TableHead>
-                  <TableHead className="text-right pr-6"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow className="border-b-2 last:border-0 hover:bg-muted/10 transition-colors">
-                  <TableCell className="py-6 pl-6 font-black">Cynda Internal</TableCell>
-                  <TableCell><Badge className="bg-primary/20 text-primary border-0 text-[9px] font-black uppercase">System</Badge></TableCell>
-                  <TableCell>
-                    <div className="w-24 h-1.5 rounded-full bg-muted overflow-hidden">
-                      <div className="w-1/4 h-full bg-primary" />
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-[10px] font-bold text-muted-foreground">2 mins ago</TableCell>
-                  <TableCell className="text-right pr-6">
-                    <Button variant="ghost" size="sm" className="h-8 rounded-lg font-black uppercase text-[9px] tracking-widest text-primary">
-                      Manage <ChevronRight className="w-3 h-3 ml-1" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-                {/* Empty states or other rows here */}
-                <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">
-                    Awaiting additional tenant synchronizations
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <Table className="min-w-[600px]">
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="border-b-2 hover:bg-transparent">
+                    <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 pl-6">Tenant Name</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Tier</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Usage</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Last Sync</TableHead>
+                    <TableHead className="text-right pr-6"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow className="border-b-2 last:border-0 hover:bg-muted/10 transition-colors">
+                    <TableCell className="py-6 pl-6 font-black">Cynda Internal</TableCell>
+                    <TableCell><Badge className="bg-primary/20 text-primary border-0 text-[9px] font-black uppercase">System</Badge></TableCell>
+                    <TableCell>
+                      <div className="w-24 h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div className="w-1/4 h-full bg-primary" />
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-[10px] font-bold text-muted-foreground">2 mins ago</TableCell>
+                    <TableCell className="text-right pr-6">
+                      <Button variant="ghost" size="sm" className="h-8 rounded-lg font-black uppercase text-[9px] tracking-widest text-primary">
+                        Manage <ChevronRight className="w-3 h-3 ml-1" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-32 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">
+                      Awaiting additional tenant synchronizations
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
           </Card>
         </TabsContent>
 
         <TabsContent value="codes" className="space-y-6">
-          <div className="flex items-center justify-between gap-4">
-            <div className="relative flex-1">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="relative flex-1 w-full">
               <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input 
-                placeholder="Search by code or reason..." 
-                className="h-14 pl-12 rounded-2xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
+                placeholder="Search codes..." 
+                className="h-12 sm:h-14 pl-12 rounded-2xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
               />
             </div>
-            <Button className="h-14 px-8 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] shadow-glow flex items-center gap-2" onClick={() => setIsCodeModalOpen(true)}>
+            <Button className="h-12 sm:h-14 px-8 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] shadow-glow flex items-center gap-2 w-full sm:w-auto" onClick={() => setIsCodeModalOpen(true)}>
               <Plus className="w-4 h-4" /> New Code
             </Button>
           </div>
 
           <Card className="rounded-3xl border-2 overflow-hidden">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow className="border-b-2 hover:bg-transparent">
-                  <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Code</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Duration</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Reason</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Status</TableHead>
-                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Created</TableHead>
-                  <TableHead className="text-right"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {codes.length > 0 ? codes.map((code) => (
-                  <TableRow key={code.id} className="group hover:bg-muted/20 transition-colors border-b-2 last:border-0">
-                    <TableCell className="py-6">
-                      <div className="flex items-center gap-2">
-                        <code className="px-2 py-1 rounded bg-primary/10 text-primary font-mono font-bold text-xs">{code.code}</code>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100" onClick={() => {
-                          navigator.clipboard.writeText(code.code);
-                          toast({ title: "Copied", description: "Code copied to clipboard." });
-                        }}>
-                          <Copy className="w-3.5 h-3.5" />
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <Table className="min-w-[600px]">
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="border-b-2 hover:bg-transparent">
+                    <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 pl-6">Code</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Duration</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Reason</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Status</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Created</TableHead>
+                    <TableHead className="text-right pr-6"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {codes.length > 0 ? codes.map((code) => (
+                    <TableRow key={code.id} className="group hover:bg-muted/20 transition-colors border-b-2 last:border-0">
+                      <TableCell className="py-6 pl-6">
+                        <div className="flex items-center gap-2">
+                          <code className="px-2 py-1 rounded bg-primary/10 text-primary font-mono font-bold text-xs">{code.code}</code>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100" onClick={() => {
+                            navigator.clipboard.writeText(code.code);
+                            toast({ title: "Copied", description: "Code copied to clipboard." });
+                          }}>
+                            <Copy className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-black">{code.duration} Months</TableCell>
+                      <TableCell className="text-xs font-bold uppercase tracking-widest opacity-70">{code.reason}</TableCell>
+                      <TableCell>
+                        <Badge className={cn(
+                          "rounded-lg font-black uppercase tracking-widest text-[9px] px-2 py-0.5",
+                          code.status === 'active' ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"
+                        )}>
+                          {code.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{code.created}</TableCell>
+                      <TableCell className="text-right pr-6">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 p-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:bg-destructive/10">
+                          <Trash2 className="w-4 h-4" />
                         </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-black">{code.duration} Months</TableCell>
-                    <TableCell className="text-xs font-bold uppercase tracking-widest opacity-70">{code.reason}</TableCell>
-                    <TableCell>
-                      <Badge className={cn(
-                        "rounded-lg font-black uppercase tracking-widest text-[9px] px-2 py-0.5",
-                        code.status === 'active' ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"
-                      )}>
-                        {code.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{code.created}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-10 w-10 p-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:bg-destructive/10">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                )) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">
-                      No redemption codes generated yet
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-32 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">
+                        No codes generated
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </Card>
         </TabsContent>
 
         <TabsContent value="logs" className="space-y-6">
-          <Card className="rounded-3xl border-2 p-12 text-center">
+          <Card className="rounded-3xl border-2 p-8 sm:p-12 text-center">
             <div className="max-w-md mx-auto space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto">
-                <Clock className="w-8 h-8 text-muted-foreground" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto">
+                <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-xl font-black uppercase tracking-tight">System Logs Coming Soon</h3>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">
-                We are currently building the global audit log system to track all enterprise activities and system events.
+              <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight">Logs Coming Soon</h3>
+              <p className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">
+                Global audit log system in development.
               </p>
             </div>
           </Card>
