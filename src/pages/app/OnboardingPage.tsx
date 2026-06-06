@@ -31,6 +31,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
+import { generateChatName } from "@/lib/utils";
+
 const OnboardingPage = () => {
   const { 
     userType, setUserType, setSelectedModules, 
@@ -168,6 +170,7 @@ const OnboardingPage = () => {
         useIndustryStore.getState().setAdminProfile({
           name: finalName,
           email: adminData.email || "admin@workspace.com",
+          chatName: generateChatName(finalName),
           companyName: adminData.companyName || "My Company",
           role: "Super Admin",
           logo: adminData.logo,
@@ -180,10 +183,12 @@ const OnboardingPage = () => {
 
         // Add invited staff
         invites.forEach(invite => {
+          const staffName = invite.email.split('@')[0];
           addStaff({
             id: Math.random().toString(36).substr(2, 9),
-            name: invite.email.split('@')[0],
+            name: staffName,
             email: invite.email,
+            chatName: generateChatName(staffName),
             role: invite.role,
             department: "General",
             tools: invite.modules,
@@ -192,7 +197,10 @@ const OnboardingPage = () => {
         });
 
         // Add all staff to the store if any were added via parsing (legacy logic, keeping it for now)
-        localStaffList.forEach(staff => addStaff(staff));
+        localStaffList.forEach(staff => addStaff({
+          ...staff,
+          chatName: staff.chatName || generateChatName(staff.name)
+        }));
       } else if (userType === 'enterprise') {
         setEnterpriseSubmitted(true);
         toast({ title: "Request Sent", description: "Our sales team will contact you shortly." });
@@ -224,7 +232,12 @@ const OnboardingPage = () => {
 
       // Force a small delay to ensure Zustand store has persisted to localStorage
       setTimeout(() => {
-        navigate("/app/dashboard", { replace: true });
+        const { adminProfile } = useIndustryStore.getState();
+        if (adminProfile?.role === 'Super Admin') {
+          navigate("/app/super-admin", { replace: true });
+        } else {
+          navigate("/app/dashboard", { replace: true });
+        }
       }, 150);
     } catch (error) {
       console.error("Onboarding finish error:", error);

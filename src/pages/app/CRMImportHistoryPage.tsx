@@ -3,35 +3,7 @@ import { cn } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react";
 
-const MOCK_IMPORTS = [
-  {
-    id: "imp-1",
-    name: "Q1_contacts.csv",
-    source: "HubSpot",
-    records: 847,
-    status: "Completed" as const,
-    date: "Mar 12, 2026",
-    mappedBy: "Cyndi",
-  },
-  {
-    id: "imp-2",
-    name: "legacy_deals.xlsx",
-    source: "Salesforce",
-    records: 312,
-    status: "Completed" as const,
-    date: "Mar 08, 2026",
-    mappedBy: "Cyndi",
-  },
-  {
-    id: "imp-3",
-    name: "partial_leads.csv",
-    source: "Manual upload",
-    records: 0,
-    status: "Failed" as const,
-    date: "Mar 01, 2026",
-    mappedBy: "—",
-  },
-];
+const MOCK_IMPORTS: { id: string; name: string; source: string; records: number; status: "Completed" | "Failed"; date: string; mappedBy: string }[] = [];
 
 const CRMImportHistoryPage = () => {
   return (

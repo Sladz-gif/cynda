@@ -118,66 +118,9 @@ interface Base {
 
 // --- Mock Initial Data ---
 
-const INITIAL_FORMS: Form[] = [
-  {
-    id: "1",
-    title: "Creative Request Form",
-    description: "Submit your design and content requests here.",
-    status: "Active",
-    questions: [
-      { id: "q1", type: "short_answer", title: "Project Name", required: true },
-      { id: "q2", type: "paragraph", title: "Description", required: true },
-      { id: "q3", type: "multiple_choice", title: "Priority", required: true, options: ["Low", "Medium", "High"] },
-    ],
-    theme: { primaryColor: "#3b82f6", font: "Inter" },
-    responses: [
-      { id: "r1", data: { q1: "Logo Redesign", q2: "We need a fresh look.", q3: "High" }, submittedAt: "2024-03-20" },
-    ],
-    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }]
-  },
-  {
-    id: "2",
-    title: "Bug Report Form",
-    description: "Report technical issues or glitches.",
-    status: "Active",
-    questions: [
-      { id: "q1", type: "short_answer", title: "Issue Title", required: true },
-      { id: "q2", type: "dropdown", title: "Environment", required: true, options: ["Production", "Staging", "Development"] },
-      { id: "q3", type: "file_upload", title: "Screenshot", required: false },
-    ],
-    theme: { primaryColor: "#ef4444", font: "Inter" },
-    responses: [],
-    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }]
-  }
-];
+const INITIAL_FORMS: Form[] = [];
 
-const INITIAL_BASES: Base[] = [
-  {
-    id: "b1",
-    name: "Marketing CRM",
-    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }],
-    tables: [
-      {
-        id: "t1",
-        name: "Contacts",
-        fields: [
-          { id: "f1", name: "Name", type: "text" },
-          { id: "f2", name: "Email", type: "text" },
-          { id: "f3", name: "Status", type: "dropdown", options: ["Lead", "Customer", "Churned"] },
-          { id: "f4", name: "Last Contact", type: "date" },
-        ],
-        records: [
-          { id: "rec1", data: { f1: "John Doe", f2: "john@example.com", f3: "Customer", f4: "2024-03-15" } },
-          { id: "rec2", data: { f1: "Jane Smith", f2: "jane@company.com", f3: "Lead", f4: "2024-03-22" } },
-        ],
-        views: [
-          { id: "v1", name: "Main Grid", type: "grid" },
-          { id: "v2", name: "Status Kanban", type: "kanban" },
-        ]
-      }
-    ]
-  }
-];
+const INITIAL_BASES: Base[] = [];
 
 const FormsPage = () => {
   const { toast } = useToast();

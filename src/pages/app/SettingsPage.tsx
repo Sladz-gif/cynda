@@ -711,6 +711,7 @@ const SettingsPage = () => {
                 </div>
                 <div className="text-center sm:text-left space-y-2">
                   <h3 className="text-xl font-black uppercase tracking-tight">{activeUser?.name || "Your Profile"}</h3>
+                  <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">@{activeUser?.chatName || "username.cynda"}</p>
                   <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest opacity-60">Update your photo and personal details.</p>
                   <div className="pt-2">
                     <Button variant="outline" size="sm" className="rounded-xl h-9 px-6 font-black uppercase text-[10px] tracking-widest border-primary/20 text-primary hover:bg-primary/5">Change Avatar</Button>
@@ -722,11 +723,23 @@ const SettingsPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <div className="space-y-2.5">
                     <label className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] ml-1">Full Name</label>
-                    <input defaultValue={activeUser?.name} className="w-full h-12 px-5 rounded-2xl border border-border bg-secondary/30 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all" />
+                    <input 
+                      value={activeUser?.name || ""} 
+                      onChange={(e) => isAdmin && adminProfile && useIndustryStore.getState().setAdminProfile({...adminProfile, name: e.target.value})}
+                      className="w-full h-12 px-5 rounded-2xl border border-border bg-secondary/30 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all" 
+                    />
                   </div>
                   <div className="space-y-2.5">
                     <label className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] ml-1">Email Address</label>
-                    <input defaultValue={activeUser?.email} className="w-full h-12 px-5 rounded-2xl border border-border bg-secondary/30 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all" />
+                    <input 
+                      value={activeUser?.email || ""} 
+                      onChange={(e) => isAdmin && adminProfile && useIndustryStore.getState().setAdminProfile({...adminProfile, email: e.target.value})}
+                      className="w-full h-12 px-5 rounded-2xl border border-border bg-secondary/30 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all" 
+                    />
+                  </div>
+                  <div className="space-y-2.5">
+                    <label className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] ml-1">Cynda Username</label>
+                    <input readOnly defaultValue={activeUser?.chatName} className="w-full h-12 px-5 rounded-2xl border border-border bg-muted/30 text-sm font-bold text-muted-foreground cursor-not-allowed" />
                   </div>
                   <div className="space-y-2.5">
                     <label className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] ml-1">Job Role</label>

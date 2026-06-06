@@ -91,7 +91,7 @@ const AppTopBar = ({ title }: AppTopBarProps) => {
             type="button"
             variant="secondary"
             size="sm"
-            className="h-8 gap-1.5 px-2.5 sm:px-3 rounded-lg uppercase font-black text-[9px] tracking-widest border border-border/80 bg-secondary/80 hover:bg-secondary"
+            className="h-8 gap-1 px-2 sm:px-3 rounded-lg uppercase font-black text-[9px] tracking-widest border border-border/80 bg-secondary/80 hover:bg-secondary"
             onClick={() => {
               setCyndiDraft(
                 `I'm in ${title}. Help me with a task in this part of Cynda — suggest steps, draft content, or break the work down.`
@@ -99,6 +99,7 @@ const AppTopBar = ({ title }: AppTopBarProps) => {
               setCyndiOpen(true);
             }}
           >
+            <Sparkles className="w-3.5 h-3.5 text-primary sm:mr-0.5" />
             <span className="hidden sm:inline">Ask Cyndi</span>
             <span className="sm:hidden">Cyndi</span>
           </Button>
@@ -255,7 +256,10 @@ const AppTopBar = ({ title }: AppTopBarProps) => {
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{activeUser?.name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{isStaff ? 'Staff' : 'Admin'}</p>
+                  <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">
+                    {activeUser?.chatName || "username.cynda"}
+                  </p>
+                  <p className="text-[10px] leading-none text-muted-foreground uppercase tracking-widest pt-1">{isStaff ? 'Staff' : 'Admin'}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

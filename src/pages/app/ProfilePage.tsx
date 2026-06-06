@@ -21,6 +21,7 @@ const ProfilePage = () => {
   const [formData, setFormData] = useState({
     name: activeUser?.name || "",
     email: activeUser?.email || "",
+    chatName: activeUser?.chatName || "",
     role: activeUser?.role || "",
     jobTitle: isAdmin ? "Administrator" : (activeUser as Staff).role
   });
@@ -29,21 +30,23 @@ const ProfilePage = () => {
 
   const handleSave = () => {
     setIsSaving(true);
-    // Simulate save
+    // Update store with new values
+    if (isAdmin && adminProfile) {
+      setAdminProfile({
+        ...adminProfile,
+        name: formData.name,
+        email: formData.email,
+        role: formData.role, // Allow role update for demo/admin
+      });
+    }
+    
     setTimeout(() => {
-      if (isAdmin && adminProfile) {
-        setAdminProfile({
-          ...adminProfile,
-          name: formData.name,
-          email: formData.email,
-        });
-      }
       toast({
         title: "Profile updated",
         description: "Your changes have been saved successfully.",
       });
       setIsSaving(false);
-    }, 1000);
+    }, 800);
   };
 
   return (
@@ -138,6 +141,14 @@ const ProfilePage = () => {
                   className="h-12 rounded-xl border-2 focus-visible:ring-4 focus-visible:ring-primary/5 transition-all font-bold"
                 />
               </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Cynda Username</Label>
+                <Input 
+                  readOnly
+                  value={formData.chatName}
+                  className="h-12 rounded-xl border-2 bg-muted/30 font-bold text-muted-foreground"
+                />
+              </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Cynda mail (v1.2)</Label>
                 <Input
@@ -150,11 +161,20 @@ const ProfilePage = () => {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Job Title</Label>
+                <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground">Job Title</label>
                 <Input 
                   value={formData.jobTitle}
                   onChange={(e) => setFormData({...formData, jobTitle: e.target.value})}
                   className="h-12 rounded-xl border-2 focus-visible:ring-4 focus-visible:ring-primary/5 transition-all font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground">Workspace Role</label>
+                <Input 
+                  value={formData.role}
+                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                  className="h-12 rounded-xl border-2 focus-visible:ring-4 focus-visible:ring-primary/5 transition-all font-bold"
+                  readOnly={!isAdmin}
                 />
               </div>
               <div className="space-y-2">

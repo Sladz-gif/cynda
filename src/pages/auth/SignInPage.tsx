@@ -127,22 +127,51 @@ const SignInPage = () => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Free Access Bypass
+    // Simulation Logic
+    const isSuperAdmin = email === "admin@cynda.ai";
+    const isEnterpriseOnboarding = email === "enterprise@cynda.ai";
+    
     setAuthenticated(true);
     useIndustryStore.getState().setOnboarded(true);
     
-    // Set a default admin profile if none exists
-    if (!adminProfile) {
+    if (isSuperAdmin) {
       useIndustryStore.getState().setAdminProfile({
-        name: "Demo Admin",
-        email: email || "demo@cynda.ai",
+        name: "Super Administrator",
+        email: email,
+        chatName: "admin.cynda",
         role: "Super Admin",
-        password: "demo",
-        phone: "000-000-0000"
+        password: password,
+        phone: "555-0101"
       });
+      useIndustryStore.getState().setUserType("large-business");
+      navigate("/app/super-admin");
+    } else if (isEnterpriseOnboarding) {
+      useIndustryStore.getState().setAdminProfile({
+        name: "Enterprise Partner",
+        email: email,
+        role: "Director",
+        companyName: "Global Tech Inc",
+        password: password,
+        needsPasswordReset: true
+      });
+      useIndustryStore.getState().setUserType("enterprise");
+      useIndustryStore.getState().setNeedsPasswordReset(true);
+      navigate("/force-password-reset");
+    } else {
+      // Normal flow
+      if (!adminProfile) {
+        useIndustryStore.getState().setAdminProfile({
+          name: "Demo User",
+          email: email || "user@example.com",
+          role: "Director",
+          password: "demo",
+          phone: "000-000-0000"
+        });
+      }
+      navigate("/app/dashboard");
     }
     
-    navigate("/app/dashboard");
+    setIsLoading(false);
   };
 
   return (
@@ -217,7 +246,7 @@ const SignInPage = () => {
         >
           <div className="space-y-2">
             <h2 className="text-3xl font-black uppercase tracking-tight">Welcome back</h2>
-            <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest opacity-60">Your workspace is waiting.</p>
+            <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest opacity-60">Enterprise & Solo access hub.</p>
           </div>
 
           <form onSubmit={handleSignIn} className="space-y-6">

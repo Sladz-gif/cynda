@@ -10,7 +10,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useIndustryStore, Staff, CRMContact } from "@/lib/industry-store";
 import { useLocation } from "react-router-dom";
 // Email UI removed from Chat — keep chat-only experience.
@@ -22,6 +24,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,55 +77,29 @@ interface ChatSession {
 
 // --- Mock Data ---
 
-const MOCK_CHATS: ChatSession[] = [
-  {
-    id: "c1",
-    name: "Marcus Johnson",
-    avatar: "https://i.pravatar.cc/150?u=marcus",
-    type: "direct",
-    lastMessage: "The API endpoint is live now.",
-    lastTime: "11:05 AM",
-    unreadCount: 2,
-    online: true,
-    messages: [
-      { id: "m1", senderId: "me", text: "Hey Marcus, any update on the backend?", time: "10:55 AM", status: "read", type: "text" },
-      { id: "m2", senderId: "marcus", text: "Just finished the last deployment.", time: "11:02 AM", status: "read", type: "text" },
-      { id: "m3", senderId: "marcus", text: "The API endpoint is live now.", time: "11:05 AM", status: "read", type: "text" },
-    ]
-  },
-  {
-    id: "c2",
-    name: "Product Design",
-    avatar: "https://i.pravatar.cc/150?u=design",
-    type: "group",
-    lastMessage: "Alex: Love the new icon set!",
-    lastTime: "09:45 AM",
-    unreadCount: 0,
-    messages: []
-  },
-  {
-    id: "c3",
-    name: "General",
-    avatar: "",
-    type: "channel",
-    lastMessage: "Sarah: Reminder about the all-hands.",
-    lastTime: "Yesterday",
-    unreadCount: 0,
-    messages: []
-  }
-];
+const MOCK_CHATS: ChatSession[] = [];
 
 const ChatPage = () => {
   const { toast } = useToast();
   const location = useLocation();
-  const { staffList = [], externalContacts = [], crmContacts = [], addExternalContact } = useIndustryStore();
+  const isMobile = useIsMobile();
+  const { 
+    staffList = [], 
+    externalContacts = [], 
+    crmContacts = [], 
+    addExternalContact,
+    currentUser,
+    adminProfile
+  } = useIndustryStore();
+  
+  const activeUser = currentUser || adminProfile;
   const [mode] = useState<MessagingMode>('chat');
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileSidebar, setShowSidebar] = useState(true);
   
   // Chat States
   const [chats, setChats] = useState<ChatSession[]>(MOCK_CHATS);
-  const [selectedChat, setSelectedChat] = useState<ChatSession | null>(MOCK_CHATS[0]);
+  const [selectedChat, setSelectedChat] = useState<ChatSession | null>(null);
 
   // Handle query params for starting new chats
   useEffect(() => {
@@ -138,19 +115,29 @@ const ChatPage = () => {
 
   const [chatMessage, setChatMessage] = useState("");
   const [isSearchUserOpen, setIsSearchUserOpen] = useState(false);
+  const [isNewGroupOpen, setIsNewGroupOpen] = useState(false);
+  const [isNewChannelOpen, setIsNewChannelOpen] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newChannelName, setNewChannelName] = useState("");
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync mobile sidebar when selection changes
   useEffect(() => {
-    if (window.innerWidth < 768) {
-      if (selectedChat) {
-        setShowSidebar(false);
-      }
+    if (isMobile && selectedChat) {
+      setShowSidebar(false);
     }
-  }, [selectedChat]);
+  }, [selectedChat, isMobile]);
+
+  // Reset sidebar when switching to desktop
+  useEffect(() => {
+    if (!isMobile) {
+      setShowSidebar(true);
+    }
+  }, [isMobile]);
 
   const startChatWithContact = (contact: Staff | { id: string; name: string; email: string; type: 'external' }) => {
     const existing = chats.find(c => c.id === contact.id);
@@ -176,33 +163,92 @@ const ChatPage = () => {
   };
 
   const handleExternalSearch = () => {
-    if (!userSearchQuery.includes('@')) {
-      toast({ title: "Invalid Email", description: "Please enter a valid email to search externally.", variant: "destructive" });
+    // Strictly check for Cynda chat name format (username.cynda)
+    const isChatName = userSearchQuery.toLowerCase().endsWith('.cynda');
+
+    if (!isChatName) {
+      toast({ 
+        title: "Invalid Username", 
+        description: "Please enter a valid Cynda username (e.g., name.cynda).", 
+        variant: "destructive" 
+      });
       return;
     }
     
     const newExternal: any = {
       id: Math.random().toString(36).substr(2, 9),
-      name: userSearchQuery.split('@')[0],
-      email: userSearchQuery,
+      name: userSearchQuery.split('.cynda')[0].replace(/\./g, ' '),
+      email: "",
+      chatName: userSearchQuery,
       type: 'external'
     };
     
     addExternalContact(newExternal);
     startChatWithContact(newExternal);
-    toast({ title: "External Contact Added", description: `Started chat with ${userSearchQuery}` });
+    toast({ title: "Contact Added", description: `Started chat with ${userSearchQuery}` });
   };
 
   const filteredStaff = staffList.filter(s => 
     s.name.toLowerCase().includes(userSearchQuery.toLowerCase()) || 
-    s.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+    (s.chatName && s.chatName.toLowerCase().includes(userSearchQuery.toLowerCase()))
   );
 
   const filteredExternal = externalContacts.filter(c => 
     c.name.toLowerCase().includes(userSearchQuery.toLowerCase()) || 
-    c.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+    (c as any).chatName?.toLowerCase().includes(userSearchQuery.toLowerCase())
   );
   
+
+  const handleCreateGroup = () => {
+    if (!newGroupName.trim()) {
+      toast({ title: "Group Name Required", variant: "destructive" });
+      return;
+    }
+    const newChat: ChatSession = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: newGroupName,
+      avatar: `https://i.pravatar.cc/150?u=${newGroupName}`,
+      type: 'group',
+      lastMessage: "Group created",
+      lastTime: "Just now",
+      unreadCount: 0,
+      messages: []
+    };
+    setChats([newChat, ...chats]);
+    setSelectedChat(newChat);
+    setIsNewGroupOpen(false);
+    setNewGroupName("");
+    setSelectedParticipants([]);
+    toast({ title: "Group Created", description: `"${newGroupName}" is ready for messaging.` });
+  };
+
+  const handleCreateChannel = () => {
+    if (!newChannelName.trim()) {
+      toast({ title: "Channel Name Required", variant: "destructive" });
+      return;
+    }
+    const newChat: ChatSession = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: newChannelName,
+      avatar: "",
+      type: 'channel',
+      lastMessage: "Channel created",
+      lastTime: "Just now",
+      unreadCount: 0,
+      messages: []
+    };
+    setChats([newChat, ...chats]);
+    setSelectedChat(newChat);
+    setIsNewChannelOpen(false);
+    setNewChannelName("");
+    toast({ title: "Channel Created", description: `#${newChannelName} is now live.` });
+  };
+
+  const toggleParticipant = (id: string) => {
+    setSelectedParticipants(prev => 
+      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    );
+  };
 
   // --- Handlers ---
 
@@ -246,15 +292,29 @@ const ChatPage = () => {
   // --- UI Components ---
 
   const renderChatList = () => (
-    <div className="flex flex-col h-full bg-muted/30">
-      <div className="p-4 border-b border-border/50">
+    <div className={cn("flex flex-col h-full", isMobile ? "bg-background" : "bg-muted/30")}>
+      <div className="p-4 border-b border-border/50 bg-background/50 backdrop-blur-md sticky top-0 z-10">
+        {/* User Profile Summary */}
+        <div className="flex items-center gap-3 mb-6 p-2">
+          <Avatar className="h-10 w-10 rounded-full border-2 border-primary/20 shadow-sm">
+            <AvatarFallback className="bg-primary text-white font-black">
+              {activeUser?.name?.charAt(0) || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="text-sm font-black text-foreground truncate uppercase tracking-tight">
+              {activeUser?.chatName || "username.cynda"}
+            </p>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-black text-xl text-foreground tracking-tight uppercase">Chats</h3>
           <div className="flex gap-1.5">
-            <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl bg-muted text-muted-foreground" onClick={() => toast({ title: "New Group created" })}>
+            <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl bg-muted text-muted-foreground" onClick={() => setIsNewGroupOpen(true)}>
               <UserPlus className="w-4 h-4" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl bg-muted text-muted-foreground" onClick={() => toast({ title: "New Channel created" })}>
+            <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl bg-muted text-muted-foreground" onClick={() => setIsNewChannelOpen(true)}>
               <Hash className="w-4 h-4" />
             </Button>
           </div>
@@ -305,13 +365,13 @@ const ChatPage = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-56px)] -m-4 md:-m-6 overflow-hidden bg-muted/30">
       {/* Horizontal Toolbar */}
-      <div className="h-auto md:h-16 border-b border-border/50 bg-muted/30 px-4 py-2 md:py-0 flex flex-col md:flex-row items-start md:items-center justify-between shrink-0 gap-3">
-        <div className="flex flex-wrap items-center gap-2 md:gap-4 w-full md:w-auto">
+      <div className="h-auto md:h-16 border-b border-border/50 bg-background/50 backdrop-blur-md px-4 py-2.5 md:py-0 flex flex-col md:flex-row items-stretch md:items-center justify-between shrink-0 gap-2.5 md:gap-3">
+        <div className="flex items-center gap-2 md:gap-4 overflow-x-auto no-scrollbar pb-0.5 md:pb-0">
           <div className="bg-muted p-1 rounded-xl flex gap-1 shrink-0">
             <Button 
               size="sm" 
               variant="default"
-              className="h-8 md:h-9 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-widest gap-1.5 md:gap-2 px-2 md:px-4 transition-all bg-primary hover:bg-primary/90 text-white shadow-md"
+              className="h-8 md:h-9 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-widest gap-1.5 md:gap-2 px-2.5 md:px-4 transition-all bg-primary hover:bg-primary/90 text-white shadow-md"
               onClick={() => setShowSidebar(true)}
             >
               <MessageSquare className="w-3 md:w-3.5 h-3 md:h-3.5" /> CHAT
@@ -320,16 +380,16 @@ const ChatPage = () => {
           <div className="hidden md:block h-6 w-px bg-border/50" />
           <Button 
             size="sm" 
-            className="rounded-xl h-8 md:h-9 px-3 md:px-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest gap-1.5 md:gap-2 bg-primary hover:bg-primary/90 text-white shadow-md shrink-0"
+            className="rounded-xl h-8 md:h-9 px-2.5 md:px-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest gap-1.5 md:gap-2 bg-primary hover:bg-primary/90 text-white shadow-md shrink-0"
             onClick={() => setIsSearchUserOpen(true)}
           >
-            <Plus className="w-3.5 md:w-4 h-3.5 md:h-4 stroke-[3px]" /> NEW CHAT
+            <Plus className="w-3.5 md:w-4 h-3.5 md:h-4 stroke-[3px]" /> NEW
           </Button>
-          <div className="relative flex-1 md:flex-none">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground" />
+          <div className="relative flex-1 md:flex-none min-w-[100px] md:min-w-[120px]">
+            <Search className="absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground" />
             <Input 
               placeholder="Contacts..." 
-              className="pl-8 md:pl-9 h-8 md:h-9 w-full md:w-48 lg:w-64 rounded-xl bg-muted border-none text-[10px] md:text-xs placeholder:text-muted-foreground"
+              className="pl-7 md:pl-9 h-8 md:h-9 w-full md:w-48 lg:w-64 rounded-xl bg-muted border-none text-[10px] md:text-xs placeholder:text-muted-foreground shadow-inner"
             />
           </div>
         </div>
@@ -345,11 +405,14 @@ const ChatPage = () => {
         <AnimatePresence mode="wait">
           {showMobileSidebar && (
             <motion.div 
-              initial={{ x: -320, opacity: 0 }}
+              initial={isMobile ? { x: -320 } : { x: -320, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -320, opacity: 0 }}
+              exit={isMobile ? { x: -320 } : { x: -320, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="absolute md:relative z-20 w-full md:w-[280px] lg:w-[320px] h-full flex-shrink-0 border-r border-border/50 flex-col bg-muted/30"
+              className={cn(
+                "z-20 w-full md:w-[280px] lg:w-[320px] h-full flex-shrink-0 border-r border-border/50 flex-col shadow-xl md:shadow-none",
+                isMobile ? "absolute inset-0 bg-background" : "relative bg-muted/30"
+              )}
             >
               {renderChatList()}
             </motion.div>
@@ -392,10 +455,6 @@ const ChatPage = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 md:gap-2">
-                      <Button size="icon" variant="ghost" className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-card text-muted-foreground shadow-sm"><Video className="w-3.5 md:w-4 h-3.5 md:h-4" /></Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-card text-muted-foreground shadow-sm"><Phone className="w-3.5 md:w-4 h-3.5 md:h-4" /></Button>
-                      <div className="hidden sm:block h-6 w-px bg-border/50 mx-1" />
-                      <Button size="icon" variant="ghost" className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-card text-muted-foreground shadow-sm" onClick={() => toast({ title: "User info opened" })}><Info className="w-3.5 md:w-4 h-3.5 md:h-4" /></Button>
                     </div>
                   </div>
 
@@ -407,27 +466,41 @@ const ChatPage = () => {
                       </div>
                       
                       <div className="space-y-4">
-                        {selectedChat.messages.map((msg, i) => (
-                          <div key={msg.id} className={`flex ${msg.senderId === 'me' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[85%] md:max-w-[75%] flex flex-col ${msg.senderId === 'me' ? 'items-end' : 'items-start'}`}>
-                              <div className={`px-3 md:px-4 py-1.5 md:py-2 rounded-[16px] md:rounded-[20px] text-xs md:text-sm font-bold shadow-sm transition-all ${
-                                msg.senderId === 'me' 
-                                  ? 'bg-primary text-white rounded-tr-none' 
-                                  : 'bg-muted/30 text-foreground border border-border/50 rounded-tl-none'
-                              }`}>
-                                {msg.text}
-                              </div>
-                              <div className="flex items-center gap-1.5 mt-1 px-1.5">
-                                <span className="text-[7px] md:text-[8px] text-muted-foreground font-black uppercase tracking-widest">{msg.time}</span>
-                                {msg.senderId === 'me' && (
-                                  <div className="flex -space-x-1">
-                                    <CheckCircle2 className={`w-2.5 md:w-3 h-2.5 md:h-3 ${msg.status === 'read' ? 'text-primary' : 'text-muted-foreground'}`} />
-                                  </div>
-                                )}
+                        {selectedChat.messages.map((msg, i) => {
+                          const isMe = msg.senderId === 'me';
+                          let senderName = isMe ? (activeUser?.chatName || "me.cynda") : selectedChat.name;
+                          
+                          // In group/channel, find the actual staff member's chatName
+                          if (!isMe && (selectedChat.type === 'group' || selectedChat.type === 'channel')) {
+                            const staff = staffList.find(s => s.id === msg.senderId);
+                            if (staff) senderName = staff.chatName || staff.name;
+                          }
+
+                          return (
+                            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                              <div className={`max-w-[85%] md:max-w-[75%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                                <span className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.15em] mb-1 px-1">
+                                  {senderName}
+                                </span>
+                                <div className={`px-3 md:px-4 py-1.5 md:py-2 rounded-[16px] md:rounded-[20px] text-xs md:text-sm font-bold shadow-sm transition-all ${
+                                  isMe 
+                                    ? 'bg-primary text-white rounded-tr-none' 
+                                    : 'bg-muted/30 text-foreground border border-border/50 rounded-tl-none'
+                                }`}>
+                                  {msg.text}
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-1 px-1.5">
+                                  <span className="text-[7px] md:text-[8px] text-muted-foreground font-black uppercase tracking-widest">{msg.time}</span>
+                                  {isMe && (
+                                    <div className="flex -space-x-1">
+                                      <CheckCircle2 className={`w-2.5 md:w-3 h-2.5 md:h-3 ${msg.status === 'read' ? 'text-primary' : 'text-muted-foreground'}`} />
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                         <div ref={messagesEndRef} />
                       </div>
                     </div>
@@ -478,14 +551,14 @@ const ChatPage = () => {
         <DialogContent className="sm:max-w-[450px] rounded-[24px]">
           <DialogHeader>
             <DialogTitle className="font-black text-xl text-foreground uppercase tracking-tight">New Conversation</DialogTitle>
-            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Connect with team members or external contacts.</DialogDescription>
+            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Connect with team members or external contacts using their username.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="relative flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Name or email..." 
+                  placeholder="Username (e.g. name.cynda)" 
                   className="pl-10 h-12 rounded-xl bg-muted border-none text-xs font-bold"
                   value={userSearchQuery}
                   onChange={(e) => setUserSearchQuery(e.target.value)}
@@ -516,7 +589,12 @@ const ChatPage = () => {
                             <AvatarFallback className="bg-primary/10 text-primary font-black">{staff.name.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <div className="text-left flex-1 min-w-0">
-                            <p className="text-xs font-black uppercase truncate">{staff.name}</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs font-black uppercase truncate">{staff.name}</p>
+                              {staff.chatName && (
+                                <span className="text-[9px] text-primary font-bold bg-primary/5 px-2 py-0.5 rounded-full">{staff.chatName}</span>
+                              )}
+                            </div>
                             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest truncate">{staff.role} • {staff.department}</p>
                           </div>
                           <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
@@ -543,8 +621,13 @@ const ChatPage = () => {
                             </AvatarFallback>
                           </Avatar>
                           <div className="text-left flex-1 min-w-0">
-                            <p className="text-xs font-black uppercase truncate">{contact.name}</p>
-                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest truncate">{contact.email}</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs font-black uppercase truncate">{contact.name}</p>
+                              {(contact as any).chatName && (
+                                <span className="text-[9px] text-blue-500 font-bold bg-blue-500/5 px-2 py-0.5 rounded-full">{(contact as any).chatName}</span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest truncate">{(contact as any).chatName}</p>
                           </div>
                           <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
                         </button>
@@ -556,12 +639,95 @@ const ChatPage = () => {
                 {filteredStaff.length === 0 && filteredExternal.length === 0 && (
                   <div className="py-12 text-center">
                     <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">No contacts found</p>
-                    <p className="text-[9px] text-muted-foreground/60 font-medium mt-2">Enter an email address to invite someone external.</p>
+                    <p className="text-[9px] text-muted-foreground/60 font-medium mt-2">Enter a username (e.g. name.cynda) to connect.</p>
                   </div>
                 )}
               </div>
             </ScrollArea>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Group Dialog */}
+      <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
+        <DialogContent className="sm:max-w-[450px] rounded-[24px]">
+          <DialogHeader>
+            <DialogTitle className="font-black text-xl text-foreground uppercase tracking-tight">Create New Group</DialogTitle>
+            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Start a collaborative conversation with your team.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Group Name</Label>
+              <Input 
+                placeholder="e.g. Q3 Marketing Sync" 
+                className="h-12 rounded-xl bg-muted border-none text-xs font-bold"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-3">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Select Members</Label>
+              <ScrollArea className="h-[250px] pr-4 border border-border/30 rounded-xl p-2 bg-muted/20">
+                <div className="space-y-1">
+                  {staffList.map((staff) => (
+                    <div 
+                      key={staff.id} 
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => toggleParticipant(staff.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8 rounded-lg">
+                          <AvatarFallback className="text-[10px] font-black">{staff.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-xs font-bold">{staff.name}</p>
+                          <p className="text-[9px] text-muted-foreground uppercase font-medium">{staff.role}</p>
+                        </div>
+                      </div>
+                      <Checkbox checked={selectedParticipants.includes(staff.id)} />
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="rounded-xl font-black text-[10px] uppercase tracking-widest" onClick={() => setIsNewGroupOpen(false)}>Cancel</Button>
+            <Button className="rounded-xl font-black text-[10px] uppercase tracking-widest bg-primary text-white" onClick={handleCreateGroup}>Create Group</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Channel Dialog */}
+      <Dialog open={isNewChannelOpen} onOpenChange={setIsNewChannelOpen}>
+        <DialogContent className="sm:max-w-[400px] rounded-[24px]">
+          <DialogHeader>
+            <DialogTitle className="font-black text-xl text-foreground uppercase tracking-tight">Create New Channel</DialogTitle>
+            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Channels are for broad, department-wide communication.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Channel Name</Label>
+              <div className="relative">
+                <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input 
+                  placeholder="e.g. general-announcements" 
+                  className="h-12 pl-10 rounded-xl bg-muted border-none text-xs font-bold"
+                  value={newChannelName}
+                  onChange={(e) => setNewChannelName(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 flex items-start gap-3">
+              <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-[9px] text-primary font-bold uppercase tracking-widest leading-relaxed">Channels are public to all team members in the organization by default.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="rounded-xl font-black text-[10px] uppercase tracking-widest" onClick={() => setIsNewChannelOpen(false)}>Cancel</Button>
+            <Button className="rounded-xl font-black text-[10px] uppercase tracking-widest bg-primary text-white" onClick={handleCreateChannel}>Create Channel</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

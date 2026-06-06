@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import React, { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -36,7 +37,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useIndustryStore, DEPARTMENTS } from "@/lib/industry-store";
-import { cn } from "@/lib/utils";
+import { cn, generateChatName } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -166,6 +167,7 @@ const StaffOnboardingPage = () => {
     setTimeout(() => {
       parsedData.forEach(staff => addStaff({
         ...staff,
+        chatName: generateChatName(staff.name),
         tools: staff.tools
       }));
       setImportStats({ created: parsedData.length, updated: 0, skipped: 0 });
@@ -183,6 +185,7 @@ const StaffOnboardingPage = () => {
     addStaff({
       id: Math.random().toString(),
       ...newStaff,
+      chatName: generateChatName(newStaff.name),
       tools: newStaff.assignedModules
     });
     setNewStaff({ 
@@ -321,13 +324,15 @@ const StaffOnboardingPage = () => {
                       </div>
                       <div className="flex items-center gap-6">
                         <div className="text-right w-24">
-                          <p className="text-xs font-black text-primary">{hire.progress}%</p>
-                          <Progress value={hire.progress} className="h-1.5 mt-1" />
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ChevronRight className="w-5 h-5" />
-                        </Button>
+                        <p className="text-xs font-black text-primary">{hire.progress}%</p>
+                        <Progress value={hire.progress} className="h-1.5 mt-1" />
                       </div>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" asChild>
+                        <Link to="/app/hr">
+                          <ChevronRight className="w-5 h-5" />
+                        </Link>
+                      </Button>
+                    </div>
                     </div>
                   ))}
                 </div>

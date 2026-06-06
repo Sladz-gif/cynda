@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn, generateChatName, exportToCSV } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import PhoneInput from "@/components/ui/PhoneInput";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from "recharts";
@@ -104,44 +104,26 @@ type LeaveRequest = {
 
 // --- Mock Data ---
 
-const MOCK_EMPLOYEES: Employee[] = [
-  { id: "1", name: "Alex Rivera", role: "Senior Product Designer", department: "Design", status: "Active", avatar: "https://i.pravatar.cc/150?u=1", location: "San Francisco, CA", email: "alex@cynda.ai", phone: "+1 (555) 012-3456", startDate: "2023-01-15", manager: "Sarah Chen", salary: "$145,000", performance: 4.8 },
-  { id: "2", name: "Sarah Chen", role: "VP of Engineering", department: "Engineering", status: "Active", avatar: "https://i.pravatar.cc/150?u=2", location: "Remote", email: "sarah@cynda.ai", phone: "+1 (555) 012-3457", startDate: "2022-06-01", manager: "James Wilson", salary: "$210,000", performance: 4.9 },
-  { id: "3", name: "Marcus Johnson", role: "Software Engineer", department: "Engineering", status: "Active", avatar: "https://i.pravatar.cc/150?u=3", location: "London, UK", email: "marcus@cynda.ai", phone: "+44 20 7123 4567", startDate: "2023-03-10", manager: "Sarah Chen", salary: "$120,000", performance: 4.5 },
-  { id: "4", name: "Elena Rodriguez", role: "HR Manager", department: "People", status: "Active", avatar: "https://i.pravatar.cc/150?u=4", location: "Madrid, ES", email: "elena@cynda.ai", phone: "+34 91 123 4567", startDate: "2022-11-20", manager: "James Wilson", salary: "$95,000", performance: 4.7 },
-  { id: "5", name: "David Kim", role: "Marketing Lead", department: "Marketing", status: "On Leave", avatar: "https://i.pravatar.cc/150?u=5", location: "Seoul, KR", email: "david@cynda.ai", phone: "+82 2 123 4567", startDate: "2023-05-05", manager: "James Wilson", salary: "$110,000", performance: 4.6 },
-  { id: "6", name: "Jordan Smith", role: "Junior Developer", department: "Engineering", status: "Onboarding", avatar: "https://i.pravatar.cc/150?u=6", location: "Remote", email: "jordan@cynda.ai", phone: "+1 (555) 012-3458", startDate: "2024-03-20", manager: "Sarah Chen", salary: "$85,000", performance: 0 },
-];
+const MOCK_EMPLOYEES: Employee[] = [];
 
-const MOCK_JOBS: Job[] = [
-  { id: "1", title: "Senior Full Stack Engineer", department: "Engineering", location: "Remote", type: "Full-time", status: "Open", applicants: 42 },
-  { id: "2", title: "Product Manager", department: "Product", location: "San Francisco", type: "Full-time", status: "Open", applicants: 128 },
-  { id: "3", title: "Content Strategist", department: "Marketing", location: "Remote", type: "Contract", status: "Draft", applicants: 0 },
-];
+const MOCK_JOBS: Job[] = [];
 
-const MOCK_LEAVE_REQUESTS: LeaveRequest[] = [
-  { id: "1", employee: "Alex Rivera", type: "Vacation", startDate: "2024-04-10", endDate: "2024-04-17", status: "Approved", reason: "Annual family trip" },
-  { id: "2", employee: "Marcus Johnson", type: "Sick Leave", startDate: "2024-03-24", endDate: "2024-03-25", status: "Pending", reason: "Flu symptoms" },
-  { id: "3", employee: "Elena Rodriguez", type: "Personal", startDate: "2024-05-02", endDate: "2024-05-02", status: "Pending", reason: "Family matter" },
-];
+const MOCK_LEAVE_REQUESTS: LeaveRequest[] = [];
 
-const MOCK_TEAMS: Team[] = [
-  { id: "1", name: "Product Design", lead: "Alex Rivera", members: ["1", "4", "5"], description: "Core product design and user research team.", icon: LayoutDashboard, color: "text-blue-500" },
-  { id: "2", name: "Platform Engineering", lead: "Sarah Chen", members: ["2", "3", "6"], description: "Infrastructure, scalability, and internal tools.", icon: Zap, color: "text-primary" },
-  { id: "3", name: "Growth Marketing", lead: "David Kim", members: ["5", "1", "3"], description: "User acquisition and conversion optimization.", icon: TrendingUp, color: "text-green-500" },
-];
+const MOCK_TEAMS: Team[] = [];
 
-const MOCK_SURVEILLANCE: any[] = [
-  { id: "1", staff: "Marcus Johnson", action: "Updated Deal Stage", tool: "CRM", detail: "Acme Corp -> Negotiation", time: "2 mins ago", status: "success" },
-  { id: "2", staff: "Sarah Chen", action: "Approved Payroll", tool: "Finance", detail: "Batch #8821", time: "15 mins ago", status: "warning" },
-  { id: "3", staff: "Alex Rivera", action: "Created Task", tool: "Projects", detail: "UI/UX Audit", time: "45 mins ago", status: "success" },
-  { id: "4", staff: "Elena Rodriguez", action: "Viewed Salary Report", tool: "HR", detail: "Confidential Access", time: "1 hour ago", status: "info" },
-  { id: "5", staff: "David Kim", action: "Sent Email", tool: "Marketing", detail: "Spring Campaign", time: "2 hours ago", status: "success" },
-  { id: "6", staff: "Jordan Smith", action: "Deleted Workflow", tool: "Automation", detail: "Legacy Cleanup", time: "3 hours ago", status: "destructive" },
-];
+const MOCK_SURVEILLANCE: any[] = [];
 
 const HRPage = () => {
-  const { userType, selectedModules = [], adminProfile, currentUser } = useIndustryStore();
+  const { 
+    userType, 
+    selectedModules = [], 
+    adminProfile, 
+    currentUser, 
+    deleteStaff,
+    staffList = [],
+    addStaff
+  } = useIndustryStore();
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -172,7 +154,7 @@ const HRPage = () => {
   const finalizeDelete = () => {
     if (itemToDelete) {
       if (itemToDelete.type === 'staff') {
-        // Logic for deleting staff (mock for now as per original code)
+        deleteStaff(itemToDelete.id);
         toast({ title: "Staff member deleted", description: "The staff member has been permanently removed." });
       } else if (itemToDelete.type === 'leave-request') {
         setLeaveRequests(prev => prev.filter(r => r.id !== itemToDelete.id));
@@ -183,7 +165,7 @@ const HRPage = () => {
     }
   };
 
-  const hrNavigationTools = [
+  const hrNavigationTools = useMemo(() => [
     { id: 'hr-dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'directory', label: 'Directory', icon: Users },
     { id: 'departments', label: 'Departments', icon: Sitemap },
@@ -196,7 +178,7 @@ const HRPage = () => {
     { id: 'hr-analytics', label: 'Analytics', icon: FileText },
     { id: 'surveillance', label: 'Surveillance', icon: Eye },
     { id: 'teams', label: 'Teams', icon: Users2 },
-  ];
+  ], []);
 
   const tools = useMemo(() => {
     const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
@@ -208,7 +190,7 @@ const HRPage = () => {
       return [hrNavigationTools[0]]; // Default to dashboard
     }
     return filtered;
-  }, [selectedModules, userType]);
+  }, [selectedModules, userType, hrNavigationTools]);
 
   const [activeTool, setActiveTool] = useState<string>(tools[0]?.id || 'hr-dashboard');
 
@@ -227,7 +209,7 @@ const HRPage = () => {
     if (hrNavigationTools.some((t) => t.id === fromRoute) && fromRoute !== activeTool) {
       setActiveTool(fromRoute);
     }
-  }, [location.pathname, activeTool]);
+  }, [location.pathname, activeTool, hrNavigationTools]);
 
   const goToTool = (id: string) => {
     const url = id === "hr-dashboard" ? "/app/hr" : `/app/${id}`;
@@ -286,6 +268,7 @@ const HRPage = () => {
       id: Math.random().toString(),
       name: newStaffData.name,
       email: newStaffData.email,
+      chatName: generateChatName(newStaffData.name),
       role: newStaffData.role as any,
       department: finalDept,
       tools: newStaffData.tools,
@@ -355,52 +338,79 @@ const HRPage = () => {
    const [clockInTime, setClockInTime] = useState<Date | null>(null);
    const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(MOCK_LEAVE_REQUESTS);
    const [onboardingTasks, setOnboardingTasks] = useState([
-     { id: '1', title: "Set up hardware", completed: true },
-     { id: '2', title: "Access to Slack/Email", completed: true },
-     { id: '3', title: "Initial 1:1 with Mentor", completed: false },
-     { id: '4', title: "Security Training", completed: false },
-     { id: '5', title: "Product Deep Dive", completed: false },
-   ]);
-   const [isReviewCycleOpen, setIsReviewCycleOpen] = useState(false);
+    { id: '1', title: "Set up hardware", completed: true },
+    { id: '2', title: "Access to Slack/Email", completed: true },
+    { id: '3', title: "Initial 1:1 with Mentor", completed: false },
+    { id: '4', title: "Security Training", completed: false },
+    { id: '5', title: "Product Deep Dive", completed: false },
+  ]);
+
+  // --- HR Calculations (Spreadsheet Logic) ---
+  const hrMetrics = useMemo(() => {
+    const allEmployees = [...MOCK_EMPLOYEES, ...staffList];
+    const totalEmployees = allEmployees.length;
+    const activeEmployees = allEmployees.filter(e => e.status === 'Active' || !e.status).length;
+    const onLeave = allEmployees.filter(e => e.status === 'On Leave').length;
+    
+    // Logic: Retention Rate calculation (Mocked with trend)
+    const retentionRate = 98.2; 
+    const turnoverRate = 1.8;
+    
+    // Average Performance Score
+    const avgPerformance = allEmployees.reduce((sum, e) => sum + ( (e as any).performance || 0), 0) / (totalEmployees || 1);
+    
+    // Department Distribution
+    const deptDistribution: Record<string, number> = {};
+    allEmployees.forEach(e => {
+      const dept = e.department || "General";
+      deptDistribution[dept] = (deptDistribution[dept] || 0) + 1;
+    });
+
+    return { totalEmployees, activeEmployees, onLeave, retentionRate, turnoverRate, avgPerformance: avgPerformance.toFixed(1), deptDistribution };
+  }, [staffList]);
+
+  const [isReviewCycleOpen, setIsReviewCycleOpen] = useState(false);
    const [isRunPayrollOpen, setIsRunPayrollOpen] = useState(false);
    const [selectedEvent, setSelectedEvent] = useState<{ title: string; date: string; icon: any; color: string } | null>(null);
 
    const filteredEmployees = useMemo(() => {
-     return MOCK_EMPLOYEES.filter(emp => 
+     const allEmployees = [...MOCK_EMPLOYEES, ...staffList];
+     return allEmployees.filter(emp => 
        emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       emp.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       emp.department.toLowerCase().includes(searchQuery.toLowerCase())
+       (emp.role && emp.role.toLowerCase().includes(searchQuery.toLowerCase())) ||
+       (emp.department && emp.department.toLowerCase().includes(searchQuery.toLowerCase())) ||
+       (emp.chatName && emp.chatName.toLowerCase().includes(searchQuery.toLowerCase()))
      );
-   }, [searchQuery]);
+   }, [searchQuery, staffList]);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <h2 className="font-display text-2xl font-bold">Human Resources</h2>
+            <h2 className="font-display text-2xl font-bold uppercase tracking-tight">HR Management</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Manage your global workforce, hiring, and performance.
+              Manage your global workforce, performance, and culture.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 no-scrollbar">
             {isAdmin && (
-              <Button variant="outline" size="sm" className="rounded-xl border-primary/20 text-primary hover:bg-primary/5" onClick={() => navigate('/app/hr/onboarding')}>
+              <Button variant="outline" size="sm" className="rounded-xl h-9 border-primary/20 text-primary hover:bg-primary/5 whitespace-nowrap" onClick={() => navigate('/app/hr/onboarding')}>
                 <UserPlus className="w-4 h-4 mr-1.5" /> Staff Onboarding
               </Button>
             )}
-            <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setIsExportOpen(true)}>
+            <Button variant="outline" size="sm" className="rounded-xl h-9 whitespace-nowrap" onClick={() => setIsExportOpen(true)}>
               <Download className="w-4 h-4 mr-1.5" /> Export
             </Button>
-            <Button size="sm" className="rounded-xl" onClick={() => setIsAddStaffOpen(true)}>
+            <Button size="sm" className="rounded-xl h-9 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 whitespace-nowrap" onClick={() => setIsAddStaffOpen(true)}>
               <Plus className="w-4 h-4 mr-1.5" /> Quick Add
             </Button>
           </div>
         </div>
 
         {/* Sub-navigation */}
-        <div className="flex items-center gap-1 border-b border-border pb-px overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-1 border-b border-border pb-px overflow-x-auto no-scrollbar">
           {tools.map((tool) => {
             const ToolIcon = tool.icon;
             return (
@@ -434,24 +444,24 @@ const HRPage = () => {
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-6"
               >
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
-                    { label: "Headcount", value: MOCK_EMPLOYEES.length.toString(), change: "+2", icon: Users, color: "text-blue-500" },
-                    { label: "Active Now", value: MOCK_EMPLOYEES.filter(e => e.status === 'Active').length.toString(), change: "75%", icon: UserCheck, color: "text-green-500" },
-                    { label: "Open Roles", value: MOCK_JOBS.filter(j => j.status === 'Open').length.toString(), change: "+1", icon: UserPlus, color: "text-primary" },
-                    { label: "Retention", value: "98%", change: "+0.5%", icon: TrendingUp, color: "text-primary" },
+                    { label: "Headcount", value: hrMetrics.totalEmployees.toString(), change: "+2", icon: Users, color: "text-blue-500" },
+                    { label: "Active Now", value: hrMetrics.activeEmployees.toString(), change: "75%", icon: UserCheck, color: "text-green-500" },
+                    { label: "Retention", value: `${hrMetrics.retentionRate}%`, change: "Excellent", icon: TrendingUp, color: "text-primary" },
+                    { label: "Avg Performance", value: hrMetrics.avgPerformance, change: "+0.5%", icon: Award, color: "text-primary" },
                   ].map((stat) => {
                     const StatIcon = stat.icon;
                     return (
-                      <div key={stat.label} className="p-5 rounded-xl border border-border bg-card shadow-sm">
+                      <div key={stat.label} className="p-5 rounded-[2rem] border-2 border-border bg-card shadow-sm min-h-[140px]">
                         <div className="flex items-center justify-between mb-3">
-                          <div className={`p-2 rounded-lg bg-secondary/50 ${stat.color}`}>
+                          <div className={`p-2 rounded-xl bg-secondary/50 ${stat.color}`}>
                             {StatIcon && <StatIcon className="w-5 h-5" />}
                           </div>
-                          <span className="text-[10px] font-bold text-green-600 bg-green-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider">{stat.change}</span>
+                          <span className="text-[10px] font-black text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">{stat.change}</span>
                         </div>
-                        <p className="text-2xl font-display font-bold text-foreground">{stat.value}</p>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{stat.label}</p>
+                        <p className="text-2xl font-black tracking-tighter text-foreground">{stat.value}</p>
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1 opacity-60">{stat.label}</p>
                       </div>
                     );
                   })}
@@ -625,17 +635,17 @@ const HRPage = () => {
                 animate={{ opacity: 1, x: 0 }}
                 className="space-y-6"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input 
                       placeholder="Search employees by name, role, or department..." 
-                      className="pl-10 h-10 rounded-xl"
+                      className="pl-10 h-11 rounded-xl"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  <Button variant="outline" className="rounded-xl h-10 gap-2" onClick={() => setIsFiltersOpen(true)}>
+                  <Button variant="outline" className="rounded-xl h-11 gap-2 uppercase font-black tracking-widest text-[10px]" onClick={() => setIsFiltersOpen(true)}>
                     <Filter className="w-4 h-4" /> Filters
                   </Button>
                 </div>
@@ -651,14 +661,19 @@ const HRPage = () => {
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div className="relative">
-                            <img src={emp.avatar} alt={emp.name} className="w-12 h-12 rounded-xl object-cover" />
+                            <Avatar className="w-12 h-12 rounded-xl">
+                              <AvatarFallback className="font-black bg-primary/10 text-primary">
+                                {emp.name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
                             <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-card ${
-                              emp.status === 'Active' ? 'bg-green-500' : emp.status === 'On Leave' ? 'bg-primary' : 'bg-blue-500'
+                              emp.status === 'Active' || !emp.status ? 'bg-green-500' : emp.status === 'On Leave' ? 'bg-primary' : 'bg-blue-500'
                             }`} />
                           </div>
                           <div>
                             <h4 className="font-bold text-sm">{emp.name}</h4>
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{emp.role}</p>
+                            <p className="text-[10px] font-black text-primary uppercase tracking-widest leading-none mt-1">@{emp.chatName || "username.cynda"}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{emp.role}</p>
                           </div>
                         </div>
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
@@ -692,6 +707,75 @@ const HRPage = () => {
                       </div>
                     </motion.div>
                   ))}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTool === 'performance' && (
+              <motion.div key="performance" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div className="p-6 rounded-[24px] border border-border bg-card shadow-sm">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-6">Staff Performance Audit</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Employee</th>
+                          <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Department</th>
+                          <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">Score (1-5)</th>
+                          <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Last Review</th>
+                          <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
+                          <th className="pb-4 text-right"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {[...MOCK_EMPLOYEES, ...staffList].map((emp) => (
+                          <tr key={emp.id} className="group hover:bg-secondary/10 transition-colors">
+                            <td className="py-4">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-8 w-8 rounded-lg">
+                                  <AvatarFallback className="text-[10px] font-black">{emp.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-bold">{emp.name}</span>
+                                  <span className="text-[9px] font-black text-primary uppercase tracking-widest">@{emp.chatName || "username.cynda"}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-4">
+                              <span className="text-xs text-muted-foreground">{emp.department}</span>
+                            </td>
+                            <td className="py-4">
+                              <div className="flex flex-col items-center gap-1">
+                                <span className={cn(
+                                  "text-sm font-black",
+                                  emp.performance >= 4.5 ? "text-green-600" : emp.performance >= 4 ? "text-primary" : "text-orange-500"
+                                )}>{emp.performance || "N/A"}</span>
+                                <div className="w-20 h-1 rounded-full bg-secondary overflow-hidden">
+                                  <div className={cn(
+                                    "h-full rounded-full",
+                                    emp.performance >= 4.5 ? "bg-green-600" : emp.performance >= 4 ? "bg-primary" : "bg-orange-500"
+                                  )} style={{ width: `${(emp.performance / 5) * 100}%` }} />
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-4 text-xs text-muted-foreground">
+                              {emp.startDate}
+                            </td>
+                            <td className="py-4">
+                              <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest">
+                                {emp.performance >= 4.5 ? "Top Performer" : "Developing"}
+                              </Badge>
+                            </td>
+                            <td className="py-4 text-right">
+                              <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                                Open Review
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -2806,7 +2890,13 @@ const HRPage = () => {
             <Button variant="outline" className="rounded-xl" onClick={() => setIsExportOpen(false)}>Cancel</Button>
             <Button className="rounded-xl" onClick={() => {
               setIsExportOpen(false);
-              toast({ title: "Export Started", description: "Your file will be ready in a few moments." });
+              const data = [...MOCK_EMPLOYEES, ...staffList];
+              if (data.length === 0) {
+                toast({ title: "No data to export", variant: "destructive" });
+                return;
+              }
+              exportToCSV(data, 'hr_directory');
+              toast({ title: "Export Successful", description: "Your employee directory has been exported as CSV." });
             }}>Start Export</Button>
           </DialogFooter>
         </DialogContent>

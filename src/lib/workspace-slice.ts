@@ -67,6 +67,7 @@ export interface WorkspaceSlice {
   deleteNotification: (id: string) => void;
   addTask: (task: WorkspaceTask) => void;
   updateTask: (id: string, patch: Partial<WorkspaceTask>) => void;
+  deleteTask: (id: string) => void;
   addProject: (project: WorkspaceProject) => void;
   addInvoice: (invoice: WorkspaceInvoice) => void;
   addExpense: (expense: WorkspaceExpense) => void;
@@ -100,11 +101,6 @@ export const createWorkspaceSlice: StateCreator<WorkspaceSlice> = (set) => ({
   },
   notifications: [
     { id: "n1", source: "System", title: "Welcome to Cynda", message: "Your workspace is ready. Explore the modules to get started.", read: false, timestamp: new Date().toISOString(), type: 'system' },
-    { id: "n2", source: "Sarah Chen", title: "File shared with you", message: "Sarah shared 'Q3 Financial Report.pdf' in the Finance department.", read: false, timestamp: new Date(Date.now() - 300000).toISOString(), type: 'share', actionUrl: '/app/files' },
-    { id: "n3", source: "Form System", title: "New Form Response", message: "Your 'Customer Feedback' form received a new submission.", read: false, timestamp: new Date(Date.now() - 3600000).toISOString(), type: 'form', actionUrl: '/app/forms' },
-    { id: "n4", source: "Alex Rivera", title: "Mentioned you in #Design", message: "@admin take a look at these new onboarding wireframes when you have a moment.", read: false, timestamp: new Date(Date.now() - 7200000).toISOString(), type: 'mention', actionUrl: '/app/chat' },
-    { id: "n5", source: "Finance Bot", title: "Invoice Paid", message: "Invoice #INV-2024-001 for $2,500.00 has been marked as paid.", read: true, timestamp: new Date(Date.now() - 86400000).toISOString(), type: 'task', actionUrl: '/app/finance' },
-    { id: "n6", source: "HR System", title: "New Leave Request", message: "James Miller submitted a vacation request for next week.", read: true, timestamp: new Date(Date.now() - 172800000).toISOString(), type: 'task', actionUrl: '/app/hr' },
   ],
   tasks: [],
   projects: [],
@@ -128,17 +124,16 @@ export const createWorkspaceSlice: StateCreator<WorkspaceSlice> = (set) => ({
     set((state) => ({
       tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
     })),
+  deleteTask: (id) =>
+    set((state) => ({
+      tasks: state.tasks.filter((t) => t.id !== id),
+    })),
   addProject: (project) => set((state) => ({ projects: [...state.projects, project] })),
   addInvoice: (invoice) => set((state) => ({ invoices: [...state.invoices, invoice] })),
   addExpense: (expense) => set((state) => ({ expenses: [...state.expenses, expense] })),
   seedNotifications: () => set((state) => {
     const samples: Notification[] = [
       { id: "n1", source: "System", title: "Welcome to Cynda", message: "Your workspace is ready. Explore the modules to get started.", read: false, timestamp: new Date().toISOString(), type: 'system' },
-      { id: "n2", source: "Sarah Chen", title: "File shared with you", message: "Sarah shared 'Q3 Financial Report.pdf' in the Finance department.", read: false, timestamp: new Date(Date.now() - 300000).toISOString(), type: 'share', actionUrl: '/app/files' },
-      { id: "n3", source: "Form System", title: "New Form Response", message: "Your 'Customer Feedback' form received a new submission.", read: false, timestamp: new Date(Date.now() - 3600000).toISOString(), type: 'form', actionUrl: '/app/forms' },
-      { id: "n4", source: "Alex Rivera", title: "Mentioned you in #Design", message: "@admin take a look at these new onboarding wireframes when you have a moment.", read: false, timestamp: new Date(Date.now() - 7200000).toISOString(), type: 'mention', actionUrl: '/app/chat' },
-      { id: "n5", source: "Finance Bot", title: "Invoice Paid", message: "Invoice #INV-2024-001 for $2,500.00 has been marked as paid.", read: true, timestamp: new Date(Date.now() - 86400000).toISOString(), type: 'task', actionUrl: '/app/finance' },
-      { id: "n6", source: "HR System", title: "New Leave Request", message: "James Miller submitted a vacation request for next week.", read: true, timestamp: new Date(Date.now() - 172800000).toISOString(), type: 'task', actionUrl: '/app/hr' },
     ];
     
     const currentNotifs = state.notifications || [];

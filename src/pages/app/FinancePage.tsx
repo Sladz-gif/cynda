@@ -47,7 +47,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { cn, exportToCSV } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 type FinanceTool = string;
@@ -69,7 +69,7 @@ const FinancePage = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const allTools = [
+  const allTools = useMemo(() => [
     { id: 'finance-dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'invoicing', label: 'Invoicing', icon: Receipt },
     { id: 'expenses', label: 'Expenses', icon: Wallet },
@@ -82,7 +82,7 @@ const FinancePage = () => {
     { id: 'integrations', label: 'Integrations', icon: Zap },
     { id: 'documents', label: 'Documents', icon: FileText },
     { id: 'finance-reports', label: 'Reports', icon: BarChart3 },
-  ];
+  ], []);
 
   const tools = useMemo(() => {
     const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
@@ -94,7 +94,7 @@ const FinancePage = () => {
       return [allTools[0]]; // Default to dashboard
     }
     return filtered;
-  }, [selectedModules, userType]);
+  }, [selectedModules, userType, allTools]);
 
   const [activeTool, setActiveTool] = useState<string>(tools[0]?.id || 'finance-dashboard');
 
@@ -112,7 +112,7 @@ const FinancePage = () => {
     if (allTools.some((t) => t.id === fromRoute) && fromRoute !== activeTool) {
       setActiveTool(fromRoute);
     }
-  }, [location.pathname, activeTool]);
+  }, [location.pathname, activeTool, allTools]);
 
   const goToTool = (id: string) => {
     const url = id === "finance-dashboard" ? "/app/finance" : `/app/${id}`;
@@ -121,6 +121,42 @@ const FinancePage = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeReportType, setActiveReportType] = useState<'p-and-l' | 'balance-sheet' | 'cash-flow'>('p-and-l');
+
+  // --- Calculations (Spreadsheet Logic) ---
+  const revenueTotal = useMemo(() => 
+    storeInvoices.filter(i => i.status === 'Paid').reduce((sum, i) => sum + i.amount, 0)
+  , [storeInvoices]);
+
+  const expenseTotal = useMemo(() => 
+    storeExpenses.filter(e => e.status === 'Approved').reduce((sum, e) => sum + e.amount, 0)
+  , [storeExpenses]);
+
+  const netIncome = revenueTotal - expenseTotal;
+  const burnRate = expenseTotal / 6; // Average over 6 months
+  const profitMargin = revenueTotal > 0 ? (netProfit / revenueTotal) * 100 : 0;
+
+  const [taxRate, setTaxRate] = useState(15);
+  const [invoiceItems, setInvoiceItems] = useState([{ id: Date.now(), description: "", amount: 0, quantity: 1 }]);
+  
+  const calculatedInvoice = useMemo(() => {
+    const subtotal = invoiceItems.reduce((sum, item) => sum + (item.amount * item.quantity), 0);
+    const tax = subtotal * (taxRate / 100);
+    return { subtotal, tax, total: subtotal + tax };
+  }, [invoiceItems, taxRate]);
+
+  const addInvoiceItem = () => {
+    setInvoiceItems([...invoiceItems, { id: Date.now(), description: "", amount: 0, quantity: 1 }]);
+  };
+
+  const removeInvoiceItem = (id: number) => {
+    if (invoiceItems.length > 1) {
+      setInvoiceItems(invoiceItems.filter(item => item.id !== id));
+    }
+  };
+
+  const updateInvoiceItem = (id: number, patch: any) => {
+    setInvoiceItems(invoiceItems.map(item => item.id === id ? { ...item, ...patch } : item));
+  };
 
   // --- Modals State ---
   const [isAddInvoiceOpen, setIsAddInvoiceOpen] = useState(false);
@@ -154,7 +190,7 @@ const FinancePage = () => {
       ];
       initialExpenses.forEach(exp => storeAddExpense(exp));
     }
-  }, []);
+  }, [storeInvoices.length, storeExpenses.length, storeAddInvoice, storeAddExpense]);
 
   // Format store invoices for display
   const invoices = useMemo(() => {
@@ -172,63 +208,25 @@ const FinancePage = () => {
     }));
   }, [storeExpenses]);
 
-  const [payroll, setPayroll] = useState([
-    { id: "PAY-001", employee: "Sarah Johnson", role: "Sr. Engineer", amount: "$8,500.00", status: "Paid" },
-    { id: "PAY-002", employee: "Michael Chen", role: "Designer", amount: "$6,200.00", status: "Paid" },
-    { id: "PAY-003", employee: "Alex Rivera", role: "Product Manager", amount: "$7,800.00", status: "Pending" },
-  ]);
+  const [payroll, setPayroll] = useState<{ id: string; employee: string; role: string; amount: string; status: string }[]>([]);
 
-  const [inventory, setInventory] = useState([
-    { id: "AST-001", item: "MacBook Pro M3", serial: "SN-92831", value: "$2,499.00", status: "In Use" },
-    { id: "AST-002", item: "Dell UltraSharp 27", serial: "SN-11203", value: "$650.00", status: "Available" },
-    { id: "AST-003", item: "Herman Miller Aeron", serial: "SN-44592", value: "$1,200.00", status: "In Use" },
-  ]);
+  const [inventory, setInventory] = useState<{ id: string; item: string; serial: string; value: string; status: string }[]>([]);
 
-  const [timeEntries, setTimeEntries] = useState([
-    { id: "TME-001", employee: "Sarah Johnson", project: "Project Phoenix", hours: "32.5", date: "2024-03-18", status: "Approved" },
-    { id: "TME-002", employee: "Michael Chen", project: "UI Design System", hours: "14.0", date: "2024-03-19", status: "Pending" },
-    { id: "TME-003", employee: "Alex Rivera", project: "Client Strategy", hours: "8.0", date: "2024-03-20", status: "Approved" },
-  ]);
+  const [timeEntries, setTimeEntries] = useState<{ id: string; employee: string; project: string; hours: string; date: string; status: string }[]>([]);
 
-  const [payments, setPayments] = useState([
-    { id: "TRX-001", method: "Stripe", amount: "$12,400.00", date: "2024-03-22", status: "Completed", type: "Inbound" },
-    { id: "TRX-002", method: "Bank Transfer", amount: "$2,500.00", date: "2024-03-21", status: "Processing", type: "Outbound" },
-    { id: "TRX-003", method: "PayPal", amount: "$850.00", date: "2024-03-20", status: "Completed", type: "Inbound" },
-  ]);
+  const [payments, setPayments] = useState<{ id: string; method: string; amount: string; date: string; status: string; type: string }[]>([]);
 
   const [currencies, setCurrencies] = useState([
     { code: "USD", name: "US Dollar", rate: "1.00", status: "Primary" },
-    { code: "EUR", name: "Euro", rate: "0.92", status: "Active" },
-    { code: "GBP", name: "British Pound", rate: "0.78", status: "Active" },
   ]);
 
-  const [integrations, setIntegrations] = useState([
-    { id: "INT-001", name: "Stripe", category: "Payment Gateway", status: "Connected", icon: CreditCard },
-    { id: "INT-002", name: "QuickBooks", category: "Accounting", status: "Disconnected", icon: Building2 },
-    { id: "INT-003", name: "Plio", category: "Bank Sync", status: "Connected", icon: Landmark },
-  ]);
+  const [integrations, setIntegrations] = useState<{ id: string; name: string; category: string; status: string; icon: any }[]>([]);
 
-  const [documents, setDocuments] = useState([
-    { id: "DOC-001", name: "Q1 Financial Report.pdf", type: "Report", size: "2.4 MB", date: "2024-03-01" },
-    { id: "DOC-002", name: "Tax Returns 2023.zip", type: "Legal", size: "15.8 MB", date: "2024-02-15" },
-    { id: "DOC-003", name: "Vendor Contract - Acme.pdf", type: "Contract", size: "1.1 MB", date: "2024-03-10" },
-  ]);
+  const [documents, setDocuments] = useState<{ id: string; name: string; type: string; size: string; date: string }[]>([]);
 
-  const revenueData = [
-    { name: 'Oct', revenue: 45000, profit: 12000 },
-    { name: 'Nov', revenue: 52000, profit: 15000 },
-    { name: 'Dec', revenue: 61000, profit: 18000 },
-    { name: 'Jan', revenue: 58000, profit: 14000 },
-    { name: 'Feb', revenue: 72000, profit: 22000 },
-    { name: 'Mar', revenue: 85000, profit: 28000 },
-  ];
+  const revenueData: { name: string; revenue: number; profit: number }[] = [];
 
-  const categoryData = [
-    { name: 'Fixed', value: 45, color: 'hsl(var(--primary))' },
-    { name: 'Variable', value: 30, color: '#3b82f6' },
-    { name: 'Marketing', value: 15, color: '#10b981' },
-    { name: 'Other', value: 10, color: '#94a3b8' },
-  ];
+  const categoryData: { name: string; value: number; color: string }[] = [];
 
   const handlePrimaryAction = () => {
     if (activeTool === 'invoicing') setIsAddInvoiceOpen(true);
@@ -261,25 +259,22 @@ const FinancePage = () => {
     setCyndiOpen(true);
   };
 
-  const handleAddInvoice = () => {
-    if (!newInvoice.client || !newInvoice.amount) return;
+  const handleAddInvoice = (calculatedTotal?: number) => {
+    if (!newInvoice.client) return;
+    const finalAmount = calculatedTotal !== undefined ? calculatedTotal : Number(newInvoice.amount);
+    if (!finalAmount) return;
+
     const inv = {
       id: `INV-${Math.floor(100 + Math.random() * 900)}`,
       client: newInvoice.client,
-      amount: `$${Number(newInvoice.amount).toLocaleString()}`,
+      amount: finalAmount,
       date: newInvoice.date,
-      status: "Pending" as const,
-      icon: Building2
+      status: "Pending" as const
     };
-    storeAddInvoice({
-      id: inv.id,
-      client: inv.client,
-      amount: Number(newInvoice.amount),
-      date: inv.date,
-      status: inv.status
-    });
+    storeAddInvoice(inv);
     setIsAddInvoiceOpen(false);
     setNewInvoice({ client: "", amount: "", date: new Date().toISOString().split('T')[0] });
+    setInvoiceItems([{ id: Date.now(), description: "", amount: 0, quantity: 1 }]);
     toast({ title: "Invoice Created", description: `Invoice for ${newInvoice.client} has been generated.` });
   };
 
@@ -321,10 +316,25 @@ const FinancePage = () => {
    };
 
    const handleExport = () => {
-     toast({ 
-       title: "Export Started", 
-       description: `Your ${activeTool} report is being prepared for download.` 
-     });
+    let data: any[] = [];
+    const filename = `finance_${activeTool}`;
+    
+    if (activeTool === 'invoicing') data = storeInvoices;
+    else if (activeTool === 'expenses') data = storeExpenses;
+    else if (activeTool === 'payroll') data = payroll;
+    else if (activeTool === 'inventory') data = inventory;
+    else if (activeTool === 'payments') data = payments;
+    
+    if (data.length === 0) {
+      toast({ title: "No data to export", variant: "destructive" });
+      return;
+    }
+    
+    exportToCSV(data, filename);
+    toast({ 
+      title: "Export Successful", 
+      description: `Your ${activeTool} data has been exported.` 
+    });
    };
 
    // Two-step Delete Confirmation
@@ -564,21 +574,21 @@ const FinancePage = () => {
       </Dialog>
 
       {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="font-display text-2xl font-bold">Finance</h2>
             <p className="text-sm text-muted-foreground mt-1">
               Manage your company's financial health and operations.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="rounded-xl" onClick={handleExport}>
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 no-scrollbar">
+            <Button variant="outline" size="sm" className="rounded-xl h-9 whitespace-nowrap" onClick={handleExport}>
               <Download className="w-4 h-4 mr-1.5" /> Export
             </Button>
             <Button 
               size="sm" 
-              className="rounded-xl bg-primary hover:bg-primary/90 text-white shadow-sm"
+              className="rounded-xl h-9 bg-primary hover:bg-primary/90 text-white shadow-sm whitespace-nowrap"
               onClick={handlePrimaryAction}
             >
               <Plus className="w-4 h-4 mr-1.5" />
@@ -593,7 +603,7 @@ const FinancePage = () => {
         </div>
 
         {/* Sub-navigation */}
-        <div className="flex items-center gap-1 border-b border-border pb-px overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-1 border-b border-border pb-px overflow-x-auto no-scrollbar">
           {tools.map((tool) => {
             const ToolIcon = tool.icon;
             return (
@@ -627,11 +637,11 @@ const FinancePage = () => {
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-6"
               >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {[
-                    { label: "Total Revenue", value: "$124,500", change: "+12.5%", icon: DollarSign, color: "text-green-500" },
-                    { label: "Net Profit", value: "$42,200", change: "+8.2%", icon: TrendingUp, color: "text-primary" },
-                    { label: "Outstanding", value: "$18,400", change: "-2.4%", icon: Clock, color: "text-primary" },
+                    { label: "Total Revenue", value: `$${revenueTotal.toLocaleString()}`, change: "+12.5%", icon: DollarSign, color: "text-green-500" },
+                    { label: "Net Profit", value: `$${netIncome.toLocaleString()}`, change: `${profitMargin.toFixed(1)}% margin`, icon: TrendingUp, color: "text-primary" },
+                    { label: "Burn Rate", value: `$${burnRate.toLocaleString()}/mo`, change: "-2.4%", icon: Clock, color: "text-primary" },
                   ].map((stat) => {
                     const StatIcon = stat.icon;
                     return (
@@ -721,7 +731,7 @@ const FinancePage = () => {
 
             {activeTool === 'invoicing' && (
               <motion.div key="invoicing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   {[
                     { label: "Total Invoiced", value: "$248,500", icon: Receipt, color: "text-primary" },
                     { label: "Total Paid", value: "$192,200", icon: CheckCircle2, color: "text-green-500" },
@@ -744,19 +754,19 @@ const FinancePage = () => {
                 </div>
 
                 <div className="p-6 rounded-xl border border-border bg-card shadow-sm">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                     <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Recent Invoices</h3>
-                    <div className="flex items-center gap-2">
-                      <div className="relative">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <div className="relative w-full sm:w-[250px]">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input 
                           placeholder="Search invoices..." 
-                          className="pl-9 h-9 w-[250px] text-xs rounded-xl"
+                          className="pl-9 h-9 w-full text-xs rounded-xl"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                         />
                       </div>
-                      <Button variant="outline" size="sm" className="rounded-xl">
+                      <Button variant="outline" size="sm" className="rounded-xl h-9">
                         <Filter className="w-4 h-4 mr-1.5" /> Filter
                       </Button>
                     </div>
@@ -1014,19 +1024,15 @@ const FinancePage = () => {
                       <div className="space-y-4">
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Operating Revenue</h4>
                         <div className="space-y-3">
-                          {[
-                            { label: 'Product Sales', amount: '$85,400.00' },
-                            { label: 'Service Revenue', amount: '$32,100.00' },
-                            { label: 'Subscription Fees', amount: '$12,500.00' },
-                          ].map((row) => (
-                            <div key={row.label} className="flex items-center justify-between text-sm">
-                              <span className="font-medium text-muted-foreground">{row.label}</span>
-                              <span className="font-bold">{row.amount}</span>
+                          {storeInvoices.filter(i => i.status === 'Paid').slice(0, 5).map((inv) => (
+                            <div key={inv.id} className="flex items-center justify-between text-sm">
+                              <span className="font-medium text-muted-foreground">{inv.client}</span>
+                              <span className="font-bold">${inv.amount.toLocaleString()}</span>
                             </div>
                           ))}
                           <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
                             <span className="text-xs font-black uppercase tracking-widest">Total Revenue</span>
-                            <span className="text-base font-black text-primary">$130,000.00</span>
+                            <span className="text-base font-black text-primary">${revenueTotal.toLocaleString()}</span>
                           </div>
                         </div>
                       </div>
@@ -1034,20 +1040,15 @@ const FinancePage = () => {
                       <div className="space-y-4 pt-4">
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Operating Expenses</h4>
                         <div className="space-y-3">
-                          {[
-                            { label: 'Cost of Goods Sold', amount: '$24,500.00' },
-                            { label: 'Salaries & Wages', amount: '$42,200.00' },
-                            { label: 'Rent & Utilities', amount: '$8,500.00' },
-                            { label: 'Marketing & Advertising', amount: '$12,400.00' },
-                          ].map((row) => (
-                            <div key={row.label} className="flex items-center justify-between text-sm">
-                              <span className="font-medium text-muted-foreground">{row.label}</span>
-                              <span className="font-bold">{row.amount}</span>
+                          {storeExpenses.filter(e => e.status === 'Approved').slice(0, 5).map((exp) => (
+                            <div key={exp.id} className="flex items-center justify-between text-sm">
+                              <span className="font-medium text-muted-foreground">{exp.category}</span>
+                              <span className="font-bold">${exp.amount.toLocaleString()}</span>
                             </div>
                           ))}
                           <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
                             <span className="text-xs font-black uppercase tracking-widest">Total Expenses</span>
-                            <span className="text-base font-black text-primary">$87,600.00</span>
+                            <span className="text-base font-black text-primary">${expenseTotal.toLocaleString()}</span>
                           </div>
                         </div>
                       </div>
@@ -1058,7 +1059,9 @@ const FinancePage = () => {
                             <p className="text-[10px] font-black uppercase tracking-widest text-primary">Net Operating Income</p>
                             <p className="text-xs text-muted-foreground font-medium mt-1">Earnings before interest and taxes (EBIT)</p>
                           </div>
-                          <p className="text-3xl font-display font-black text-primary">$42,400.00</p>
+                          <p className={cn("text-3xl font-display font-black", netIncome >= 0 ? "text-primary" : "text-destructive")}>
+                            ${netIncome.toLocaleString()}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1180,6 +1183,95 @@ const FinancePage = () => {
                 </div>
               </motion.div>
             )}
+
+            {activeTool === 'integrations' && (
+              <motion.div key="integrations" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {integrations.map((int) => (
+                    <div key={int.id} className="p-6 rounded-[24px] border-2 border-border bg-card hover:border-primary/30 transition-all group">
+                      <div className="flex items-start justify-between mb-6">
+                        <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center">
+                          {int.icon && <int.icon className="w-6 h-6 text-primary" />}
+                        </div>
+                        <Badge className={cn(
+                          "text-[9px] font-black uppercase tracking-widest border-none px-2 py-0.5",
+                          int.status === 'Connected' ? "bg-green-500/10 text-green-600" : "bg-muted text-muted-foreground"
+                        )}>
+                          {int.status}
+                        </Badge>
+                      </div>
+                      <h4 className="text-sm font-black uppercase tracking-tight mb-1">{int.name}</h4>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-6">{int.category}</p>
+                      
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant={int.status === 'Connected' ? "outline" : "default"} 
+                          className="flex-1 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest"
+                          onClick={() => {
+                            setIntegrations(integrations.map(i => i.id === int.id ? { ...i, status: i.status === 'Connected' ? 'Disconnected' : 'Connected' } : i));
+                            toast({ title: int.status === 'Connected' ? "Integration Disconnected" : "Integration Connected" });
+                          }}
+                        >
+                          {int.status === 'Connected' ? "Configure" : "Connect"}
+                        </Button>
+                        {int.status === 'Connected' && (
+                          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/5" onClick={() => {
+                            setIntegrations(integrations.map(i => i.id === int.id ? { ...i, status: 'Disconnected' } : i));
+                            toast({ title: "Integration Removed" });
+                          }}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <div className="p-6 rounded-[24px] border-2 border-dashed border-border bg-secondary/5 flex flex-col items-center justify-center text-center group cursor-pointer hover:border-primary/30 transition-all" onClick={() => toast({ title: "Integration Request Sent" })}>
+                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <Plus className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Request Integration</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTool === 'documents' && (
+              <motion.div key="documents" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div className="p-6 rounded-xl border border-border bg-card shadow-sm">
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Financial Documents</h3>
+                    <Button size="sm" className="rounded-xl h-9" onClick={() => toast({ title: "Upload Started" })}>
+                      <Upload className="w-4 h-4 mr-1.5" /> Upload File
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {documents.length > 0 ? documents.map((doc) => (
+                      <div key={doc.id} className="p-4 rounded-xl border border-border hover:bg-secondary/10 transition-colors group">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-primary" />
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <p className="text-sm font-bold truncate">{doc.name}</p>
+                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-1">{doc.size} • {doc.date}</p>
+                      </div>
+                    )) : (
+                      <div className="col-span-full py-12 text-center">
+                        <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
+                          <FileText className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">No documents uploaded</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
       </div>
@@ -1219,7 +1311,7 @@ const FinancePage = () => {
 
       {/* Add Invoice Dialog */}
       <Dialog open={isAddInvoiceOpen} onOpenChange={setIsAddInvoiceOpen}>
-        <DialogContent className="sm:max-w-[500px] rounded-[32px] border-4 p-8 bg-card">
+        <DialogContent className="sm:max-w-[600px] rounded-[32px] border-4 p-8 bg-card">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black uppercase tracking-tight">Create Invoice</DialogTitle>
             <DialogDescription className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Generate a new billable item for a client.</DialogDescription>
@@ -1234,34 +1326,89 @@ const FinancePage = () => {
                 onChange={(e) => setNewInvoice({ ...newInvoice, client: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest px-1">Amount ($)</Label>
-                <Input 
-                  type="number" 
-                  placeholder="0.00" 
-                  className="rounded-xl h-12 border-2" 
-                  value={newInvoice.amount || ""}
-                  onChange={(e) => setNewInvoice({ ...newInvoice, amount: parseFloat(e.target.value) })}
-                />
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] font-black uppercase tracking-widest px-1">Line Items</Label>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 bg-secondary/30 px-2 py-1 rounded-lg">
+                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Tax Rate %</Label>
+                    <Input 
+                      type="number" 
+                      className="w-12 h-6 text-[10px] font-bold p-1 rounded border-none bg-transparent focus-visible:ring-0" 
+                      value={taxRate}
+                      onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                  <Button variant="outline" size="sm" className="h-7 rounded-lg text-[9px] uppercase font-black" onClick={addInvoiceItem}>
+                    <Plus className="w-3 h-3 mr-1" /> Add Item
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest px-1">Status</Label>
-                <Select value={newInvoice.status} onValueChange={(v) => setNewInvoice({ ...newInvoice, status: v })}>
-                  <SelectTrigger className="rounded-xl h-12 border-2">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Paid">Paid</SelectItem>
-                    <SelectItem value="Overdue">Overdue</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 no-scrollbar">
+                {invoiceItems.map((item, index) => (
+                  <div key={item.id} className="flex flex-col sm:flex-row gap-2 items-start bg-secondary/10 p-2 rounded-xl sm:bg-transparent sm:p-0">
+                    <Input 
+                      placeholder="Description" 
+                      className="w-full sm:flex-1 h-10 rounded-lg text-xs" 
+                      value={item.description}
+                      onChange={(e) => updateInvoiceItem(item.id, { description: e.target.value })}
+                    />
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Input 
+                        type="number" 
+                        placeholder="Qty" 
+                        className="flex-1 sm:w-20 h-10 rounded-lg text-xs" 
+                        value={item.quantity || ""}
+                        onChange={(e) => updateInvoiceItem(item.id, { quantity: parseFloat(e.target.value) })}
+                      />
+                      <Input 
+                        type="number" 
+                        placeholder="Price" 
+                        className="flex-1 sm:w-24 h-10 rounded-lg text-xs" 
+                        value={item.amount || ""}
+                        onChange={(e) => updateInvoiceItem(item.id, { amount: parseFloat(e.target.value) })}
+                      />
+                      <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive shrink-0" onClick={() => removeInvoiceItem(item.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-muted/50 space-y-2">
+              <div className="flex justify-between text-xs font-bold">
+                <span className="text-muted-foreground uppercase tracking-widest">Subtotal</span>
+                <span>${calculatedInvoice.subtotal.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs font-bold">
+                <span className="text-muted-foreground uppercase tracking-widest">Tax ({taxRate}%)</span>
+                <span>${calculatedInvoice.tax.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-base font-black border-t border-border pt-2 mt-2">
+                <span className="uppercase tracking-tight">Total Amount</span>
+                <span className="text-primary">${calculatedInvoice.total.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest px-1">Status</Label>
+              <Select value={newInvoice.status} onValueChange={(v) => setNewInvoice({ ...newInvoice, status: v })}>
+                <SelectTrigger className="rounded-xl h-12 border-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Paid">Paid</SelectItem>
+                  <SelectItem value="Overdue">Overdue</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-col gap-3">
-            <Button className="w-full h-12 rounded-2xl font-black uppercase tracking-widest shadow-glow" onClick={handleCreateInvoice}>Create Invoice</Button>
+            <Button className="w-full h-12 rounded-2xl font-black uppercase tracking-widest shadow-glow" onClick={() => handleAddInvoice(calculatedInvoice.total)}>Create Invoice</Button>
             <Button variant="ghost" className="w-full h-12 rounded-2xl font-black uppercase tracking-widest" onClick={() => setIsAddInvoiceOpen(false)}>Cancel</Button>
           </DialogFooter>
         </DialogContent>
@@ -1311,7 +1458,7 @@ const FinancePage = () => {
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-col gap-3">
-            <Button className="w-full h-12 rounded-2xl font-black uppercase tracking-widest shadow-glow" onClick={handleCreateExpense}>Log Expense</Button>
+            <Button className="w-full h-12 rounded-2xl font-black uppercase tracking-widest shadow-glow" onClick={handleAddExpense}>Log Expense</Button>
             <Button variant="ghost" className="w-full h-12 rounded-2xl font-black uppercase tracking-widest" onClick={() => setIsAddExpenseOpen(false)}>Cancel</Button>
           </DialogFooter>
         </DialogContent>

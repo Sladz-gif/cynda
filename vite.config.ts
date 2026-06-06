@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
     envDir: rootDir,
     server: {
       host: "localhost",
-      port: 8080,
+      port: 5173,
       hmr: {
         overlay: true,
       },

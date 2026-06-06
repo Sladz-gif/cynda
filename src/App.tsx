@@ -29,6 +29,8 @@ import SignInPage from "./pages/auth/SignInPage";
 import SignUpPage from "./pages/auth/SignUpPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
+import ForcePasswordResetPage from "./pages/auth/ForcePasswordResetPage";
+import SuperAdminPage from "./pages/app/SuperAdminPage";
 import EmailComingSoonPage from "./pages/app/EmailComingSoonPage";
 import PerformanceComingSoonPage from "./pages/app/PerformanceComingSoonPage";
 import MarketplaceComingSoonPage from "./pages/app/MarketplaceComingSoonPage";
@@ -62,6 +64,7 @@ const App = () => {
               <Route path="/sign-up" element={<Navigate to="/signup" replace />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/force-password-reset" element={<ForcePasswordResetPage />} />
               <Route path="/billing/select-plan" element={<SelectPlanPage />} />
               <Route path="/billing/checkout" element={<CheckoutPage />} />
               <Route path="/billing/success" element={<PaymentSuccessPage />} />
@@ -111,6 +114,7 @@ const App = () => {
                 <Route path="performance" element={<PerformanceComingSoonPage />} />
                 <Route path="marketplace" element={<MarketplaceComingSoonPage />} />
                 <Route path="surveillance" element={<SurveillancePage />} />
+                <Route path="super-admin" element={<SuperAdminPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
               <Route path="/privacy" element={<div className="p-20 text-center font-black uppercase tracking-tighter text-4xl">Privacy Policy</div>} />

@@ -66,12 +66,12 @@ const AutomationPage = () => {
 
   const categories = ["All", "CRM", "Finance", "Projects", "HR", "Cross-Department"];
 
-  const toolMap: Record<string, string> = {
+  const toolMap: Record<string, string> = useMemo(() => ({
     'CRM': 'crm',
     'Finance': 'finance-dashboard',
     'Projects': 'tasks',
     'HR': 'hr-dashboard'
-  };
+  }), []);
 
   const filteredLibrary = useMemo(() => {
     return automationLibrary.filter(t => {
@@ -85,7 +85,7 @@ const AutomationPage = () => {
                            t.triggerDescription.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [automationLibrary, selectedCategory, searchQuery, selectedModules]);
+  }, [automationLibrary, selectedCategory, searchQuery, selectedModules, toolMap]);
 
   const handleDelete = (id: string) => {
     setItemToDelete(id);
@@ -135,14 +135,14 @@ const AutomationPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <h2 className="font-display text-2xl font-bold">Automations</h2>
             <p className="text-sm text-muted-foreground mt-1">Supercharge your workspace with Cyndi-powered background tasks.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="rounded-xl h-9 border-2 font-black uppercase tracking-widest text-[9px]" onClick={() => toast({ title: "Export Started" })}>
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 no-scrollbar">
+            <Button variant="outline" size="sm" className="rounded-xl h-9 border-2 font-black uppercase tracking-widest text-[9px] whitespace-nowrap" onClick={() => toast({ title: "Export Started" })}>
               <Download className="w-4 h-4 mr-1.5" /> Export Logs
             </Button>
           </div>
@@ -181,7 +181,7 @@ const AutomationPage = () => {
               exit={{ opacity: 0, y: -12 }}
               className="space-y-6"
             >
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {[
                   { label: "Active Automations", value: activeAutomations.filter(a => a.status === 'active').length, icon: Zap, color: "text-primary" },
                   { label: "Total Runs (Month)", value: activeAutomations.reduce((acc, a) => acc + a.runCount, 0), icon: Play, color: "text-green-500" },

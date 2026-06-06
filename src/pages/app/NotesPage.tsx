@@ -43,7 +43,8 @@ import {
   Bot, MoreHorizontal, ChevronRight, ChevronDown, Folder, Trash2, 
   Share2, Pin, PinOff, Copy, ArrowUpRight, GripVertical, 
   CheckSquare, ListOrdered, Minus, Type, Layers, ExternalLink,
-  RotateCcw, Trash, Search as SearchIcon, Filter, X, ShieldCheck, AlertCircle
+  RotateCcw, Trash, Search as SearchIcon, Filter, X, ShieldCheck, AlertCircle,
+  PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription 
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 
@@ -104,75 +106,7 @@ type Page = {
 
 const FOLDERS = ["All Notes", "Brand", "Engineering", "Sales", "HR", "Product", "Finance", "Medical", "Education", "Restaurant", "Real Estate", "Freelancer"];
 
-const INITIAL_PAGES: Page[] = [
-  {
-    id: '1',
-    title: 'Q2 Brand Guidelines',
-    icon: '🎨',
-    folder: 'Brand',
-    content: `
-      <h1>Brand Identity Overview</h1>
-      <p>This document outlines our key brand standards for Q2 2026.</p>
-      <h2>Color Palette</h2>
-      <ul>
-        <li>Primary: Cynda Orange</li>
-        <li>Secondary: Pale Cashmere</li>
-      </ul>
-      <hr>
-      <p><strong>Note:</strong> Always use the primary accent for main CTA buttons.</p>
-    `,
-    isFavorite: true,
-    isArchived: false,
-    updatedAt: new Date().toISOString(),
-    tags: ['Design', 'Brand'],
-    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }]
-  },
-  {
-    id: '2',
-    title: 'Product Roadmap',
-    icon: '🚀',
-    folder: 'Product',
-    content: `
-      <h1>2026 Roadmap</h1>
-      <p>Current priorities for the product team:</p>
-      <ul>
-        <li>Launch v2.0 Beta</li>
-        <li>Integrate CRM</li>
-      </ul>
-    `,
-    isFavorite: true,
-    isArchived: false,
-    updatedAt: new Date().toISOString(),
-    tags: ['Product'],
-    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }]
-  },
-  {
-    id: '3',
-    title: 'Meeting Notes',
-    icon: '📝',
-    parentId: '2',
-    folder: 'Product',
-    content: `
-      <p>Notes from the client sync on March 24th.</p>
-    `,
-    isFavorite: false,
-    isArchived: false,
-    updatedAt: new Date().toISOString(),
-    tags: ['Meetings'],
-    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }]
-  },
-  {
-    id: 'trash-1',
-    title: 'Old Ideas',
-    folder: 'Engineering',
-    content: `<p>Discarded concepts.</p>`,
-    isFavorite: false,
-    isArchived: true,
-    updatedAt: new Date().toISOString(),
-    tags: [],
-    access: [{ userId: 'admin', name: 'Admin', role: 'Owner' }]
-  }
-];
+const INITIAL_PAGES: Page[] = [];
 
 const NotesPage = () => {
   const [pages, setPages] = useState<Page[]>(INITIAL_PAGES);
@@ -185,6 +119,13 @@ const NotesPage = () => {
 
   const { currentUser, adminProfile, staffList } = useIndustryStore();
   const activeUser = currentUser || adminProfile;
+  const isMobile = useIsMobile();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobile);
+
+  // Sync sidebar state with mobile changes
+  useEffect(() => {
+    setIsSidebarOpen(!isMobile);
+  }, [isMobile]);
 
   const isDeptHead = activeUser?.role === 'Super Admin' || activeUser?.role?.includes('Director') || activeUser?.role?.includes('Manager');
 
@@ -532,162 +473,224 @@ const NotesPage = () => {
           border: 1px solid hsl(var(--border)) !important; 
           padding: 12px !important; 
         }
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
       `}</style>
+      
       {/* Sidebar */}
-      <div className="w-64 border-r border-border flex flex-col bg-card/50">
-        {/* Sidebar Header */}
-        <div className="p-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Bot className="w-3.5 h-3.5 text-primary" />
-            </div>
-            <span className="font-display font-semibold text-sm">Cynda Notes</span>
-          </div>
-          <button className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground" onClick={() => setIsSearchOpen(true)}><Search className="w-4 h-4" /></button>
-        </div>
-
-        {/* Navigation Sections */}
-        <div className="flex-1 overflow-y-auto px-2 space-y-6 py-2">
-          {/* Create New Actions */}
-          <div className="px-2 grid grid-cols-2 gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="h-9 rounded-xl text-[10px] font-bold uppercase tracking-wider gap-2 border-dashed hover:border-primary hover:text-primary transition-all"
-              onClick={() => createPage()}
-            >
-              <Plus className="w-3 h-3" /> Note
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="h-9 rounded-xl text-[10px] font-bold uppercase tracking-wider gap-2 border-dashed hover:border-primary hover:text-primary transition-all"
-              onClick={() => setIsNewFolderOpen(true)}
-            >
-              <Folder className="w-3 h-3" /> Folder
-            </Button>
-          </div>
-
-          {/* Folders */}
-          <div>
-            <div className="px-2 mb-1 flex items-center justify-between group">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Folders</span>
-            </div>
-            <div className="space-y-0.5">
-              {folders.map((f) => (
-                <button
-                  key={f}
-                  onClick={() => { setActiveFolder(f); }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors ${
-                    activeFolder === f ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-secondary"
-                  }`}
+      <AnimatePresence mode="wait">
+        {isSidebarOpen && (
+          <motion.div 
+            initial={isMobile ? { x: -300 } : { width: 0, opacity: 0 }}
+            animate={isMobile ? { x: 0 } : { width: 256, opacity: 1 }}
+            exit={isMobile ? { x: -300 } : { width: 0, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className={`${isMobile ? "fixed inset-y-0 left-0 z-50 w-72 shadow-2xl" : "w-64 relative"} border-r border-border flex flex-col bg-card/50 backdrop-blur-xl`}
+          >
+            {/* Sidebar Header */}
+            <div className="p-3 flex items-center justify-between border-b border-border/50">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <Bot className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <span className="font-display font-semibold text-sm">Cynda Notes</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground" onClick={() => setIsSearchOpen(true)}><Search className="w-4 h-4" /></button>
+                <button 
+                  className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground"
+                  onClick={() => setIsSidebarOpen(false)}
                 >
-                  <Folder className="w-3 h-3" />
-                  {f}
+                  <PanelLeftClose className="w-4 h-4" />
                 </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Favorites */}
-          {favoritePages.length > 0 && (
-            <div>
-              <div className="px-2 mb-1 flex items-center justify-between group">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Favorites</span>
-              </div>
-              <div className="space-y-0.5">
-                {favoritePages.map(page => <PageItem key={page.id} page={page} />)}
               </div>
             </div>
-          )}
 
-          {/* Private Workspace */}
-          <div>
-            <div className="px-2 mb-1 flex items-center justify-between group">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Pages</span>
+            {/* Navigation Sections */}
+            <div className="flex-1 overflow-y-auto px-2 space-y-6 py-4">
+              {/* Create New Actions */}
+              <div className="px-2 grid grid-cols-2 gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-9 rounded-xl text-[10px] font-bold uppercase tracking-wider gap-2 border-dashed hover:border-primary hover:text-primary transition-all"
+                  onClick={() => {
+                    createPage();
+                    if (isMobile) setIsSidebarOpen(false);
+                  }}
+                >
+                  <Plus className="w-3 h-3" /> Note
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-9 rounded-xl text-[10px] font-bold uppercase tracking-wider gap-2 border-dashed hover:border-primary hover:text-primary transition-all"
+                  onClick={() => setIsNewFolderOpen(true)}
+                >
+                  <Folder className="w-3 h-3" /> Folder
+                </Button>
+              </div>
+
+              {/* Folders */}
+              <div>
+                <div className="px-2 mb-1 flex items-center justify-between group">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Folders</span>
+                </div>
+                <div className="space-y-0.5">
+                  {folders.map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => { 
+                        setActiveFolder(f); 
+                        if (isMobile) setIsSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors ${
+                        activeFolder === f ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-secondary"
+                      }`}
+                    >
+                      <Folder className="w-3 h-3" />
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Favorites */}
+              {favoritePages.length > 0 && (
+                <div>
+                  <div className="px-2 mb-1 flex items-center justify-between group">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Favorites</span>
+                  </div>
+                  <div className="space-y-0.5">
+                    {favoritePages.map(page => (
+                      <div key={page.id} onClick={() => isMobile && setIsSidebarOpen(false)}>
+                        <PageItem page={page} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Private Workspace */}
+              <div>
+                <div className="px-2 mb-1 flex items-center justify-between group">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Pages</span>
+                  <button 
+                    className="p-0.5 hover:bg-secondary rounded text-muted-foreground opacity-0 group-hover:opacity-100 transition-all"
+                    onClick={() => createPage()}
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="space-y-0.5">
+                  {rootPages.map(page => (
+                    <div key={page.id} onClick={() => isMobile && setIsSidebarOpen(false)}>
+                      <PageItem page={page} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar Footer */}
+            <div className="p-2 border-t border-border space-y-1">
               <button 
-                className="p-0.5 hover:bg-secondary rounded text-muted-foreground opacity-0 group-hover:opacity-100 transition-all"
-                onClick={() => createPage()}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
+                onClick={() => {
+                  setIsTrashOpen(true);
+                  if (isMobile) setIsSidebarOpen(false);
+                }}
               >
-                <Plus className="w-3 h-3" />
+                <Trash2 className="w-3.5 h-3.5" />
+                Trash
+                <span className="ml-auto text-[10px] bg-secondary px-1.5 py-0.5 rounded-full">{archivedPages.length}</span>
               </button>
             </div>
-            <div className="space-y-0.5">
-              {rootPages.map(page => <PageItem key={page.id} page={page} />)}
-            </div>
-          </div>
-        </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Sidebar Footer */}
-        <div className="p-2 border-t border-border space-y-1">
-          <button 
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
-            onClick={() => setIsTrashOpen(true)}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Trash
-            <span className="ml-auto text-[10px] bg-secondary px-1.5 py-0.5 rounded-full">{archivedPages.length}</span>
-          </button>
-        </div>
-      </div>
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && isSidebarOpen && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+        />
+      )}
 
       {/* Editor Main Canvas */}
       <div className="flex-1 flex flex-col min-w-0 bg-background">
         {activePage ? (
           <>
             {/* Page Header / Toolbar */}
-            <div className="h-11 px-4 border-b border-border flex items-center justify-between">
-              <div className="flex items-center gap-0.5">
-                {[
-                  { icon: Bold, action: () => handleFormat('bold'), label: 'Bold' },
-                  { icon: Italic, action: () => handleFormat('italic'), label: 'Italic' },
-                  { icon: Heading1, action: () => handleFormat('header', 1), label: 'H1' },
-                  { icon: Heading2, action: () => handleFormat('header', 2), label: 'H2' },
-                  { icon: Heading3, action: () => handleFormat('header', 3), label: 'H3' },
-                  { icon: List, action: () => handleFormat('list', 'bullet'), label: 'Bullet List' },
-                  { icon: ListOrdered, action: () => handleFormat('list', 'ordered'), label: 'Numbered List' },
-                  { icon: Quote, action: () => handleFormat('blockquote'), label: 'Quote' },
-                  { icon: Code, action: () => handleFormat('code-block'), label: 'Code' },
-                  // { icon: LinkIcon, action: () => handleFormat('link'), label: 'Link' },
-                  { icon: ImageIcon, action: () => handleFormat('image'), label: 'Image' },
-                  // { icon: TableIcon, action: () => handleFormat('table'), label: 'Table' },
-                ].map((item, i) => (
+            <div className="h-11 px-2 md:px-4 border-b border-border flex items-center justify-between sticky top-0 bg-background/80 backdrop-blur-md z-30">
+              <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar scroll-smooth">
+                {!isSidebarOpen && (
                   <button 
-                    key={i} 
-                    className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" 
-                    onMouseDown={(e) => {
-                      e.preventDefault(); // Prevent focus loss from the editor
-                      item.action();
-                    }} 
-                    title={item.label}
+                    className="p-1.5 mr-1 md:mr-2 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shrink-0"
+                    onClick={() => setIsSidebarOpen(true)}
                   >
-                    <item.icon className="w-4 h-4" />
+                    <PanelLeftOpen className="w-4 h-4" />
                   </button>
-                ))}
-                <div className="mx-2 w-px h-5 bg-border" />
-                <button className="p-1.5 rounded text-primary hover:bg-primary/5 transition-colors flex items-center gap-1" onClick={() => toast({ title: "AI Assistant", description: "Analyzing your note..." })}>
+                )}
+                <div className="flex items-center gap-0.5">
+                  {[
+                    { icon: Bold, action: () => handleFormat('bold'), label: 'Bold' },
+                    { icon: Italic, action: () => handleFormat('italic'), label: 'Italic' },
+                    { icon: Heading1, action: () => handleFormat('header', 1), label: 'H1' },
+                    { icon: Heading2, action: () => handleFormat('header', 2), label: 'H2' },
+                    { icon: Heading3, action: () => handleFormat('header', 3), label: 'H3' },
+                    { icon: List, action: () => handleFormat('list', 'bullet'), label: 'Bullet List' },
+                    { icon: ListOrdered, action: () => handleFormat('list', 'ordered'), label: 'Numbered List' },
+                    { icon: Quote, action: () => handleFormat('blockquote'), label: 'Quote' },
+                    { icon: Code, action: () => handleFormat('code-block'), label: 'Code' },
+                    { icon: ImageIcon, action: () => handleFormat('image'), label: 'Image' },
+                  ].map((item, i) => (
+                    <button 
+                      key={i} 
+                      className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shrink-0" 
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        item.action();
+                      }} 
+                      title={item.label}
+                    >
+                      <item.icon className="w-4 h-4" />
+                    </button>
+                  ))}
+                </div>
+                <div className="mx-1 md:mx-2 w-px h-5 bg-border shrink-0" />
+                <button className="p-1.5 rounded text-primary hover:bg-primary/5 transition-colors flex items-center gap-1 shrink-0" onClick={() => toast({ title: "AI Assistant", description: "Analyzing your note..." })}>
                   <Bot className="w-4 h-4" />
-                  <span className="text-xs font-medium">AI</span>
+                  <span className="text-[10px] md:text-xs font-medium">AI</span>
                 </button>
               </div>
               
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" className="h-8 rounded-lg text-xs gap-1.5 text-muted-foreground" onClick={() => toggleFavorite(activePage.id)}>
+              <div className="flex items-center gap-0.5 md:gap-1 shrink-0 ml-2">
+                <Button variant="ghost" size="sm" className="h-8 rounded-lg text-[10px] md:text-xs gap-1 md:gap-1.5 text-muted-foreground px-2" onClick={() => toggleFavorite(activePage.id)}>
                   {activePage.isFavorite ? <PinOff className="w-3.5 h-3.5 text-primary" /> : <Pin className="w-3.5 h-3.5" />}
-                  {activePage.isFavorite ? 'Pinned' : 'Pin'}
+                  <span className="hidden sm:inline">{activePage.isFavorite ? 'Pinned' : 'Pin'}</span>
                 </Button>
-                <div className="w-px h-4 bg-border mx-1" />
+                <div className="w-px h-4 bg-border mx-0.5 md:mx-1" />
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-8 rounded-lg text-xs gap-1.5 text-muted-foreground"
+                  className="h-8 rounded-lg text-[10px] md:text-xs gap-1 md:gap-1.5 text-muted-foreground px-2"
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedNoteForAccess(activePage);
                     setIsAccessDialogOpen(true);
                   }}
                 >
-                  <Share2 className="w-3.5 h-3.5" /> Share
+                  <Share2 className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Share</span>
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -831,7 +834,15 @@ const NotesPage = () => {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 relative">
+            {!isSidebarOpen && (
+              <button 
+                className="absolute top-4 left-4 p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                <PanelLeftOpen className="w-5 h-5" />
+              </button>
+            )}
             <div className="w-16 h-16 rounded-3xl bg-secondary/50 flex items-center justify-center mb-6">
               <FileText className="w-8 h-8 text-muted-foreground" />
             </div>

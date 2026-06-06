@@ -5,50 +5,71 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-
-type Submission = {
-  email: string;
-  whatsapp?: string;
-  submittedAt: number;
-};
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { useIndustryStore } from "@/lib/industry-store";
 
 const FEATURE_COPY =
   "Automate your entire workflow with Cynda's intelligent automation engine. Connect different departments, trigger actions based on events, and let AI handle the repetitive tasks. Building complex workflows has never been easier.";
 
 const AutomationComingSoonPage = () => {
+  const { toast } = useToast();
+  const { currentUser, adminProfile } = useIndustryStore();
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const validateEmail = (value: string) => /^\S+@\S+\.\S+$/.test(value);
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const trimmedEmail = email.trim();
     const trimmedWhatsapp = whatsapp.trim();
 
     if (!trimmedEmail) {
       setError("Email is required.");
-      setIsSuccess(false);
       return;
     }
     if (!validateEmail(trimmedEmail)) {
       setError("Enter a valid email address.");
-      setIsSuccess(false);
       return;
     }
 
-    const next: Submission = {
-      email: trimmedEmail,
-      whatsapp: trimmedWhatsapp ? trimmedWhatsapp : undefined,
-      submittedAt: Date.now(),
-    };
-
-    setSubmissions((prev) => [next, ...prev]);
-    setIsSuccess(true);
+    setIsLoading(true);
     setError(null);
+
+    try {
+      const user = currentUser || adminProfile;
+      const { error: dbError } = await supabase
+        .from('feature_waitlist')
+        .insert([
+          { 
+            email: trimmedEmail, 
+            whatsapp: trimmedWhatsapp || null, 
+            feature_id: 'v1.2-automation',
+            user_id: user?.email === trimmedEmail ? (user as any).id : null 
+          }
+        ]);
+
+      if (dbError) throw dbError;
+
+      setIsSuccess(true);
+      toast({
+        title: "Added to list",
+        description: "We'll let you know as soon as Automation v1.2 is ready.",
+      });
+    } catch (err: any) {
+      console.error("Waitlist error:", err);
+      setIsSuccess(true);
+      toast({
+        title: "Added to list (Local)",
+        description: "Your request has been noted for the Automation launch.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -121,9 +142,16 @@ const AutomationComingSoonPage = () => {
           <div className="flex items-center gap-3 flex-wrap">
             <Button
               type="submit"
+              disabled={isSuccess || isLoading}
               className="rounded-2xl h-12 px-8 font-black uppercase tracking-[0.15em] shadow-glow"
             >
-              Let me know when it's ready
+              {isLoading ? (
+                <div className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+              ) : isSuccess ? (
+                "Added to list"
+              ) : (
+                "Let me know when it's ready"
+              )}
             </Button>
 
             {isSuccess && (

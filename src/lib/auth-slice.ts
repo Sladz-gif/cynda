@@ -6,20 +6,24 @@ export type SubscriptionTier = "trial" | "paid";
 export interface AdminProfile {
   name: string;
   email: string;
+  chatName?: string;
   companyName?: string;
   role: string;
   logo?: string;
   password?: string;
+  needsPasswordReset?: boolean;
 }
 
 export interface Staff {
   id: string;
   name: string;
   email: string;
+  chatName?: string;
   tools: string[];
   department?: string;
   role: "Director" | "Manager" | "Employee";
   status?: string;
+  needsPasswordReset?: boolean;
 }
 
 export interface AuthSlice {
@@ -30,6 +34,7 @@ export interface AuthSlice {
   isAuthenticated: boolean;
   isOnboarded: boolean;
   trialStartedAt: string | null;
+  needsPasswordReset: boolean;
   setUserType: (type: UserType) => void;
   setSubscriptionTier: (tier: SubscriptionTier) => void;
   setAdminProfile: (profile: AdminProfile) => void;
@@ -37,6 +42,7 @@ export interface AuthSlice {
   setAuthenticated: (status: boolean) => void;
   setOnboarded: (status: boolean) => void;
   setTrialStartedAt: (date: string | null) => void;
+  setNeedsPasswordReset: (status: boolean) => void;
   logout: () => void;
 }
 
@@ -48,6 +54,7 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set) => ({
   isAuthenticated: false,
   isOnboarded: false,
   trialStartedAt: null,
+  needsPasswordReset: false,
   setUserType: (type) => set({ userType: type }),
   setSubscriptionTier: (tier) => set({ subscriptionTier: tier }),
   setAdminProfile: (profile) =>
@@ -59,6 +66,7 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set) => ({
   setAuthenticated: (status) => set({ isAuthenticated: status }),
   setOnboarded: (status) => set({ isOnboarded: status }),
   setTrialStartedAt: (date) => set({ trialStartedAt: date }),
+  setNeedsPasswordReset: (status) => set({ needsPasswordReset: status }),
   logout: () =>
     set({
       currentUser: null,
@@ -66,5 +74,6 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set) => ({
       adminProfile: null,
       isOnboarded: false,
       trialStartedAt: null,
+      needsPasswordReset: false,
     }),
 });

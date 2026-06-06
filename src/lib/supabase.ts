@@ -1,4 +1,3 @@
-/*
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -9,10 +8,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-*/
-
-// Hashed for now as per cyn-da.md specification
-export const supabase = null as any;
 
 export type Tables = {
   profiles: {

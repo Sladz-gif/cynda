@@ -99,7 +99,7 @@ const PricingSection = () => {
   const [isAnnual, setIsAnnual] = useState(false);
 
   return (
-    <section className="py-32 relative overflow-hidden">
+    <section id="pricing" className="py-32 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-primary/5 blur-[100px]" />
         <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] rounded-full bg-primary/3 blur-[120px]" />

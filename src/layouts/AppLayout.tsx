@@ -121,8 +121,10 @@ const AppLayout = () => {
 
   const activeUser = currentUser || adminProfile;
   const isAdmin = activeUser?.role === 'Super Admin' || activeUser?.role === 'Director' || userType === 'solo';
+  const isSuperAdmin = activeUser?.role === 'Super Admin';
   const isStaff = !!(currentUser && 'tools' in currentUser);
   const isTrial = useIndustryStore(s => s.subscriptionTier === 'trial');
+  const needsPasswordReset = useIndustryStore(s => s.needsPasswordReset);
 
   const trialDaysRemaining = useMemo(() => {
     if (!isTrial || !trialStartedAt) return 3;
@@ -188,8 +190,12 @@ const AppLayout = () => {
       return isAdmin && userType !== "solo";
     }
 
+    if (segment === "super-admin") {
+      return isSuperAdmin;
+    }
+
     return false;
-  }, [location.pathname, effectiveTools, isAdmin, userType]);
+  }, [location.pathname, effectiveTools, isAdmin, isSuperAdmin, userType]);
 
   // Scroll to top on route change
   useEffect(() => {
@@ -200,6 +206,10 @@ const AppLayout = () => {
 
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;
+  }
+
+  if (needsPasswordReset) {
+    return <Navigate to="/force-password-reset" replace />;
   }
 
   if (!isOnboarded) {
@@ -283,8 +293,8 @@ const AppLayout = () => {
                     initial={{ x: "100%" }}
                     animate={{ x: 0 }}
                     exit={{ x: "100%" }}
-                    transition={{ type: "spring", damping: 28, stiffness: 260 }}
-                    className="fixed inset-0 z-[100] flex min-h-0 flex-col bg-card shadow-2xl md:absolute md:inset-0"
+                    transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                    className="fixed inset-y-0 right-0 z-[100] w-full sm:w-[400px] md:w-[450px] lg:w-[500px] flex min-h-0 flex-col bg-card shadow-[-20px_0_60px_-15px_rgba(0,0,0,0.3)] border-l border-border"
                   >
                     <CyndiPanel onClose={() => setCyndiOpen(false)} />
                   </motion.div>
@@ -301,4 +311,5 @@ const AppLayout = () => {
 };
 
 export default AppLayout;
+
 

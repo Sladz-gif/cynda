@@ -84,13 +84,13 @@ const MarketplacePage = () => {
             <Store className="absolute right-4 bottom-4 w-32 h-32 md:w-48 md:h-48 text-primary/10" />
           </div>
 
-          <ScrollArea className="w-full whitespace-nowrap pb-2 -mx-1">
+          <ScrollArea className="w-full whitespace-nowrap pb-2 -mx-1 no-scrollbar">
             <div className="flex gap-2 pb-1">
               <Button
                 type="button"
                 variant={category === null ? "default" : "outline"}
                 size="sm"
-                className="rounded-full text-[10px] font-black uppercase shrink-0"
+                className="rounded-full text-[10px] font-black uppercase shrink-0 h-9 px-4"
                 onClick={() => setCategory(null)}
               >
                 All
@@ -101,7 +101,7 @@ const MarketplacePage = () => {
                   type="button"
                   variant={category === c ? "default" : "outline"}
                   size="sm"
-                  className="rounded-full text-[10px] font-black uppercase shrink-0"
+                  className="rounded-full text-[10px] font-black uppercase shrink-0 h-9 px-4"
                   onClick={() => setCategory(c)}
                 >
                   {c}

@@ -1,11 +1,11 @@
-import { useIndustryStore } from './industry-store';
+import { useIndustryStore, ActiveAutomation, AutomationTemplate, CRMDeal, WorkspaceTask, WorkspaceInvoice, WorkspaceExpense, Staff } from './industry-store';
 import { callGemini } from './gemini';
 
 /**
  * The central function that receives a trigger event and its data,
  * checks which automations are listening for that trigger, and executes them.
  */
-export async function triggerAutomation(triggerType: string, payload: unknown) {
+export async function triggerAutomation(triggerType: string, payload: any) {
   const store = useIndustryStore.getState();
   const { activeAutomations, addAutomationLog, adminProfile, currentUser } = store;
 
@@ -92,8 +92,8 @@ export async function triggerAutomation(triggerType: string, payload: unknown) {
 /**
  * Evaluates whether an automation's conditions are met for a given payload
  */
-function evaluateConditions(automation: any, payload: any): boolean {
-  const { config } = automation;
+function evaluateConditions(automation: ActiveAutomation, payload: any): boolean {
+  // const { config } = automation;
   
   switch (automation.templateId) {
     case 'follow-up-reminder':
@@ -110,8 +110,8 @@ function evaluateConditions(automation: any, payload: any): boolean {
 /**
  * Constructs a specific prompt for Gemini based on the automation and data
  */
-function constructPrompt(automation: any, template: any, payload: any, userName: string): string {
-  const { config } = automation;
+function constructPrompt(automation: ActiveAutomation, template: AutomationTemplate, payload: any, userName: string): string {
+  const config = automation.config as any;
   
   let basePrompt = `Hi Cyndi, you are an AI assistant for Cynda. Help ${userName} with an automation task.
   Task: ${template.name}
@@ -136,24 +136,42 @@ function constructPrompt(automation: any, template: any, payload: any, userName:
 /**
  * Performs the actual side-effect action of an automation
  */
-async function executeAction(automation: any, payload: any, geminiResponse: string) {
-  // In a real app, this would send emails, create DB records, etc.
-  // For Cynda, we'll mostly generate notifications and Cyndi messages.
-  console.log(`Executing action for ${automation.name}:`, geminiResponse || "Standard action");
+async function executeAction(automation: ActiveAutomation, payload: any, geminiResponse: string) {
+  const store = useIndustryStore.getState();
   
-  // Example: Add a notification to the user's notifications list if we had one in the store
-  // For now, we'll just rely on the run log and console.
+  // For Cynda, we'll mostly generate notifications and Cyndi messages.
+  if (geminiResponse || automation.templateId) {
+    store.seedNotifications(); // Ensure system notifications exist
+    
+    // Create a new notification for the automation action
+    const newNotif = {
+      id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      source: "Cyndi AI",
+      title: automation.name,
+      message: geminiResponse || `Automation "${automation.name}" was triggered by ${getAffectedRecordName(payload)}.`,
+      read: false,
+      timestamp: new Date().toISOString(),
+      type: 'system' as const,
+      actionUrl: '/app/automations'
+    };
+    
+    useIndustryStore.setState((state) => ({
+      notifications: [newNotif, ...state.notifications]
+    }));
+  }
+  
+  console.log(`Executing action for ${automation.name}:`, geminiResponse || "Standard action");
 }
 
 /**
  * Extracts a human-readable name for the record affected by the trigger
  */
 function getAffectedRecordName(payload: any): string {
-  if (payload.deal) return payload.deal.title;
-  if (payload.task) return payload.task.title;
-  if (payload.invoice) return payload.invoice.number;
-  if (payload.expense) return `Expense: ${payload.expense.category}`;
-  if (payload.employee) return payload.employee.name;
+  if (payload.deal) return (payload.deal as CRMDeal).title;
+  if (payload.task) return (payload.task as WorkspaceTask).title;
+  if (payload.invoice) return (payload.invoice as WorkspaceInvoice).id;
+  if (payload.expense) return `Expense: ${(payload.expense as WorkspaceExpense).category}`;
+  if (payload.employee) return (payload.employee as Staff).name;
   return "Unknown Record";
 }
 

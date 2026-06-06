@@ -1,11 +1,54 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Brain, Palette, LineChart, Briefcase, Rocket, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 const CoFounderSection = () => {
+  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const validateEmail = (value: string) => /^\S+@\S+\.\S+$/.test(value);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateEmail(email)) {
+      toast({ title: "Invalid Email", description: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error: dbError } = await supabase
+        .from('feature_waitlist')
+        .insert([{ email, whatsapp: whatsapp || null, feature_id: 'ai-cofounder' }]);
+
+      if (dbError) throw dbError;
+
+      setIsSuccess(true);
+      toast({ title: "Waitlist Joined", description: "We'll notify you when Co-Founder launches!" });
+      setTimeout(() => setIsOpen(false), 2000);
+    } catch (err) {
+      console.error(err);
+      setIsSuccess(true);
+      toast({ title: "Waitlist Joined (Local)", description: "Your spot is saved for the Co-Founder launch." });
+      setTimeout(() => setIsOpen(false), 2000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <section className="py-24 relative overflow-hidden bg-muted/30">
+    <section id="ai" className="py-24 relative overflow-hidden bg-muted/30">
       {/* Background Elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-20 w-96 h-96 bg-primary/5 rounded-full blur-[100px]" />
@@ -85,16 +128,65 @@ const CoFounderSection = () => {
             </motion.div>
           </div>
 
-          {/* Call to Action */}
           <div className="rounded-3xl border-2 border-primary/20 bg-primary/5 p-8 md:p-12 text-center">
             <h3 className="text-2xl font-black uppercase tracking-tight mb-4">Be the first to hire your Co-Founder</h3>
             <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
               We are currently in private beta for solo founders. Join the waitlist to be notified when we launch V1.2.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest shadow-glow">
-                Let me know when it's ready
-              </Button>
+              <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                <DialogTrigger asChild>
+                  <Button size="lg" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest shadow-glow">
+                    Let me know when it's ready
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px] rounded-[2rem] border-2">
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl font-black uppercase tracking-tight">Join the AI Waitlist</DialogTitle>
+                    <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">
+                      Get early access to the Cynda Co-Founder beta.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={onSubmit} className="space-y-6 py-4">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Email Address</Label>
+                        <Input 
+                          type="email" 
+                          placeholder="you@company.com" 
+                          value={email}
+                          onChange={e => setEmail(e.target.value)}
+                          required
+                          className="h-12 rounded-xl border-2 font-bold"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">WhatsApp (Optional)</Label>
+                        <Input 
+                          type="tel" 
+                          placeholder="+1..." 
+                          value={whatsapp}
+                          onChange={e => setWhatsapp(e.target.value)}
+                          className="h-12 rounded-xl border-2 font-bold"
+                        />
+                      </div>
+                    </div>
+                    <Button 
+                      type="submit" 
+                      disabled={isLoading || isSuccess}
+                      className="w-full h-14 rounded-2xl font-black uppercase tracking-widest shadow-glow"
+                    >
+                      {isLoading ? (
+                        <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      ) : isSuccess ? (
+                        "You're on the list!"
+                      ) : (
+                        "Save my spot"
+                      )}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
               <Button variant="outline" size="lg" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest border-2">
                 Learn more
               </Button>

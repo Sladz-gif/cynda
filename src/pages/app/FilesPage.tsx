@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   File, FileText, ImageIcon, FileSpreadsheet, FileArchive, 
   MoreHorizontal, Download, Trash2, Share2, Search, Filter, 
   Plus, Upload, Folder, HardDrive, Clock, Star, Shield, ShieldCheck,
-  ChevronRight, ArrowRight, Bot, Info, Eye, ExternalLink, Users, AlertCircle
+  ChevronRight, ArrowRight, Bot, Info, Eye, ExternalLink, Users, AlertCircle, Loader2
 } from "lucide-react";
 import {
   Select,
@@ -13,11 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useIndustryStore } from "@/lib/industry-store";
+import { supabase } from "@/lib/supabase";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,50 +52,7 @@ interface CyndaFile {
   access: { userId: string; name: string; role: 'Owner' | 'Editor' | 'Viewer' }[];
 }
 
-const MOCK_FILES: CyndaFile[] = [
-  {
-    id: "1",
-    name: "Q1 Financial Report.pdf",
-    type: "pdf",
-    size: "2.4 MB",
-    uploadedBy: "Sarah Chen",
-    dateUploaded: "2024-03-01",
-    module: "Financial",
-    isFavorite: true,
-    access: [
-      { userId: "admin", name: "Super Admin", role: "Owner" },
-      { userId: "sarah", name: "Sarah Chen", role: "Editor" }
-    ]
-  },
-  {
-    id: "2",
-    name: "Product Mockups.zip",
-    type: "zip",
-    size: "15.8 MB",
-    uploadedBy: "Alex Rivera",
-    dateUploaded: "2024-03-15",
-    module: "Projects",
-    isFavorite: false,
-    access: [
-      { userId: "admin", name: "Super Admin", role: "Owner" },
-      { userId: "alex", name: "Alex Rivera", role: "Editor" }
-    ]
-  },
-  {
-    id: "3",
-    name: "Customer List.csv",
-    type: "csv",
-    size: "450 KB",
-    uploadedBy: "David Kim",
-    dateUploaded: "2024-03-20",
-    module: "CRM",
-    isFavorite: true,
-    access: [
-      { userId: "admin", name: "Super Admin", role: "Owner" },
-      { userId: "david", name: "David Kim", role: "Editor" }
-    ]
-  }
-];
+const MOCK_FILES: CyndaFile[] = [];
 
 const FilesPage = () => {
   const { toast } = useToast();
@@ -242,34 +199,35 @@ const FilesPage = () => {
     <div className="space-y-8 pb-20">
       {/* Header */}
       <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <h2 className="font-display text-3xl font-black tracking-tight text-foreground uppercase">File Drive</h2>
             <p className="text-xs text-muted-foreground mt-1 uppercase font-bold tracking-[0.2em] opacity-60">
               Your centralized workspace for cloud storage and team collaboration.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:flex-none">
               <input 
                 type="file" 
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
                 onChange={handleUpload}
                 disabled={isUploading}
               />
-              <Button className="rounded-xl shadow-glow h-12 px-6 uppercase font-black tracking-widest text-[10px]">
+              <Button className="w-full md:w-auto rounded-xl shadow-glow h-12 px-6 uppercase font-black tracking-widest text-[10px]">
                 <Upload className="w-4 h-4 mr-2" /> Upload File
               </Button>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="p-6 rounded-[2rem] border-2 border-border bg-card shadow-sm relative overflow-hidden group">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-6 rounded-[2rem] border-2 border-border bg-card shadow-sm relative overflow-hidden group min-h-[140px]">
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
               <HardDrive className="w-16 h-16 text-primary" />
             </div>
             <div className="flex flex-col justify-center h-full">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground opacity-60 mb-2">Total Storage</p>
               <p className="text-4xl font-black tracking-tighter">12.4 GB</p>
             </div>
           </div>
@@ -279,7 +237,7 @@ const FilesPage = () => {
             { label: "Starred Items", value: files.filter(f => f.isFavorite).length, icon: Star, color: "text-primary" },
             { label: "Shared with Me", value: "8", icon: Users, color: "text-green-500" },
           ].map((stat) => (
-            <div key={stat.label} className="p-6 rounded-[2rem] border-2 border-border bg-card shadow-sm">
+            <div key={stat.label} className="p-6 rounded-[2rem] border-2 border-border bg-card shadow-sm min-h-[140px]">
               <div className={`w-10 h-10 rounded-xl bg-secondary flex items-center justify-center mb-4 ${stat.color}`}>
                 <stat.icon className="w-5 h-5" />
               </div>
@@ -293,7 +251,7 @@ const FilesPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Drive Sidebar */}
         <div className="space-y-6">
-          <div className="space-y-1">
+          <div className="flex flex-row lg:flex-col gap-1 overflow-x-auto pb-2 no-scrollbar lg:overflow-visible lg:pb-0">
             {[
               { id: 'all', label: 'All Files', icon: HardDrive },
               { id: 'recent', label: 'Recent', icon: Clock },
@@ -304,7 +262,7 @@ const FilesPage = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveFilter(item.id as any)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                   activeFilter === item.id ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground hover:bg-secondary"
                 }`}
               >
@@ -314,7 +272,7 @@ const FilesPage = () => {
             ))}
           </div>
 
-          <div className="pt-6 border-t-2 border-border">
+          <div className="hidden lg:block pt-6 border-t-2 border-border">
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground opacity-40 px-4 mb-4">Quick Folders</h3>
             <div className="space-y-1">
               {['Projects', 'Finance', 'Marketing', 'Assets'].map((folder) => (
@@ -332,29 +290,29 @@ const FilesPage = () => {
 
         {/* File List */}
         <div className="lg:col-span-3 space-y-6">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input 
                 placeholder="Search your drive..." 
-                className="pl-12 h-14 rounded-2xl border-2 bg-card font-bold"
+                className="pl-12 h-14 rounded-2xl border-2 bg-card font-bold text-xs"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button variant="outline" className="h-14 w-14 rounded-2xl border-2">
+            <Button variant="outline" className="h-14 w-14 rounded-2xl border-2 shrink-0 hidden sm:flex">
               <Filter className="w-5 h-5" />
             </Button>
           </div>
 
           <div className="rounded-[2rem] border-2 border-border bg-card shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left whitespace-nowrap">
                 <thead>
                   <tr className="border-b-2 border-border bg-secondary/20">
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Name</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Uploaded By</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Size</th>
+                    <th className="hidden sm:table-cell px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Size</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">Actions</th>
                   </tr>
                 </thead>
@@ -365,20 +323,20 @@ const FilesPage = () => {
                       key={file.id} 
                       className="group hover:bg-secondary/10 transition-colors"
                     >
-                      <td className="px-6 py-5">
+                      <td className="px-6 py-5 min-w-[200px]">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
                             {getFileIcon(file.type)}
                           </div>
-                          <div>
-                            <p className="text-sm font-black uppercase tracking-tight text-foreground">{file.name}</p>
+                          <div className="min-w-0">
+                            <p className="text-sm font-black uppercase tracking-tight text-foreground truncate">{file.name}</p>
                             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{file.dateUploaded}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6 border border-border">
+                          <Avatar className="h-6 w-6 border border-border shrink-0">
                             <AvatarFallback className="text-[8px] font-black bg-primary/10 text-primary">
                               {file.uploadedBy.split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>
@@ -386,11 +344,11 @@ const FilesPage = () => {
                           <span className="text-xs font-bold text-muted-foreground">{file.uploadedBy}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-5">
+                      <td className="hidden sm:table-cell px-6 py-5">
                         <span className="text-xs font-black text-muted-foreground">{file.size}</span>
                       </td>
                       <td className="px-6 py-5 text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
                           <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary">
                             <Download className="w-4 h-4" />
                           </Button>

@@ -56,13 +56,7 @@ type Task = {
   duration?: number; // in days
 };
 
-const initialTasks: Task[] = [
-  { id: "1", title: "Research competitor pricing", assignee: "AK", priority: "low", due: "Apr 2", tags: ["Research"], status: "backlog", comments: [{ user: "Sarah", text: "Look at Acme Corp specifically.", time: "2h ago" }], subtasks: [{ title: "Gather data", done: true }, { title: "Create comparison", done: false }], startDate: "Mar 20", duration: 3 },
-  { id: "2", title: "Update API documentation", assignee: "MJ", priority: "medium", due: "Apr 5", tags: ["Docs"], status: "backlog", attachments: [{ name: "api-spec.pdf", size: "1.2MB" }], dependencies: ["4"], startDate: "Mar 25", duration: 4 },
-  { id: "3", title: "Design new onboarding flow", assignee: "SC", priority: "high", due: "Mar 28", tags: ["Design", "UX"], status: "todo", description: "Create a multi-step onboarding experience that collects user type, industry, and tool preferences.", subtasks: [{ title: "Wireframes", done: true }, { title: "High-fidelity mockup", done: false }, { title: "Prototype", done: false }], dependencies: ["1"], startDate: "Mar 22", duration: 5 },
-  { id: "4", title: "Set up CI/CD pipeline", assignee: "ED", priority: "high", due: "Mar 29", tags: ["Engineering"], status: "todo", startDate: "Mar 21", duration: 2 },
-  { id: "6", title: "Build messaging module", assignee: "MJ", priority: "high", due: "Mar 26", tags: ["Engineering"], status: "in-progress", subtasks: [{ title: "Channel UI", done: true }, { title: "Thread system", done: true }, { title: "File sharing", done: false }], dependencies: ["3"], startDate: "Mar 24", duration: 6 },
-];
+const initialTasks: Task[] = [];
 
 import { triggerAutomation } from "@/lib/automationEngine";
 import { transactionService } from "@/lib/transactionService";
@@ -75,6 +69,7 @@ const ProjectsPage = () => {
     tasks: storeTasks = [],
     addTask: storeAddTask,
     updateTask: storeUpdateTask,
+    deleteTask: storeDeleteTask,
     addProject,
   } = useIndustryStore();
   const location = useLocation();
@@ -159,6 +154,36 @@ const ProjectsPage = () => {
     }));
   }, [storeTasks]);
 
+  // --- Project Health Calculations (Spreadsheet Logic) ---
+  const projectHealth = useMemo(() => {
+    if (tasks.length === 0) return { score: 0, status: 'N/A', color: 'text-muted-foreground' };
+    
+    const completed = tasks.filter(t => t.status === 'done').length;
+    const highPriority = tasks.filter(t => t.priority === 'high' && t.status !== 'done').length;
+    const completionRate = (completed / tasks.length) * 100;
+    
+    // Logic: Completion rate weighted 70%, High priority backlog reduces score
+    let score = (completionRate * 0.7) + (30 - (highPriority * 5));
+    score = Math.max(0, Math.min(100, score));
+    
+    let status = 'Healthy';
+    let color = 'text-green-500';
+    
+    if (score < 40) { status = 'At Risk'; color = 'text-destructive'; }
+    else if (score < 70) { status = 'Warning'; color = 'text-orange-500'; }
+    
+    return { score: Math.round(score), status, color, completionRate: Math.round(completionRate) };
+  }, [tasks]);
+
+  // --- Resource Utilization Logic ---
+  const resourceUtilization = useMemo(() => {
+    const assignments: Record<string, number> = {};
+    tasks.filter(t => t.status !== 'done').forEach(t => {
+      assignments[t.assignee] = (assignments[t.assignee] || 0) + 1;
+    });
+    return assignments;
+  }, [tasks]);
+
   // Seed store with initial tasks if empty
   useEffect(() => {
     if (storeTasks.length === 0) {
@@ -196,10 +221,8 @@ const ProjectsPage = () => {
     if (itemToDelete) {
       const { id, type } = itemToDelete;
       if (type === 'task') {
-        // We need a deleteTask in store, or just filter it out
-        // For now let's just update its status to deleted if we had that, 
-        // but store doesn't have delete. Let's add it.
-        toast({ title: "Task Deletion not yet implemented in store" });
+        storeDeleteTask(id);
+        toast({ title: "Task Deleted", description: "The task has been permanently removed." });
       }
       setIsDeleteModal2Open(false);
       setItemToDelete(null);
@@ -293,34 +316,34 @@ const ProjectsPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold">Q2</div>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">Q2</div>
             <div>
               <h2 className="font-display text-2xl font-bold flex items-center gap-2">
-                Q2 Campaign <ChevronDown className="w-4 h-4 text-muted-foreground cursor-pointer" />
+                Q2 Campaign <Badge className={cn("text-[9px] uppercase font-black", projectHealth.color)} variant="outline">{projectHealth.status}</Badge>
               </h2>
-              <div className="flex items-center gap-3 mt-1">
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Project Progress</p>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-1">
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Health Score: {projectHealth.score}%</p>
                 <div className="w-32 h-1.5 rounded-full bg-secondary overflow-hidden">
-                  <div className="h-full bg-primary rounded-full" style={{ width: "65%" }} />
+                  <div className={cn("h-full rounded-full transition-all duration-500", projectHealth.score > 70 ? "bg-green-500" : projectHealth.score > 40 ? "bg-orange-500" : "bg-destructive")} style={{ width: `${projectHealth.score}%` }} />
                 </div>
-                <span className="text-[10px] font-bold text-primary">65%</span>
+                <span className="text-[10px] font-bold text-muted-foreground">{projectHealth.completionRate}% complete</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="rounded-xl"><Share2 className="w-4 h-4 mr-1.5" /> Share</Button>
-            <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setIsNewProjectOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> New Project</Button>
-            <Button size="sm" className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={() => setIsAddTaskOpen(true)}>
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 no-scrollbar">
+            <Button variant="outline" size="sm" className="rounded-xl h-9 flex-1 sm:flex-none whitespace-nowrap"><Share2 className="w-4 h-4 mr-1.5" /> Share</Button>
+            <Button variant="outline" size="sm" className="rounded-xl h-9 flex-1 sm:flex-none whitespace-nowrap" onClick={() => setIsNewProjectOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> New Project</Button>
+            <Button size="sm" className="rounded-xl h-9 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 flex-1 sm:flex-none whitespace-nowrap" onClick={() => setIsAddTaskOpen(true)}>
               <Plus className="w-4 h-4 mr-1.5" /> Add Task
             </Button>
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-b border-border pb-px overflow-x-auto scrollbar-hide">
-          <div className="flex items-center gap-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border pb-px gap-4">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
             {views.map((v) => {
               const ViewIcon = v.icon;
               return (
@@ -340,15 +363,113 @@ const ProjectsPage = () => {
               );
             })}
           </div>
-          <div className="flex items-center gap-4">
-            <div className="relative">
+          <div className="flex items-center gap-4 w-full sm:w-auto pb-2 sm:pb-0">
+            <div className="relative flex-1 sm:flex-none">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <input placeholder="Search tasks..." className="h-8 pl-8 pr-3 text-xs bg-secondary/30 rounded-lg border-none focus:ring-1 focus:ring-primary w-40" />
+              <input placeholder="Search tasks..." className="h-8 pl-8 pr-3 text-xs bg-secondary/30 rounded-lg border-none focus:ring-1 focus:ring-primary w-full sm:w-40" />
             </div>
-            <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest"><Filter className="w-3.5 h-3.5 mr-1.5" /> Filter</Button>
+            <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest shrink-0"><Filter className="w-3.5 h-3.5 mr-1.5" /> Filter</Button>
           </div>
         </div>
       </div>
+
+      {/* Resource Management View */}
+      {view === "resource-management" && (
+        <div className="space-y-6">
+          <div className="p-6 rounded-[24px] border border-border bg-card shadow-sm">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-6">Team Resource Allocation</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Team Member</th>
+                    <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Tasks</th>
+                    <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Utilization</th>
+                    <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Capacity Status</th>
+                    <th className="pb-4 text-right"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {staffList.map((staff) => {
+                    const taskCount = resourceUtilization[staff.id.charAt(0) + staff.name.split(' ')[1]?.charAt(0)] || 0;
+                    const utilization = Math.min(100, (taskCount / 5) * 100); // Max capacity is 5 tasks
+                    return (
+                      <tr key={staff.id} className="group hover:bg-secondary/10 transition-colors">
+                        <td className="py-4">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8 rounded-lg">
+                              <AvatarFallback className="text-[10px] font-black">{staff.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-xs font-bold">{staff.name}</p>
+                              <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest">{staff.role}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4">
+                          <Badge variant="secondary" className="text-[10px] font-bold">{taskCount} tasks</Badge>
+                        </td>
+                        <td className="py-4 w-48">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
+                              <div className={cn(
+                                "h-full rounded-full transition-all duration-500",
+                                utilization > 80 ? "bg-destructive" : utilization > 50 ? "bg-orange-500" : "bg-green-500"
+                              )} style={{ width: `${utilization}%` }} />
+                            </div>
+                            <span className="text-[10px] font-black text-muted-foreground">{utilization}%</span>
+                          </div>
+                        </td>
+                        <td className="py-4">
+                          <span className={cn(
+                            "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
+                            utilization > 80 ? "bg-destructive/10 text-destructive" : 
+                            utilization > 50 ? "bg-orange-500/10 text-orange-600" : "bg-green-500/10 text-green-600"
+                          )}>
+                            {utilization > 80 ? "Overloaded" : utilization > 50 ? "Optimal" : "Available"}
+                          </span>
+                        </td>
+                        <td className="py-4 text-right">
+                          <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                            Reassign Tasks
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 rounded-[24px] border border-border bg-card shadow-sm">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">Workload Distribution</h4>
+              <div className="h-[200px] w-full bg-secondary/10 rounded-xl flex items-center justify-center border border-dashed border-border">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Visualizing team balance...</p>
+              </div>
+            </div>
+            <div className="p-6 rounded-[24px] border border-border bg-card shadow-sm">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">Productivity Forecast</h4>
+              <div className="space-y-4">
+                {[
+                  { label: "Estimated Completion", value: "Apr 12, 2024", icon: Calendar },
+                  { label: "Remaining Work", value: `${tasks.filter(t => t.status !== 'done').length} Tasks`, icon: Clock },
+                  { label: "Current Velocity", value: "4.2 tasks/week", icon: Zap },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-secondary/20">
+                    <div className="flex items-center gap-2">
+                      <item.icon className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{item.label}</span>
+                    </div>
+                    <span className="text-xs font-black">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Kanban Board */}
       {view === "kanban" && (
@@ -676,8 +797,13 @@ const ProjectsPage = () => {
                       <div className="space-y-1">
                         <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Assignee</Label>
                         <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-secondary transition-colors cursor-pointer group">
-                          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-xs font-bold">{selectedTask.assignee}</div>
-                          <span className="text-sm font-bold">{selectedTask.assignee === "MJ" ? "Michael J." : "Team Member"}</span>
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-black text-primary uppercase">
+                            {selectedTask.assignee?.substring(0, 2)}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold">{selectedTask.assignee}</span>
+                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Workspace Member</span>
+                          </div>
                           <UserPlus className="w-3.5 h-3.5 ml-auto opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
                         </div>
                       </div>
@@ -874,11 +1000,11 @@ const ProjectsPage = () => {
                     {newTask.assignee ? (
                       <div className="flex items-center gap-2">
                         <Avatar className="h-5 w-5">
-                          <AvatarFallback className="text-[7px] font-black bg-primary/10 text-primary">
-                            {newTask.assignee}
+                          <AvatarFallback className="text-[7px] font-black bg-primary/10 text-primary uppercase">
+                            {newTask.assignee.substring(0, 2)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-xs">{newTask.assignee}</span>
+                        <span className="text-xs font-bold">{newTask.assignee}</span>
                       </div>
                     ) : "Select Assignee..."}
                     <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -892,10 +1018,11 @@ const ProjectsPage = () => {
                       <CommandGroup heading="Team Members">
                         {[adminProfile, ...staffList].filter(Boolean).map((member: any) => {
                           const initials = member.name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+                          const displayValue = member.chatName || initials;
                           return (
                             <CommandItem
                               key={member.id || 'admin'}
-                              value={initials}
+                              value={displayValue}
                               onSelect={(currentValue) => {
                                 setNewTask({ ...newTask, assignee: currentValue });
                                 setIsAssigneePopoverOpen(false);
@@ -908,13 +1035,18 @@ const ProjectsPage = () => {
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-black uppercase tracking-tight">{member.name}</p>
+                                <div className="flex items-center justify-between">
+                                  <p className="text-xs font-black uppercase tracking-tight">{member.name}</p>
+                                  {member.chatName && (
+                                    <span className="text-[8px] font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded-full">@{member.chatName}</span>
+                                  )}
+                                </div>
                                 <p className="text-[10px] font-bold text-muted-foreground truncate">{member.role}</p>
                               </div>
                               <Check
                                 className={cn(
                                   "ml-auto h-4 w-4 text-primary",
-                                  newTask.assignee === initials ? "opacity-100" : "opacity-0"
+                                  newTask.assignee === displayValue ? "opacity-100" : "opacity-0"
                                 )}
                               />
                             </CommandItem>

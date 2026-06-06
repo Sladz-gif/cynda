@@ -4,7 +4,12 @@ import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const navLinks = ["Features", "Pricing", "About", "Blog"];
+const navLinks = [
+  { name: "Features", id: "features" },
+  { name: "How it Works", id: "how" },
+  { name: "AI Partner", id: "ai" },
+  { name: "Pricing", id: "pricing" }
+];
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -27,11 +32,11 @@ const Navbar = () => {
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
             <a
-              key={link}
-              href={`#${link.toLowerCase()}`}
+              key={link.id}
+              href={`#${link.id}`}
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200"
             >
-              {link}
+              {link.name}
             </a>
           ))}
         </div>
@@ -57,8 +62,13 @@ const Navbar = () => {
         >
           <div className="container py-4 flex flex-col gap-3">
             {navLinks.map((link) => (
-              <a key={link} href={`#${link.toLowerCase()}`} className="text-sm font-medium text-muted-foreground py-2">
-                {link}
+              <a 
+                key={link.id} 
+                href={`#${link.id}`} 
+                onClick={() => setMobileOpen(false)}
+                className="text-sm font-medium text-muted-foreground py-2"
+              >
+                {link.name}
               </a>
             ))}
             <div className="flex gap-3 pt-2">

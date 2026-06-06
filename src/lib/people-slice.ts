@@ -39,6 +39,7 @@ export interface PeopleSlice {
   removeExternalAccount: (id: string) => void;
   setStaffCustomFields: (fields: StaffCustomField[]) => void;
   addCustomDepartment: (dept: CustomDepartment) => void;
+  deleteStaff: (id: string) => void;
 }
 
 export const createPeopleSlice: StateCreator<PeopleSlice> = (set) => ({
@@ -61,4 +62,8 @@ export const createPeopleSlice: StateCreator<PeopleSlice> = (set) => ({
     })),
   setStaffCustomFields: (fields) => set({ staffCustomFields: fields }),
   addCustomDepartment: (dept) => set((state) => ({ customDepartments: [...state.customDepartments, dept] })),
+  deleteStaff: (id) =>
+    set((state) => ({
+      staffList: state.staffList.filter((s) => s.id !== id),
+    })),
 });

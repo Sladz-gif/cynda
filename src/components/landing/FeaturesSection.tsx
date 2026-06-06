@@ -20,7 +20,7 @@ const item = {
 
 const FeaturesSection = () => {
   return (
-    <section id="product" className="py-32 relative">
+    <section id="features" className="py-32 relative">
       <div className="container">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

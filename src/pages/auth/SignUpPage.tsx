@@ -8,7 +8,7 @@ import { useIndustryStore, UserType, USER_TYPES } from "@/lib/industry-store";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Mail, Lock, User, ArrowRight, Bot, CheckCircle2, Eye, EyeOff, AlertCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, generateChatName } from "@/lib/utils";
 import * as bcrypt from 'bcryptjs';
 import PhoneInput from "@/components/ui/PhoneInput";
 
@@ -184,6 +184,7 @@ const SignUpPage = () => {
         setAdminProfile({
           name: name,
           email: email,
+          chatName: generateChatName(name),
           role: "Super Admin",
           password: hashedPassword,
           phone: phone,
@@ -195,6 +196,7 @@ const SignUpPage = () => {
           if (subscriptionChoice === "paid") {
             navigate("/billing/select-plan");
           } else {
+            // For demo purposes, we automatically set onboarded to false to show the onboarding flow
             navigate("/onboarding");
           }
         }, 3000);

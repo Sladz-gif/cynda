@@ -73,6 +73,8 @@ const DashboardPage = () => {
     return "Good evening";
   }, []);
 
+  const isAdmin = activeUser?.role === 'Super Admin';
+
   const openDeals = useMemo(
     () => crmDeals.filter((d) => d.stage !== "Closed Won" && d.stage !== "Closed Lost").length,
     [crmDeals]
@@ -139,12 +141,19 @@ const DashboardPage = () => {
             Cynda · Work OS
           </p>
           <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-foreground uppercase leading-tight">
-            {greeting}, {activeUser?.name?.split(" ")[0] ?? "there"}.
+            {greeting}, {activeUser?.chatName?.split(".")[0] || activeUser?.name?.split(" ")[0] || "there"}.
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground max-w-xl leading-relaxed">
-            One place for clients, finance, projects, people, and day‑to‑day tools — with{" "}
-            <span className="text-primary font-semibold">Cyndi</span> woven through the stack.
-          </p>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <p className="text-xs sm:text-sm text-muted-foreground max-w-xl leading-relaxed">
+              One place for clients, finance, projects, people, and day‑to‑day tools — with{" "}
+              <span className="text-primary font-semibold">Cyndi</span> woven through the stack.
+            </p>
+            {isAdmin && (
+              <Button variant="outline" size="sm" className="h-7 rounded-lg border-primary/20 text-primary font-black uppercase text-[9px] tracking-widest bg-primary/5 hover:bg-primary/10" asChild>
+                <Link to="/app/super-admin">Admin Control</Link>
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 

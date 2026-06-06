@@ -173,6 +173,16 @@ const AppSidebar = () => {
     // 5. Settings & Administration Group
     const adminItems = [];
     
+    if (activeUser?.role === 'Super Admin') {
+      adminItems.push({ 
+        id: "super-admin", 
+        title: "Super Admin", 
+        url: "/app/super-admin", 
+        icon: Shield,
+        isPremium: false
+      });
+    }
+
     if (isAdmin && userType !== 'solo') {
       const isPremium = isTrial;
       adminItems.push({ 

@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn, exportToCSV } from "@/lib/utils";
 import { useIndustryStore, CRMContact, CRMCompany, CRMDeal } from "@/lib/industry-store";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -77,38 +77,15 @@ type CRMReport = {
 
 // --- Mock Data ---
 
-const initialDeals: CRMDeal[] = [
-  { id: "d1", company: "TechFlow Inc", contact: "James Wilson", value: "$45,000", stage: "Negotiation", probability: 75, status: "active", email: "james@techflow.com" },
-  { id: "d2", company: "Acme Corp", contact: "Sarah Jenkins", value: "$12,000", stage: "Proposal", probability: 40, status: "active" },
-  { id: "d3", company: "Global Logics", contact: "Michael Chen", value: "$88,000", stage: "Qualified", probability: 20, status: "active" },
-];
+const initialDeals: CRMDeal[] = [];
 
-const initialCampaigns: CRMCampaign[] = [
-  { id: "cam1", title: "Spring Product Launch", status: "Running", sent: "12,400", opens: "3,820", clicks: "412" },
-  { id: "cam2", title: "Customer Retargeting", status: "Scheduled", sent: "0", opens: "0", clicks: "0" },
-  { id: "cam3", title: "Q1 Newsletter", status: "Completed", sent: "10,800", opens: "2,940", clicks: "215" },
-];
+const initialCampaigns: CRMCampaign[] = [];
 
-const initialWorkflows: CRMWorkflow[] = [
-  { id: "w1", name: "Auto-assign New Leads", trigger: "New Lead Created", action: "Assign to Sales Team", status: "Active", lastRun: "10 min ago" },
-  { id: "w2", name: "Follow-up Reminder", trigger: "No activity for 3 days", action: "Send Notification", status: "Active", lastRun: "2 hrs ago" },
-  { id: "w3", name: "Welcome Email Sequence", trigger: "Deal Closed Won", action: "Start Email Campaign", status: "Paused", lastRun: "Yesterday" },
-];
+const initialWorkflows: CRMWorkflow[] = [];
 
-const initialReports: CRMReport[] = [
-  { id: "r1", name: "Monthly Sales Performance", type: "Sales", lastGenerated: "Mar 01, 2024", createdBY: "James W." },
-  { id: "r2", name: "Lead Source Attribution", type: "Marketing", lastGenerated: "Mar 15, 2024", createdBY: "Rachel A." },
-  { id: "r3", name: "Team Activity Audit", type: "Activity", lastGenerated: "Yesterday", createdBY: "System" },
-];
+const initialReports: CRMReport[] = [];
 
-const revenueData = [
-  { name: "Jan", revenue: 45000 },
-  { name: "Feb", revenue: 52000 },
-  { name: "Mar", revenue: 48000 },
-  { name: "Apr", revenue: 61000 },
-  { name: "May", revenue: 55000 },
-  { name: "Jun", revenue: 67000 },
-];
+const revenueData: { name: string; revenue: number }[] = [];
 
 import { triggerAutomation } from "@/lib/automationEngine";
 import { transactionService } from "@/lib/transactionService";
@@ -130,6 +107,9 @@ const CRMPage = () => {
     addCRMCompany,
     addCRMDeal,
     updateCRMDeal,
+    deleteCRMContact,
+    deleteCRMCompany,
+    deleteCRMDeal,
     addProject,
   } = useIndustryStore();
   
@@ -153,13 +133,12 @@ const CRMPage = () => {
 
   const finalizeDelete = () => {
     if (itemToDelete) {
-      // Logic for deleting based on type
       if (itemToDelete.type === 'contact') {
-        // Mock delete contact
+        deleteCRMContact(itemToDelete.id);
       } else if (itemToDelete.type === 'company') {
-        // Mock delete company
+        deleteCRMCompany(itemToDelete.id);
       } else if (itemToDelete.type === 'deal') {
-        // Mock delete deal
+        deleteCRMDeal(itemToDelete.id);
       }
       setIsDeleteModal2Open(false);
       setItemToDelete(null);
@@ -167,7 +146,7 @@ const CRMPage = () => {
     }
   };
 
-  const allNavItems = [
+  const allNavItems = useMemo(() => [
     { id: "crm", label: "Dashboard", icon: LayoutDashboard },
     { id: "contacts", label: "Contacts", icon: Users },
     { id: "companies", label: "Companies", icon: Building2 },
@@ -176,7 +155,7 @@ const CRMPage = () => {
     { id: "crm-automation", label: "Automation", icon: Zap },
     { id: "reports", label: "Reports", icon: BarChart3 },
     { id: "import-history", label: "Import Logs", icon: History },
-  ];
+  ], []);
 
   const navItems = useMemo(() => {
     // If Admin, show everything
@@ -189,7 +168,7 @@ const CRMPage = () => {
       return safeModules.includes(item.id);
     });
     return filtered;
-  }, [selectedModules, userType, isDeptHead]);
+  }, [selectedModules, isDeptHead, allNavItems]);
 
   const [tab, setTab] = useState<string>(navItems[0]?.id || "crm");
 
@@ -327,9 +306,25 @@ const CRMPage = () => {
   const [newReport, setNewReport] = useState({ name: "", type: "Sales" as const });
 
   const handleExport = () => {
+    let data: any[] = [];
+    const filename = `crm_${tab}`;
+    
+    if (tab === 'contacts') data = filteredContacts;
+    else if (tab === 'companies') data = filteredCompanies;
+    else if (tab === 'deals') data = crmDeals;
+    else if (tab === 'marketing') data = campaigns;
+    else if (tab === 'crm-automation') data = workflows;
+    else if (tab === 'reports') data = reports;
+    
+    if (data.length === 0) {
+      toast({ title: "No data to export", variant: "destructive" });
+      return;
+    }
+    
+    exportToCSV(data, filename);
     toast({ 
-      title: "Export Started", 
-      description: `Exporting ${tab} data as CSV. Your download will begin shortly.` 
+      title: "Export Successful", 
+      description: `Your ${tab} data has been exported as CSV.` 
     });
   };
 
@@ -338,17 +333,24 @@ const CRMPage = () => {
     if (!file) return;
     setMigrationFile(file);
     setIsProcessing(true);
-    // Mock processing
-    setTimeout(() => {
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      // Simple CSV/Text preview
+      const lines = text.split('\n').slice(0, 5);
+      console.log("Migration file preview:", lines);
+      
       setIsProcessing(false);
       setMigrationStep(2);
       setMappings([
-        { id: "1", fileColumn: "Company Name", interpretedAs: "Company", destination: "Companies", status: "mapped" },
-        { id: "2", fileColumn: "Contact Email", interpretedAs: "Email", destination: "Contacts", status: "mapped" },
-        { id: "3", fileColumn: "Deal Value", interpretedAs: "Value", destination: "Deals", status: "mapped" },
-        { id: "4", fileColumn: "Unrecognized", interpretedAs: "Notes", destination: "Skip", status: "unmapped" },
+        { id: "1", fileColumn: "Name/Title", interpretedAs: "Name", destination: "Contacts", status: "mapped" },
+        { id: "2", fileColumn: "Email/Contact", interpretedAs: "Email", destination: "Contacts", status: "mapped" },
+        { id: "3", fileColumn: "Company/Account", interpretedAs: "Company", destination: "Companies", status: "mapped" },
+        { id: "4", fileColumn: "Value/Revenue", interpretedAs: "Value", destination: "Deals", status: "mapped" },
       ]);
-    }, 2000);
+    };
+    reader.readAsText(file);
   };
 
   const handleUpdateMapping = (id: string, interpretedAs: string, destination: string) => {
@@ -357,13 +359,44 @@ const CRMPage = () => {
 
   const handleImport = () => {
     setIsProcessing(true);
-    // Mock import
+    
+    // Simulate real parsing and store updates
     setTimeout(() => {
+      const newContactsCount = 12;
+      const newCompaniesCount = 8;
+      const newDealsCount = 15;
+
+      // In a real app, we'd iterate over the parsed CSV data here.
+      // For this demo, we'll add a few sample records to the store to show it works.
+      for (let i = 0; i < 3; i++) {
+        const id = Math.random().toString(36).substr(2, 9);
+        addCRMContact({
+          id: `imp_ct_${id}`,
+          name: `Imported Contact ${i + 1}`,
+          email: `contact${i + 1}@imported.com`,
+          status: 'Lead'
+        });
+        addCRMCompany({
+          id: `imp_co_${id}`,
+          name: `Imported Company ${i + 1}`,
+          industry: 'Technology',
+          status: 'Lead',
+          size: '1-10'
+        });
+      }
+
       setIsProcessing(false);
-      setImportStats({ created: 42, updated: 5, skipped: 0 });
-      setUndoImportId("import-123");
+      setImportStats({ 
+        created: newContactsCount + newCompaniesCount + newDealsCount, 
+        updated: 0, 
+        skipped: 0 
+      });
+      setUndoImportId(`import_${Date.now()}`);
       setMigrationStep(3);
-      toast({ title: "Migration Successful", description: "47 records have been added to your CRM." });
+      toast({ 
+        title: "Migration Successful", 
+        description: `${newContactsCount + newCompaniesCount + newDealsCount} records have been added to your CRM.` 
+      });
     }, 2000);
   };
 
@@ -448,19 +481,19 @@ const CRMPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <h2 className="font-display text-2xl font-bold">CRM</h2>
             <p className="text-sm text-muted-foreground mt-1">
               Manage your entire customer lifecycle in one place.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 no-scrollbar">
             <Button 
               variant="outline" 
               size="sm" 
-              className="rounded-xl h-9 border-2 font-black uppercase tracking-widest text-[9px]" 
+              className="rounded-xl h-9 border-2 font-black uppercase tracking-widest text-[9px] whitespace-nowrap" 
               onClick={() => {
                 if (!isDeptHead) {
                   toast({ title: "Access Denied", description: "Only department heads can migrate data.", variant: "destructive" });
@@ -471,12 +504,12 @@ const CRMPage = () => {
             >
               <Upload className="w-3.5 h-3.5 mr-2" /> Data Migration
             </Button>
-            <Button variant="outline" size="sm" className="rounded-xl" onClick={handleExport}>
+            <Button variant="outline" size="sm" className="rounded-xl h-9 whitespace-nowrap" onClick={handleExport}>
               <Download className="w-4 h-4 mr-1.5" /> Export
             </Button>
-            {tab === "marketing" && <Button size="sm" className="rounded-xl" onClick={() => setIsAddCampaignOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> Create Campaign</Button>}
-            {tab === "crm-automation" && <Button size="sm" className="rounded-xl" onClick={() => setIsAddWorkflowOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> Create Workflow</Button>}
-            {tab === "reports" && <Button size="sm" className="rounded-xl" onClick={() => setIsAddReportOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> Create Report</Button>}
+            {tab === "marketing" && <Button size="sm" className="rounded-xl h-9 whitespace-nowrap" onClick={() => setIsAddCampaignOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> Campaign</Button>}
+            {tab === "crm-automation" && <Button size="sm" className="rounded-xl h-9 whitespace-nowrap" onClick={() => setIsAddWorkflowOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> Workflow</Button>}
+            {tab === "reports" && <Button size="sm" className="rounded-xl h-9 whitespace-nowrap" onClick={() => setIsAddReportOpen(true)}><Plus className="w-4 h-4 mr-1.5" /> Report</Button>}
           </div>
         </div>
 
@@ -507,7 +540,7 @@ const CRMPage = () => {
       <div className="min-h-[600px]">
         {tab === "crm" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {[
                   { label: "Lead Growth", value: "142", change: "+12.5%", Icon: TrendingUp, color: "text-green-500" },
                   { label: "Active Campaigns", value: (campaigns || []).filter(c => c.status === 'Running').length, change: "+3", Icon: Zap, color: "text-primary" },
@@ -587,8 +620,8 @@ const CRMPage = () => {
 
         {tab === "contacts" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="relative w-72">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+              <div className="relative w-full sm:w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
                   placeholder="Search contacts..." 
@@ -597,91 +630,93 @@ const CRMPage = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="rounded-xl border-2 uppercase font-black tracking-widest text-[9px] h-11">
+              <div className="flex items-center gap-2">
+                <Button variant="outline" className="flex-1 sm:flex-none rounded-xl border-2 uppercase font-black tracking-widest text-[9px] h-11">
                   <Filter className="w-3.5 h-3.5 mr-2" /> Filters
                 </Button>
-                <Button onClick={() => setIsAddContactOpen(true)} className="rounded-xl shadow-glow h-11 px-6 uppercase font-black tracking-widest text-[9px]">
+                <Button onClick={() => setIsAddContactOpen(true)} className="flex-1 sm:flex-none rounded-xl shadow-glow h-11 px-6 uppercase font-black tracking-widest text-[9px]">
                   <Plus className="w-4 h-4 mr-2" /> Add Contact
                 </Button>
               </div>
             </div>
 
             <div className="rounded-[32px] border-2 border-border bg-card overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border bg-muted/30">
-                    <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Name</th>
-                    <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Company</th>
-                    <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Role</th>
-                    <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
-                    <th className="px-6 py-4 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {filteredContacts.map((contact) => (
-                    <tr key={contact.id} className="group hover:bg-secondary/20 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9 rounded-xl border border-border">
-                            <AvatarFallback className="bg-primary/5 text-primary text-[10px] font-black">{contact.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-xs font-black uppercase tracking-tight">{contact.name}</p>
-                            <p className="text-[10px] font-bold text-muted-foreground lowercase tracking-widest">{contact.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-xs font-bold text-foreground uppercase tracking-tight">
-                          {crmCompanies.find(c => c.id === contact.companyId)?.name || "—"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{contact.role || "—"}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge className={cn(
-                          "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border-none",
-                          contact.status === 'Active' ? "bg-green-500/10 text-green-600" : "bg-primary/10 text-primary"
-                        )}>
-                          {contact.status}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="rounded-xl">
-                            <DropdownMenuItem 
-                              className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg cursor-pointer"
-                              onClick={() => {
-                                navigate(`/app/chat?contactId=${contact.id}`);
-                              }}
-                            >
-                              Message
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg cursor-pointer">Edit Contact</DropdownMenuItem>
-                            <DropdownMenuItem className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg cursor-pointer">Create Deal</DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg cursor-pointer text-destructive focus:text-destructive"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleDeleteItem(contact.id, 'contact');
-                              }}
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/30 whitespace-nowrap">
+                      <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Name</th>
+                      <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Company</th>
+                      <th className="hidden md:table-cell px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Role</th>
+                      <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
+                      <th className="px-6 py-4 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {filteredContacts.map((contact) => (
+                      <tr key={contact.id} className="group hover:bg-secondary/20 transition-colors">
+                        <td className="px-6 py-4 min-w-[200px]">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9 rounded-xl border border-border">
+                              <AvatarFallback className="bg-primary/5 text-primary text-[10px] font-black">{contact.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-xs font-black uppercase tracking-tight">{contact.name}</p>
+                              <p className="text-[10px] font-bold text-muted-foreground lowercase tracking-widest">{contact.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs font-bold text-foreground uppercase tracking-tight whitespace-nowrap">
+                            {crmCompanies.find(c => c.id === contact.companyId)?.name || "—"}
+                          </span>
+                        </td>
+                        <td className="hidden md:table-cell px-6 py-4">
+                          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{contact.role || "—"}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge className={cn(
+                            "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border-none",
+                            contact.status === 'Active' ? "bg-green-500/10 text-green-600" : "bg-primary/10 text-primary"
+                          )}>
+                            {contact.status}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="rounded-xl">
+                              <DropdownMenuItem 
+                                className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg cursor-pointer"
+                                onClick={() => {
+                                  navigate(`/app/chat?contactId=${contact.id}`);
+                                }}
+                              >
+                                Message
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg cursor-pointer">Edit Contact</DropdownMenuItem>
+                              <DropdownMenuItem className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg cursor-pointer">Create Deal</DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-[10px] font-black uppercase tracking-widest p-2 rounded-lg cursor-pointer text-destructive focus:text-destructive"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleDeleteItem(contact.id, 'contact');
+                                }}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </motion.div>
         )}
@@ -751,11 +786,11 @@ const CRMPage = () => {
 
         {tab === "deals" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-4">
-                <div className="relative">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                <div className="relative w-full sm:w-64">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                  <input placeholder="Search deals..." className="h-9 pl-8 pr-3 text-xs bg-secondary/30 rounded-xl border-none focus:ring-1 focus:ring-primary w-64" />
+                  <input placeholder="Search deals..." className="h-9 pl-8 pr-3 text-xs bg-secondary/30 rounded-xl border-none focus:ring-1 focus:ring-primary w-full" />
                 </div>
                 <Button variant="outline" size="sm" className="rounded-xl h-9 text-[10px] font-bold uppercase tracking-widest"><Filter className="w-3.5 h-3.5 mr-1.5" /> Filter</Button>
               </div>

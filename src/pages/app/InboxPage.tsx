@@ -68,7 +68,10 @@ const InboxPage = () => {
               Seed Test Data
             </Button>
           )}
-          <Button size="sm" className="flex-1 sm:flex-none h-10 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-glow">
+          <Button size="sm" className="flex-1 sm:flex-none h-10 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-glow" onClick={() => {
+            notifications.forEach(n => markNotificationRead(n.id));
+            toast({ title: "Inbox Cleared", description: "All notifications marked as read." });
+          }}>
             <CheckCircle2 className="w-4 h-4 mr-2" /> Mark All Read
           </Button>
         </div>

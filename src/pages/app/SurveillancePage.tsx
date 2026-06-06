@@ -87,7 +87,7 @@ const SurveillancePage = () => {
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "Events (filtered)", value: String(stats.today), icon: Activity },
           { label: "Unique actors", value: String(stats.actors), icon: Eye },
@@ -119,7 +119,7 @@ const SurveillancePage = () => {
           </div>
           <div className="flex flex-wrap gap-2 items-center">
             <Select value={moduleFilter} onValueChange={setModuleFilter}>
-              <SelectTrigger className="w-[140px] rounded-xl h-10 text-xs font-bold">
+              <SelectTrigger className="w-full sm:w-[140px] rounded-xl h-10 text-xs font-bold">
                 <SelectValue placeholder="Module" />
               </SelectTrigger>
               <SelectContent>
@@ -131,7 +131,7 @@ const SurveillancePage = () => {
               </SelectContent>
             </Select>
             <Select value={severityFilter} onValueChange={setSeverityFilter}>
-              <SelectTrigger className="w-[140px] rounded-xl h-10 text-xs font-bold">
+              <SelectTrigger className="w-full sm:w-[140px] rounded-xl h-10 text-xs font-bold">
                 <SelectValue placeholder="Severity" />
               </SelectTrigger>
               <SelectContent>
@@ -141,17 +141,17 @@ const SurveillancePage = () => {
                 <SelectItem value="critical">Critical</SelectItem>
               </SelectContent>
             </Select>
-            <Button type="button" variant="outline" size="sm" className="rounded-xl gap-2 text-[10px] font-black uppercase" onClick={() => comingSoon("Saved surveillance views")}>
+            <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto rounded-xl gap-2 h-10 text-[10px] font-black uppercase" onClick={() => comingSoon("Saved surveillance views")}>
               <Filter className="w-4 h-4" /> Saved views
             </Button>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2 justify-end">
-          <Button type="button" variant="outline" className="rounded-xl text-[10px] font-black uppercase" onClick={() => comingSoon("Export audit log (CSV/JSON)")}>
+          <Button type="button" variant="outline" className="w-full sm:w-auto rounded-xl h-10 text-[10px] font-black uppercase" onClick={() => comingSoon("Export audit log (CSV/JSON)")}>
             <Download className="w-4 h-4 mr-2" /> Export log
           </Button>
-          <Button type="button" className="rounded-xl text-[10px] font-black uppercase shadow-glow" onClick={() => comingSoon("Create alert rule")}>
+          <Button type="button" className="w-full sm:w-auto rounded-xl h-10 text-[10px] font-black uppercase shadow-glow" onClick={() => comingSoon("Create alert rule")}>
             Create alert rule
           </Button>
         </div>
