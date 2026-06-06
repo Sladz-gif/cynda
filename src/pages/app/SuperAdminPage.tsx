@@ -6,7 +6,7 @@ import {
   ExternalLink, Trash2, Edit2, CheckCircle2, XCircle,
   Clock, ArrowUpRight, HelpCircle, LifeBuoy, BellRing, Smartphone,
   Ticket, Gift, RefreshCcw, Copy, LogOut, Database, Layers, UserPlus,
-  Briefcase, Layout, Settings, ChevronRight, Check
+  Briefcase, Layout, Settings, ChevronRight, Check, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
