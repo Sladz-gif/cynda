@@ -30,6 +30,7 @@ import SignUpPage from "./pages/auth/SignUpPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import ForcePasswordResetPage from "./pages/auth/ForcePasswordResetPage";
+import SuperAdminAuthPage from "./pages/app/SuperAdminAuthPage";
 import SuperAdminPage from "./pages/app/SuperAdminPage";
 import EmailComingSoonPage from "./pages/app/EmailComingSoonPage";
 import PerformanceComingSoonPage from "./pages/app/PerformanceComingSoonPage";
@@ -69,6 +70,7 @@ const App = () => {
               <Route path="/billing/checkout" element={<CheckoutPage />} />
               <Route path="/billing/success" element={<PaymentSuccessPage />} />
               <Route path="/billing/failed" element={<PaymentFailedPage />} />
+              <Route path="/super-admin/auth" element={<SuperAdminAuthPage />} />
               <Route path="/super-admin" element={<SuperAdminPage />} />
               <Route path="/app" element={<AppLayout />}>
                 <Route index element={<Navigate to="/app/dashboard" replace />} />

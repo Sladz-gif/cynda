@@ -128,24 +128,12 @@ const SignInPage = () => {
     setIsLoading(true);
     
     // Simulation Logic
-    const isSuperAdmin = email === "admin@cynda.ai";
     const isEnterpriseOnboarding = email === "enterprise@cynda.ai";
     
     setAuthenticated(true);
     useIndustryStore.getState().setOnboarded(true);
     
-    if (isSuperAdmin) {
-      useIndustryStore.getState().setAdminProfile({
-        name: "Super Administrator",
-        email: email,
-        chatName: "admin.cynda",
-        role: "Super Admin",
-        password: password,
-        phone: "555-0101"
-      });
-      useIndustryStore.getState().setUserType("large-business");
-      navigate("/app/super-admin");
-    } else if (isEnterpriseOnboarding) {
+    if (isEnterpriseOnboarding) {
       useIndustryStore.getState().setAdminProfile({
         name: "Enterprise Partner",
         email: email,

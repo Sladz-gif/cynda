@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Users, Building2, Search as SearchIcon, Plus, Shield, ShieldCheck, 
   Filter, MoreHorizontal, Mail, Phone, 
   ExternalLink, Trash2, Edit2, CheckCircle2, XCircle,
   Clock, ArrowUpRight, HelpCircle, LifeBuoy, BellRing, Smartphone,
-  Ticket, Gift, RefreshCcw, Copy
+  Ticket, Gift, RefreshCcw, Copy, LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,13 +34,29 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useIndustryStore } from "@/lib/industry-store";
 
 // Empty initial states
 const SuperAdminPage = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { adminProfile, setAdminProfile } = useIndustryStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
+
+  // Security Guard
+  useEffect(() => {
+    if (!adminProfile || adminProfile.role !== 'Super Admin') {
+      navigate("/super-admin/auth", { replace: true });
+    }
+  }, [adminProfile, navigate]);
+
+  const handleLogout = () => {
+    setAdminProfile(null);
+    toast({ title: "Logged Out", description: "Admin session ended." });
+    navigate("/super-admin/auth");
+  };
   
   // These would typically come from a database/API
   const accounts: any[] = [];
@@ -121,6 +137,9 @@ const SuperAdminPage = () => {
           </p>
         </div>
         <div className="flex gap-3">
+          <Button variant="ghost" className="h-12 px-4 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={handleLogout}>
+            <LogOut className="w-4 h-4" /> Logout
+          </Button>
           <Dialog open={isCodeModalOpen} onOpenChange={setIsCodeModalOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="h-12 px-6 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 border-2">
