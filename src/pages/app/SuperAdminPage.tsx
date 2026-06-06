@@ -113,10 +113,8 @@ const SuperAdminPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-4xl font-black uppercase tracking-tighter flex items-center gap-3">
-            <Link to="/app/dashboard" className="hover:text-primary transition-colors flex items-center gap-3">
-              <Shield className="w-10 h-10 text-primary" />
-              Super Admin Control
-            </Link>
+            <Shield className="w-10 h-10 text-primary" />
+            Super Admin Control
           </h1>
           <p className="text-muted-foreground font-bold uppercase tracking-widest text-xs mt-1 opacity-70">
             Enterprise Management & Global Support System

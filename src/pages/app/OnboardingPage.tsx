@@ -232,12 +232,7 @@ const OnboardingPage = () => {
 
       // Force a small delay to ensure Zustand store has persisted to localStorage
       setTimeout(() => {
-        const { adminProfile } = useIndustryStore.getState();
-        if (adminProfile?.role === 'Super Admin') {
-          navigate("/app/super-admin", { replace: true });
-        } else {
-          navigate("/app/dashboard", { replace: true });
-        }
+        navigate("/app/dashboard", { replace: true });
       }, 150);
     } catch (error) {
       console.error("Onboarding finish error:", error);

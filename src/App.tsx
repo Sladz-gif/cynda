@@ -69,6 +69,7 @@ const App = () => {
               <Route path="/billing/checkout" element={<CheckoutPage />} />
               <Route path="/billing/success" element={<PaymentSuccessPage />} />
               <Route path="/billing/failed" element={<PaymentFailedPage />} />
+              <Route path="/super-admin" element={<SuperAdminPage />} />
               <Route path="/app" element={<AppLayout />}>
                 <Route index element={<Navigate to="/app/dashboard" replace />} />
                 <Route path="dashboard" element={<DashboardPage />} />
@@ -114,7 +115,6 @@ const App = () => {
                 <Route path="performance" element={<PerformanceComingSoonPage />} />
                 <Route path="marketplace" element={<MarketplaceComingSoonPage />} />
                 <Route path="surveillance" element={<SurveillancePage />} />
-                <Route path="super-admin" element={<SuperAdminPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
               <Route path="/privacy" element={<div className="p-20 text-center font-black uppercase tracking-tighter text-4xl">Privacy Policy</div>} />
