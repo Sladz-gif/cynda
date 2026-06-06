@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
   Plus, Search, MapPin, ChevronRight, X, Mail, Phone, Calendar, Clock, 
   CheckCircle2, XCircle, AlertCircle, LayoutDashboard, Users, UserPlus, 
@@ -102,17 +103,7 @@ type LeaveRequest = {
   reason: string;
 };
 
-// --- Mock Data ---
-
-const MOCK_EMPLOYEES: Employee[] = [];
-
-const MOCK_JOBS: Job[] = [];
-
-const MOCK_LEAVE_REQUESTS: LeaveRequest[] = [];
-
-const MOCK_TEAMS: Team[] = [];
-
-const MOCK_SURVEILLANCE: any[] = [];
+// --- Initial States ---
 
 const HRPage = () => {
   const { 
@@ -128,71 +119,76 @@ const HRPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const activeUser = currentUser || adminProfile;
-  const isAdmin = activeUser?.role === 'Super Admin' || userType === 'solo';
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+   const [surveillance, setSurveillance] = useState<any[]>([]);
+ 
+   const activeUser = currentUser || adminProfile;
+   const isAdmin = activeUser?.role === 'Super Admin' || userType === 'solo';
 
-  // Two-step Delete Confirmation
-  const [isDeleteModal1Open, setIsDeleteModal1Open] = useState(false);
-  const [isDeleteModal2Open, setIsDeleteModal2Open] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'staff' | 'leave-request' } | null>(null);
+   // Two-step Delete Confirmation
+   const [isDeleteModal1Open, setIsDeleteModal1Open] = useState(false);
+   const [isDeleteModal2Open, setIsDeleteModal2Open] = useState(false);
+   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'staff' | 'leave-request' } | null>(null);
 
-  const handleDeleteStaff = (staffId: string) => {
-    setItemToDelete({ id: staffId, type: 'staff' });
-    setIsDeleteModal1Open(true);
-  };
+   const handleDeleteStaff = (staffId: string) => {
+     setItemToDelete({ id: staffId, type: 'staff' });
+     setIsDeleteModal1Open(true);
+   };
 
-  const handleDeleteLeaveRequest = (requestId: string) => {
-    setItemToDelete({ id: requestId, type: 'leave-request' });
-    setIsDeleteModal1Open(true);
-  };
+   const handleDeleteLeaveRequest = (requestId: string) => {
+     setItemToDelete({ id: requestId, type: 'leave-request' });
+     setIsDeleteModal1Open(true);
+   };
 
-  const confirmDeleteStep1 = () => {
-    setIsDeleteModal1Open(false);
-    setIsDeleteModal2Open(true);
-  };
+   const confirmDeleteStep1 = () => {
+     setIsDeleteModal1Open(false);
+     setIsDeleteModal2Open(true);
+   };
 
-  const finalizeDelete = () => {
-    if (itemToDelete) {
-      if (itemToDelete.type === 'staff') {
-        deleteStaff(itemToDelete.id);
-        toast({ title: "Staff member deleted", description: "The staff member has been permanently removed." });
-      } else if (itemToDelete.type === 'leave-request') {
-        setLeaveRequests(prev => prev.filter(r => r.id !== itemToDelete.id));
-        toast({ title: "Request deleted", description: "The leave request has been removed." });
-      }
-      setIsDeleteModal2Open(false);
-      setItemToDelete(null);
-    }
-  };
+   const finalizeDelete = () => {
+     if (itemToDelete) {
+       if (itemToDelete.type === 'staff') {
+         deleteStaff(itemToDelete.id);
+         toast({ title: "Staff member deleted", description: "The staff member has been permanently removed." });
+       } else if (itemToDelete.type === 'leave-request') {
+         setLeaveRequests(prev => prev.filter(r => r.id !== itemToDelete.id));
+         toast({ title: "Request deleted", description: "The leave request has been removed." });
+       }
+       setIsDeleteModal2Open(false);
+       setItemToDelete(null);
+     }
+   };
 
-  const hrNavigationTools = useMemo(() => [
-    { id: 'hr-dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'directory', label: 'Directory', icon: Users },
-    { id: 'departments', label: 'Departments', icon: Sitemap },
-    { id: 'hiring', label: 'Hiring', icon: UserPlus },
-    { id: 'onboarding', label: 'Onboarding', icon: Briefcase },
-    { id: 'time-off', label: 'Time Off', icon: Coffee },
-    { id: 'hr-time-tracking', label: 'Tracking', icon: Clock },
-    { id: 'hr-payroll', label: 'Payroll', icon: CreditCard },
-    { id: 'performance', label: 'Performance', icon: BarChart3 },
-    { id: 'hr-analytics', label: 'Analytics', icon: FileText },
-    { id: 'surveillance', label: 'Surveillance', icon: Eye },
-    { id: 'teams', label: 'Teams', icon: Users2 },
-  ], []);
+   const hrNavigationTools = useMemo(() => [
+     { id: 'hr-dashboard', label: 'Dashboard', icon: LayoutDashboard },
+     { id: 'directory', label: 'Directory', icon: Users },
+     { id: 'departments', label: 'Departments', icon: Sitemap },
+     { id: 'hiring', label: 'Hiring', icon: UserPlus },
+     { id: 'onboarding', label: 'Onboarding', icon: Briefcase },
+     { id: 'time-off', label: 'Time Off', icon: Coffee },
+     { id: 'hr-time-tracking', label: 'Tracking', icon: Clock },
+     { id: 'hr-payroll', label: 'Payroll', icon: CreditCard },
+     { id: 'performance', label: 'Performance', icon: BarChart3 },
+     { id: 'hr-analytics', label: 'Analytics', icon: FileText },
+     { id: 'surveillance', label: 'Surveillance', icon: Eye },
+     { id: 'teams', label: 'Teams', icon: Users2 },
+   ], []);
 
-  const tools = useMemo(() => {
-    const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
-    if (userType === 'enterprise' || userType === 'large-business') return hrNavigationTools;
-    
-    const filtered = hrNavigationTools.filter(item => safeModules.includes(item.id));
-    
-    if (filtered.length === 0) {
-      return [hrNavigationTools[0]]; // Default to dashboard
-    }
-    return filtered;
-  }, [selectedModules, userType, hrNavigationTools]);
+   const tools = useMemo(() => {
+     const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
+     if (userType === 'enterprise' || userType === 'large-business') return hrNavigationTools;
+     
+     const filtered = hrNavigationTools.filter(item => safeModules.includes(item.id));
+     
+     if (filtered.length === 0) {
+       return [hrNavigationTools[0]]; // Default to dashboard
+     }
+     return filtered;
+   }, [selectedModules, userType, hrNavigationTools]);
 
-  const [activeTool, setActiveTool] = useState<string>(tools[0]?.id || 'hr-dashboard');
+   const [activeTool, setActiveTool] = useState<string>(tools[0]?.id || 'hr-dashboard');
 
   // Sync active tool if selection changes
   useEffect(() => {
@@ -336,7 +332,6 @@ const HRPage = () => {
    const [isExportOpen, setIsExportOpen] = useState(false);
    const [isClockedIn, setIsClockedIn] = useState(false);
    const [clockInTime, setClockInTime] = useState<Date | null>(null);
-   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(MOCK_LEAVE_REQUESTS);
    const [onboardingTasks, setOnboardingTasks] = useState([
     { id: '1', title: "Set up hardware", completed: true },
     { id: '2', title: "Access to Slack/Email", completed: true },
@@ -347,7 +342,7 @@ const HRPage = () => {
 
   // --- HR Calculations (Spreadsheet Logic) ---
   const hrMetrics = useMemo(() => {
-    const allEmployees = [...MOCK_EMPLOYEES, ...staffList];
+    const allEmployees = staffList;
     const totalEmployees = allEmployees.length;
     const activeEmployees = allEmployees.filter(e => e.status === 'Active' || !e.status).length;
     const onLeave = allEmployees.filter(e => e.status === 'On Leave').length;
@@ -374,7 +369,7 @@ const HRPage = () => {
    const [selectedEvent, setSelectedEvent] = useState<{ title: string; date: string; icon: any; color: string } | null>(null);
 
    const filteredEmployees = useMemo(() => {
-     const allEmployees = [...MOCK_EMPLOYEES, ...staffList];
+     const allEmployees = staffList;
      return allEmployees.filter(emp => 
        emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
        (emp.role && emp.role.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -728,7 +723,7 @@ const HRPage = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {[...MOCK_EMPLOYEES, ...staffList].map((emp) => (
+                        {staffList.map((emp) => (
                           <tr key={emp.id} className="group hover:bg-secondary/10 transition-colors">
                             <td className="py-4">
                               <div className="flex items-center gap-3">
@@ -748,22 +743,22 @@ const HRPage = () => {
                               <div className="flex flex-col items-center gap-1">
                                 <span className={cn(
                                   "text-sm font-black",
-                                  emp.performance >= 4.5 ? "text-green-600" : emp.performance >= 4 ? "text-primary" : "text-orange-500"
-                                )}>{emp.performance || "N/A"}</span>
+                                  (emp as any).performance >= 4.5 ? "text-green-600" : (emp as any).performance >= 4 ? "text-primary" : "text-orange-500"
+                                )}>{(emp as any).performance || "N/A"}</span>
                                 <div className="w-20 h-1 rounded-full bg-secondary overflow-hidden">
                                   <div className={cn(
                                     "h-full rounded-full",
-                                    emp.performance >= 4.5 ? "bg-green-600" : emp.performance >= 4 ? "bg-primary" : "bg-orange-500"
-                                  )} style={{ width: `${(emp.performance / 5) * 100}%` }} />
+                                    (emp as any).performance >= 4.5 ? "bg-green-600" : (emp as any).performance >= 4 ? "bg-primary" : "bg-orange-500"
+                                  )} style={{ width: `${((emp as any).performance / 5) * 100}%` }} />
                                 </div>
                               </div>
                             </td>
                             <td className="py-4 text-xs text-muted-foreground">
-                              {emp.startDate}
+                              {(emp as any).startDate || "N/A"}
                             </td>
                             <td className="py-4">
                               <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest">
-                                {emp.performance >= 4.5 ? "Top Performer" : "Developing"}
+                                {(emp as any).performance >= 4.5 ? "Top Performer" : "Developing"}
                               </Badge>
                             </td>
                             <td className="py-4 text-right">
@@ -981,8 +976,10 @@ const HRPage = () => {
                     <div className="mt-6 space-y-3">
                       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Away Today</p>
                       <div className="flex -space-x-2">
-                        {MOCK_EMPLOYEES.filter(e => e.status === 'On Leave').map(emp => (
-                          <img key={emp.id} src={emp.avatar} alt={emp.name} className="w-8 h-8 rounded-full border-2 border-card object-cover" title={emp.name} />
+                        {staffList.filter(e => e.status === 'On Leave').map(emp => (
+                          <Avatar key={emp.id} className="w-8 h-8 rounded-full border-2 border-card">
+                            <AvatarFallback className="text-[8px] font-black">{emp.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
                         ))}
                       </div>
                     </div>

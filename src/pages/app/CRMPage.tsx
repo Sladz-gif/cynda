@@ -360,49 +360,20 @@ const CRMPage = () => {
   const handleImport = () => {
     setIsProcessing(true);
     
-    // Simulate real parsing and store updates
+    // In a real application, this would parse the CSV file and send to API
     setTimeout(() => {
-      const newContactsCount = 12;
-      const newCompaniesCount = 8;
-      const newDealsCount = 15;
-
-      // In a real app, we'd iterate over the parsed CSV data here.
-      // For this demo, we'll add a few sample records to the store to show it works.
-      for (let i = 0; i < 3; i++) {
-        const id = Math.random().toString(36).substr(2, 9);
-        addCRMContact({
-          id: `imp_ct_${id}`,
-          name: `Imported Contact ${i + 1}`,
-          email: `contact${i + 1}@imported.com`,
-          status: 'Lead'
-        });
-        addCRMCompany({
-          id: `imp_co_${id}`,
-          name: `Imported Company ${i + 1}`,
-          industry: 'Technology',
-          status: 'Lead',
-          size: '1-10'
-        });
-      }
-
       setIsProcessing(false);
-      setImportStats({ 
-        created: newContactsCount + newCompaniesCount + newDealsCount, 
-        updated: 0, 
-        skipped: 0 
-      });
-      setUndoImportId(`import_${Date.now()}`);
-      setMigrationStep(3);
       toast({ 
-        title: "Migration Successful", 
-        description: `${newContactsCount + newCompaniesCount + newDealsCount} records have been added to your CRM.` 
+        title: "Import Complete", 
+        description: "Your data has been processed." 
       });
+      setIsMigrationOpen(false);
     }, 2000);
   };
 
   const handleUndoImport = () => {
     setIsProcessing(true);
-    // Mock undo
+    // In a real application, this would call an API to delete the last import
     setTimeout(() => {
       setIsProcessing(false);
       setUndoImportId(null);

@@ -171,26 +171,8 @@ const FinancePage = () => {
 
   // Sync store with mock data if empty
   useEffect(() => {
-    if (storeInvoices.length === 0) {
-      const initialInvoices = [
-        { id: "INV-001", client: "Acme Corp", amount: 4250.00, date: "2024-03-20", status: "Paid" },
-        { id: "INV-002", client: "Global Tech", amount: 1800.00, date: "2024-03-22", status: "Pending" },
-        { id: "INV-003", client: "Solaris Inc", amount: 12400.00, date: "2024-03-15", status: "Overdue" },
-        { id: "INV-004", client: "Nebula Soft", amount: 3100.00, date: "2024-03-25", status: "Paid" },
-      ];
-      initialInvoices.forEach(inv => storeAddInvoice(inv));
-    }
-    
-    if (storeExpenses.length === 0) {
-      const initialExpenses = [
-        { id: "EXP-001", category: "Office Rent", amount: 2500.00, date: "2024-03-01", status: "Approved" },
-        { id: "EXP-002", category: "Cloud Services", amount: 420.00, date: "2024-03-05", status: "Approved" },
-        { id: "EXP-003", category: "Marketing", amount: 1200.00, date: "2024-03-10", status: "Pending" },
-        { id: "EXP-004", category: "Hardware", amount: 850.00, date: "2024-03-15", status: "Rejected" },
-      ];
-      initialExpenses.forEach(exp => storeAddExpense(exp));
-    }
-  }, [storeInvoices.length, storeExpenses.length, storeAddInvoice, storeAddExpense]);
+    // Initial data load would happen here from API
+  }, []);
 
   // Format store invoices for display
   const invoices = useMemo(() => {

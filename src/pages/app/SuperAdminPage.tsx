@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { 
-  Users, Building2, Search, Plus, Shield, ShieldCheck, 
-  SearchIcon, Filter, MoreHorizontal, Mail, Phone, 
+  Users, Building2, Search as SearchIcon, Plus, Shield, ShieldCheck, 
+  Filter, MoreHorizontal, Mail, Phone, 
   ExternalLink, Trash2, Edit2, CheckCircle2, XCircle,
   Clock, ArrowUpRight, HelpCircle, LifeBuoy, BellRing, Smartphone,
   Ticket, Gift, RefreshCcw, Copy
@@ -35,37 +35,19 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-// Mock data for initial development
-const MOCK_ACCOUNTS = [
-  { id: "1", name: "Acme Corp", owner: "John Doe", email: "john@acme.com", type: "enterprise", status: "active", users: 45, createdAt: "2024-01-15" },
-  { id: "2", name: "Stark Industries", owner: "Tony Stark", email: "tony@stark.com", type: "enterprise", status: "active", users: 120, createdAt: "2024-02-10" },
-  { id: "3", name: "Wayne Ent", owner: "Bruce Wayne", email: "bruce@wayne.com", type: "enterprise", status: "active", users: 85, createdAt: "2024-03-05" },
-  { id: "4", name: "Individual User", owner: "Alice Smith", email: "alice@example.com", type: "solo", status: "active", users: 1, createdAt: "2024-05-20" },
-];
-
-const MOCK_TICKETS = [
-  { id: "T-101", subject: "Login Issue", user: "John Doe", company: "Acme Corp", priority: "high", status: "open", createdAt: "2024-06-05" },
-  { id: "T-102", subject: "Billing Query", user: "Alice Smith", company: "N/A", priority: "medium", status: "in-progress", createdAt: "2024-06-04" },
-  { id: "T-103", subject: "Feature Request", user: "Tony Stark", company: "Stark Industries", priority: "low", status: "closed", createdAt: "2024-06-01" },
-];
-
-const MOCK_WAITLIST = [
-  { id: "W-001", email: "future@user.com", whatsapp: "+234 801 234 5678", feature: "Email v1.2", createdAt: "2024-06-05" },
-  { id: "W-002", email: "ai@enthusiast.io", whatsapp: null, feature: "AI Co-Founder", createdAt: "2024-06-04" },
-  { id: "W-003", email: "global@trade.net", whatsapp: "+44 7700 900000", feature: "Marketplace", createdAt: "2024-06-03" },
-];
-
-const MOCK_CODES = [
-  { id: "C-001", code: "PRO2MONTHS", duration: 2, reason: "Welcome Gift", status: "active", created: "2024-06-01" },
-  { id: "C-002", code: "CYNDA50", duration: 6, reason: "Enterprise Partner", status: "used", created: "2024-05-20" },
-];
-
+// Empty initial states
 const SuperAdminPage = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   
+  // These would typically come from a database/API
+  const accounts: any[] = [];
+  const tickets: any[] = [];
+  const waitlist: any[] = [];
+  const codes: any[] = [];
+
   // New account form state
   const [newAccount, setNewAccount] = useState({
     companyName: "",
@@ -92,12 +74,12 @@ const SuperAdminPage = () => {
   };
 
   const filteredAccounts = useMemo(() => {
-    return MOCK_ACCOUNTS.filter(acc => 
+    return accounts.filter(acc => 
       acc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       acc.owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
       acc.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm]);
+  }, [searchTerm, accounts]);
 
   const handleCreateAccount = (e: React.FormEvent) => {
     e.preventDefault();
@@ -295,9 +277,9 @@ const SuperAdminPage = () => {
             <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Total Accounts</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">{MOCK_ACCOUNTS.length}</div>
+            <div className="text-3xl font-black">{accounts.length}</div>
             <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1 flex items-center gap-1">
-              <ArrowUpRight className="w-3 h-3" /> +2 this week
+              <ArrowUpRight className="w-3 h-3" /> No new accounts
             </p>
           </CardContent>
         </Card>
@@ -306,9 +288,9 @@ const SuperAdminPage = () => {
             <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Active Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">271</div>
+            <div className="text-3xl font-black">0</div>
             <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1 flex items-center gap-1">
-              <ArrowUpRight className="w-3 h-3" /> +12% increase
+              <ArrowUpRight className="w-3 h-3" /> 0% increase
             </p>
           </CardContent>
         </Card>
@@ -317,8 +299,8 @@ const SuperAdminPage = () => {
             <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Open Tickets</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">{MOCK_TICKETS.filter(t => t.status !== 'closed').length}</div>
-            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mt-1">3 Urgent priority</p>
+            <div className="text-3xl font-black">{tickets.filter(t => t.status !== 'closed').length}</div>
+            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mt-1">0 Urgent priority</p>
           </CardContent>
         </Card>
         <Card className="rounded-3xl border-2 border-purple-500/10 bg-purple-500/[0.02]">
@@ -326,9 +308,9 @@ const SuperAdminPage = () => {
             <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Rev (ARR)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">$42.5k</div>
+            <div className="text-3xl font-black">$0</div>
             <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1 flex items-center gap-1">
-              <ArrowUpRight className="w-3 h-3" /> +$5.2k month
+              <ArrowUpRight className="w-3 h-3" /> $0 month
             </p>
           </CardContent>
         </Card>
@@ -382,7 +364,7 @@ const SuperAdminPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAccounts.map((acc) => (
+                {filteredAccounts.length > 0 ? filteredAccounts.map((acc) => (
                   <TableRow key={acc.id} className="group hover:bg-muted/20 transition-colors border-b-2 last:border-0">
                     <TableCell className="py-6">
                       <div className="flex items-center gap-3">
@@ -436,7 +418,13 @@ const SuperAdminPage = () => {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))}
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-32 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">
+                      No enterprise accounts found
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </Card>
@@ -453,7 +441,7 @@ const SuperAdminPage = () => {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {MOCK_TICKETS.map((ticket) => (
+            {tickets.length > 0 ? tickets.map((ticket) => (
               <Card key={ticket.id} className="rounded-3xl border-2 group hover:border-primary/30 transition-all cursor-pointer">
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start mb-2">
@@ -486,7 +474,14 @@ const SuperAdminPage = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )) : (
+              <div className="col-span-full py-20 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4 opacity-20">
+                  <LifeBuoy className="w-8 h-8" />
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">No support tickets at this time</p>
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -513,7 +508,7 @@ const SuperAdminPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {MOCK_WAITLIST.map((entry) => (
+                {waitlist.length > 0 ? waitlist.map((entry) => (
                   <TableRow key={entry.id} className="group hover:bg-muted/20 transition-colors border-b-2 last:border-0">
                     <TableCell className="py-6">
                       <div className="space-y-1">
@@ -548,7 +543,13 @@ const SuperAdminPage = () => {
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-32 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">
+                      Feature waitlist is currently empty
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </Card>
@@ -581,7 +582,7 @@ const SuperAdminPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {MOCK_CODES.map((code) => (
+                {codes.length > 0 ? codes.map((code) => (
                   <TableRow key={code.id} className="group hover:bg-muted/20 transition-colors border-b-2 last:border-0">
                     <TableCell className="py-6">
                       <div className="flex items-center gap-2">
@@ -611,9 +612,29 @@ const SuperAdminPage = () => {
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-32 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">
+                      No redemption codes generated yet
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="logs" className="space-y-6">
+          <Card className="rounded-3xl border-2 p-12 text-center">
+            <div className="max-w-md mx-auto space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto">
+                <Clock className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-tight">System Logs Coming Soon</h3>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">
+                We are currently building the global audit log system to track all enterprise activities and system events.
+              </p>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>

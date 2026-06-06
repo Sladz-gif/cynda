@@ -186,20 +186,7 @@ const ProjectsPage = () => {
 
   // Seed store with initial tasks if empty
   useEffect(() => {
-    if (storeTasks.length === 0) {
-      initialTasks.forEach(t => {
-        storeAddTask({
-          id: t.id,
-          title: t.title,
-          project: "General",
-          due: t.due,
-          priority: t.priority,
-          status: t.status,
-          assignees: [t.assignee],
-          description: t.description
-        });
-      });
-    }
+    // Initial data load would happen here from API
   }, []);
 
   // Two-step Delete Confirmation
