@@ -5,7 +5,8 @@ import {
   Filter, MoreHorizontal, Mail, Phone, 
   ExternalLink, Trash2, Edit2, CheckCircle2, XCircle,
   Clock, ArrowUpRight, HelpCircle, LifeBuoy, BellRing, Smartphone,
-  Ticket, Gift, RefreshCcw, Copy, LogOut
+  Ticket, Gift, RefreshCcw, Copy, LogOut, Database, Layers, UserPlus,
+  Briefcase, Layout, Settings, ChevronRight, Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,13 +66,44 @@ const SuperAdminPage = () => {
   const codes: any[] = [];
 
   // New account form state
+  const [createStep, setCreateStep] = useState(1);
   const [newAccount, setNewAccount] = useState({
     companyName: "",
     adminName: "",
     adminEmail: "",
     tempPassword: Math.random().toString(36).slice(-8),
-    userType: "enterprise"
+    userType: "enterprise" as any,
+    departments: ["CRM", "Finance", "Projects", "HR", "Other"],
+    workspaces: ["Main HQ"],
+    defaultRoles: ["Director", "Manager", "Employee"]
   });
+
+  const availableDepts = ["CRM", "Finance", "Projects", "HR", "Marketing", "Operations", "Legal", "Other"];
+
+  const handleCreateAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (createStep < (newAccount.userType === 'enterprise' ? 2 : 1)) {
+      setCreateStep(createStep + 1);
+      return;
+    }
+
+    toast({
+      title: "Account Provisioned",
+      description: `${newAccount.userType.toUpperCase()} account for ${newAccount.companyName || newAccount.adminName} has been initialized.`,
+    });
+    setIsCreateModalOpen(false);
+    setCreateStep(1);
+    setNewAccount({
+      companyName: "",
+      adminName: "",
+      adminEmail: "",
+      tempPassword: Math.random().toString(36).slice(-8),
+      userType: "enterprise",
+      departments: ["CRM", "Finance", "Projects", "HR", "Other"],
+      workspaces: ["Main HQ"],
+      defaultRoles: ["Director", "Manager", "Employee"]
+    });
+  };
 
   // New code form state
   const [newCode, setNewCode] = useState({
@@ -96,23 +128,6 @@ const SuperAdminPage = () => {
       acc.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [searchTerm, accounts]);
-
-  const handleCreateAccount = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Account Created Successfully",
-      description: `Enterprise account for ${newAccount.companyName} has been created. Temporary password: ${newAccount.tempPassword}`,
-    });
-    setIsCreateModalOpen(false);
-    // Reset form
-    setNewAccount({
-      companyName: "",
-      adminName: "",
-      adminEmail: "",
-      tempPassword: Math.random().toString(36).slice(-8),
-      userType: "enterprise"
-    });
-  };
 
   const handleCreateCode = (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,79 +222,187 @@ const SuperAdminPage = () => {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+          <Dialog open={isCreateModalOpen} onOpenChange={(open) => {
+            setIsCreateModalOpen(open);
+            if (!open) setCreateStep(1);
+          }}>
             <DialogTrigger asChild>
               <Button className="h-12 px-6 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] shadow-glow flex items-center gap-2">
-                <Plus className="w-4 h-4" /> Create Enterprise Account
+                <UserPlus className="w-4 h-4" /> Provision New Account
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] rounded-3xl border-2">
+            <DialogContent className="sm:max-w-[600px] rounded-3xl border-2">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-black uppercase tracking-tight">Onboard New Enterprise</DialogTitle>
+                <DialogTitle className="text-2xl font-black uppercase tracking-tight">
+                  {createStep === 1 ? "Provision Account" : "Enterprise Configuration"}
+                </DialogTitle>
                 <DialogDescription className="font-bold uppercase tracking-widest text-[10px] opacity-60">
-                  Create a new company account and its primary administrator.
+                  {createStep === 1 
+                    ? "Select user type and primary administrator credentials." 
+                    : "Pre-configure departments, roles, and workspaces for the enterprise."}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateAccount} className="space-y-6 py-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Company Name</Label>
-                    <Input 
-                      placeholder="e.g. Wayne Enterprises" 
-                      className="h-12 rounded-xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
-                      value={newAccount.companyName}
-                      onChange={e => setNewAccount({...newAccount, companyName: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+                {createStep === 1 ? (
+                  <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Admin Name</Label>
-                      <Input 
-                        placeholder="e.g. Bruce Wayne" 
-                        className="h-12 rounded-xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
-                        value={newAccount.adminName}
-                        onChange={e => setNewAccount({...newAccount, adminName: e.target.value})}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Admin Email</Label>
-                      <Input 
-                        type="email"
-                        placeholder="bruce@wayne.com" 
-                        className="h-12 rounded-xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
-                        value={newAccount.adminEmail}
-                        onChange={e => setNewAccount({...newAccount, adminEmail: e.target.value})}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Temporary Password</Label>
-                    <div className="flex gap-2">
-                      <Input 
-                        value={newAccount.tempPassword}
-                        readOnly
-                        className="h-12 rounded-xl bg-muted/50 border-2 border-transparent font-mono font-bold"
-                      />
-                      <Button 
-                        type="button" 
-                        variant="outline"
-                        className="h-12 rounded-xl"
-                        onClick={() => setNewAccount({...newAccount, tempPassword: Math.random().toString(36).slice(-8)})}
+                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Account Type</Label>
+                      <Select 
+                        value={newAccount.userType} 
+                        onValueChange={v => setNewAccount({...newAccount, userType: v as any})}
                       >
-                        Regen
-                      </Button>
+                        <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-2">
+                          <SelectItem value="solo">Solo Professional</SelectItem>
+                          <SelectItem value="team">Small Team</SelectItem>
+                          <SelectItem value="organisation">Organisation</SelectItem>
+                          <SelectItem value="enterprise">Enterprise</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-                      User will be forced to change this upon first login.
-                    </p>
+                    
+                    {newAccount.userType !== 'solo' && (
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Entity/Company Name</Label>
+                        <Input 
+                          placeholder="e.g. Wayne Enterprises" 
+                          className="h-12 rounded-xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
+                          value={newAccount.companyName}
+                          onChange={e => setNewAccount({...newAccount, companyName: e.target.value})}
+                          required={newAccount.userType !== 'solo'}
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Admin Full Name</Label>
+                        <Input 
+                          placeholder="e.g. Bruce Wayne" 
+                          className="h-12 rounded-xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
+                          value={newAccount.adminName}
+                          onChange={e => setNewAccount({...newAccount, adminName: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Admin Primary Email</Label>
+                        <Input 
+                          type="email"
+                          placeholder="bruce@wayne.com" 
+                          className="h-12 rounded-xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
+                          value={newAccount.adminEmail}
+                          onChange={e => setNewAccount({...newAccount, adminEmail: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Temporary Security Password</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          value={newAccount.tempPassword}
+                          readOnly
+                          className="h-12 rounded-xl bg-muted/50 border-2 border-transparent font-mono font-bold"
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline"
+                          className="h-12 rounded-xl"
+                          onClick={() => setNewAccount({...newAccount, tempPassword: Math.random().toString(36).slice(-8)})}
+                        >
+                          Regen
+                        </Button>
+                      </div>
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+                        User will be forced to change this upon first login.
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit" className="w-full h-12 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] shadow-glow">
-                    Initialize Enterprise Account
+                ) : (
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <Layers className="w-3 h-3" /> Core Departments
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {availableDepts.map(dept => (
+                          <button
+                            key={dept}
+                            type="button"
+                            onClick={() => {
+                              const depts = newAccount.departments.includes(dept)
+                                ? newAccount.departments.filter(d => d !== dept)
+                                : [...newAccount.departments, dept];
+                              setNewAccount({...newAccount, departments: depts});
+                            }}
+                            className={cn(
+                              "flex items-center justify-between px-3 py-2 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                              newAccount.departments.includes(dept) 
+                                ? "border-primary bg-primary/5 text-primary" 
+                                : "border-transparent bg-muted/30 text-muted-foreground opacity-60 hover:opacity-100"
+                            )}
+                          >
+                            {dept}
+                            {newAccount.departments.includes(dept) && <Check className="w-3 h-3" />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <Briefcase className="w-3 h-3" /> Default Roles
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {["Director", "Manager", "Employee", "Guest", "Contractor"].map(role => (
+                          <Badge 
+                            key={role}
+                            variant={newAccount.defaultRoles.includes(role) ? "default" : "outline"}
+                            className="cursor-pointer rounded-lg px-3 py-1 font-bold uppercase tracking-widest text-[9px]"
+                            onClick={() => {
+                              const roles = newAccount.defaultRoles.includes(role)
+                                ? newAccount.defaultRoles.filter(r => r !== role)
+                                : [...newAccount.defaultRoles, role];
+                              setNewAccount({...newAccount, defaultRoles: roles});
+                            }}
+                          >
+                            {role}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <Layout className="w-3 h-3" /> Initial Workspace
+                      </Label>
+                      <Input 
+                        placeholder="e.g. London HQ" 
+                        className="h-12 rounded-xl bg-muted/30 border-2 border-transparent focus-visible:border-primary/30 transition-all font-bold"
+                        value={newAccount.workspaces[0]}
+                        onChange={e => setNewAccount({...newAccount, workspaces: [e.target.value]})}
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                <DialogFooter className="pt-4 border-t gap-2">
+                  {createStep === 2 && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="h-12 px-6 rounded-2xl font-black uppercase tracking-widest text-[10px]"
+                      onClick={() => setCreateStep(1)}
+                    >
+                      Back
+                    </Button>
+                  )}
+                  <Button type="submit" className="flex-1 h-12 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] shadow-glow">
+                    {createStep === 1 && newAccount.userType === 'enterprise' ? "Next: Configure" : "Initialize Account"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -343,6 +466,9 @@ const SuperAdminPage = () => {
           </TabsTrigger>
           <TabsTrigger value="waitlist" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
             <BellRing className="w-3.5 h-3.5 mr-2" /> Feature Waitlist
+          </TabsTrigger>
+          <TabsTrigger value="database" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
+            <Database className="w-3.5 h-3.5 mr-2" /> Global Database
           </TabsTrigger>
           <TabsTrigger value="codes" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
             <Ticket className="w-3.5 h-3.5 mr-2" /> Redemption Codes
@@ -567,6 +693,90 @@ const SuperAdminPage = () => {
                     </TableCell>
                   </TableRow>
                 )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="database" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h2 className="text-xl font-black uppercase tracking-tight">Core Database Explorer</h2>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Global cross-tenant monitoring and management</p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="h-10 rounded-xl font-black uppercase text-[9px] tracking-widest">
+                <Settings className="w-3.5 h-3.5 mr-2" /> DB Settings
+              </Button>
+              <Button size="sm" className="h-10 rounded-xl font-black uppercase text-[9px] tracking-widest bg-emerald-600 text-white">
+                <Download className="w-3.5 h-3.5 mr-2" /> Export Global CSV
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="rounded-3xl border-2 bg-secondary/10">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Database Health</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-lg font-black">99.9% Uptime</span>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="rounded-3xl border-2 bg-secondary/10">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Records</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg font-black">12,482 Objects</div>
+              </CardContent>
+            </Card>
+            <Card className="rounded-3xl border-2 bg-secondary/10">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Connections</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg font-black">42 Active Sessions</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="rounded-3xl border-2 overflow-hidden">
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow className="border-b-2 hover:bg-transparent">
+                  <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 pl-6">Tenant Name</TableHead>
+                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Tier</TableHead>
+                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Usage</TableHead>
+                  <TableHead className="font-black uppercase tracking-widest text-[10px]">Last Sync</TableHead>
+                  <TableHead className="text-right pr-6"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow className="border-b-2 last:border-0 hover:bg-muted/10 transition-colors">
+                  <TableCell className="py-6 pl-6 font-black">Cynda Internal</TableCell>
+                  <TableCell><Badge className="bg-primary/20 text-primary border-0 text-[9px] font-black uppercase">System</Badge></TableCell>
+                  <TableCell>
+                    <div className="w-24 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div className="w-1/4 h-full bg-primary" />
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-[10px] font-bold text-muted-foreground">2 mins ago</TableCell>
+                  <TableCell className="text-right pr-6">
+                    <Button variant="ghost" size="sm" className="h-8 rounded-lg font-black uppercase text-[9px] tracking-widest text-primary">
+                      Manage <ChevronRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+                {/* Empty states or other rows here */}
+                <TableRow>
+                  <TableCell colSpan={5} className="h-32 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-50">
+                    Awaiting additional tenant synchronizations
+                  </TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           </Card>

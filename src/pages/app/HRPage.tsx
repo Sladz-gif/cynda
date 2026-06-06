@@ -178,7 +178,7 @@ const HRPage = () => {
 
    const tools = useMemo(() => {
      const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
-     if (userType === 'enterprise' || userType === 'large-business') return hrNavigationTools;
+     if (userType === 'enterprise' || userType === 'organisation') return hrNavigationTools;
      
      const filtered = hrNavigationTools.filter(item => safeModules.includes(item.id));
      

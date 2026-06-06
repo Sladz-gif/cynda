@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 
-export type UserType = "solo" | "small-business" | "large-business" | "enterprise";
+export type UserType = "solo" | "team" | "organisation" | "enterprise";
 export type SubscriptionTier = "trial" | "paid";
 
 export interface AdminProfile {

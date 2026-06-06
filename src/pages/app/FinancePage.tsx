@@ -86,7 +86,7 @@ const FinancePage = () => {
 
   const tools = useMemo(() => {
     const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
-    if (userType === 'enterprise' || userType === 'large-business') return allTools;
+    if (userType === 'enterprise' || userType === 'organisation') return allTools;
     
     const filtered = allTools.filter(item => safeModules.includes(item.id));
     

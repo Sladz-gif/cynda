@@ -29,22 +29,22 @@ export const USER_TYPES: Record<
     description: "Just me.",
     icon: User,
   },
-  "small-business": {
-    id: "small-business",
-    name: "Small Business",
-    description: "2 to 5 people",
-    icon: Building2,
-  },
-  "large-business": {
-    id: "large-business",
-    name: "Organisation",
-    description: "16+ team members",
+  team: {
+    id: "team",
+    name: "Small Team",
+    description: "2 to 10 people",
     icon: Users,
+  },
+  organisation: {
+    id: "organisation",
+    name: "Organisation",
+    description: "11 to 50 members",
+    icon: Building2,
   },
   enterprise: {
     id: "enterprise",
     name: "Enterprise",
-    description: "Custom deployment & scale.",
+    description: "Custom scale & deployment.",
     icon: Globe,
   },
 };

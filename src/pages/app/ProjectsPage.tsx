@@ -85,7 +85,7 @@ const ProjectsPage = () => {
 
   const views = useMemo(() => {
     const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
-    if (userType === 'enterprise' || userType === 'large-business') return allViews;
+    if (userType === 'enterprise' || userType === 'organisation') return allViews;
     
     // Map internal view IDs to industry-store tool IDs
     const idMap: Record<string, string> = {

@@ -273,7 +273,7 @@ const BillingSection = () => {
       features: ['All tools included', '3-day free trial', 'No seat fees']
     },
     { 
-      id: 'small-business', 
+      id: 'team', 
       name: 'Team', 
       price: billingCycle === 'monthly' ? 29 : 24,
       seatPrice: billingCycle === 'monthly' ? 8 : 6.50,
@@ -281,7 +281,7 @@ const BillingSection = () => {
       features: ['Admin controls', 'Staff assignment', 'Per-person tool assignment']
     },
     { 
-      id: 'large-business', 
+      id: 'organisation', 
       name: 'Organisation', 
       price: billingCycle === 'monthly' ? 199 : 165,
       seatPrice: billingCycle === 'monthly' ? 6 : 5,
@@ -306,7 +306,7 @@ const BillingSection = () => {
     year: 'numeric' 
   });
 
-  const seatCount = userType === 'solo' ? 0 : userType === 'small-business' ? 10 : 50;
+  const seatCount = userType === 'solo' ? 0 : userType === 'team' ? 10 : 50;
   const seatTotal = seatCount * (currentTier.seatPrice || 0);
   const monthlyTotal = currentTier.price + seatTotal;
 

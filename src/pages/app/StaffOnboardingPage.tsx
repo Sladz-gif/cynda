@@ -212,7 +212,7 @@ const StaffOnboardingPage = () => {
         <div>
           <h1 className="text-4xl font-black text-foreground uppercase tracking-tight">Staff Onboarding</h1>
           <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest mt-1 opacity-70">
-            {userType === 'large-business' ? 'Organisation-wide onboarding and HR lead tools' : 'Team management and automated staff setup'}
+            {userType === 'organisation' ? 'Organisation-wide onboarding and HR lead tools' : 'Team management and automated staff setup'}
           </p>
         </div>
         <div className="flex items-center gap-3">

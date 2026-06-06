@@ -105,14 +105,14 @@ const OnboardingPage = () => {
     if (userType === 'solo') {
       if (step === 1) return selectedModules.length > 0;
     }
-    if (userType === 'small-business') {
+    if (userType === 'team') {
       if (step === 1) return !!adminData.companyName;
       if (step === 2) return selectedModules.length > 0;
       if (step === 3) return !!adminData.name;
       if (step === 4) return true; // Invites optional
       if (step === 5) return true;
     }
-    if (userType === 'large-business') {
+    if (userType === 'organisation') {
       if (step === 1) return true; // Modules preset or toggled
       if (step === 2) return true; // Profile
       if (step === 3) return true; // Departments
@@ -155,8 +155,8 @@ const OnboardingPage = () => {
   };
 
   const handleNext = () => {
-    if (userType === 'large-business' && step === 0) {
-      // For large business, pre-select all tools
+    if (userType === 'organisation' && step === 0) {
+      // For organisation, pre-select all tools
       const allTools = Object.values(DEPARTMENTS).flatMap(d => d.tools.map(t => t.id));
       setSelectedModules(allTools);
     }
@@ -165,7 +165,7 @@ const OnboardingPage = () => {
 
   const handleFinish = async () => {
     try {
-      if (userType === 'small-business' || userType === 'large-business') {
+      if (userType === 'team' || userType === 'organisation') {
         const finalName = adminData.name || "Admin User";
         useIndustryStore.getState().setAdminProfile({
           name: finalName,
@@ -242,8 +242,8 @@ const OnboardingPage = () => {
 
   const getSteps = () => {
     if (userType === 'solo') return ["Type", "Tools", "Ready"];
-    if (userType === 'small-business') return ["Type", "Business", "Tools", "Profile", "Team", "Ready"];
-    if (userType === 'large-business') return ["Type", "Organisation", "Profile", "Departments", "HR Setup", "Ready"];
+    if (userType === 'team') return ["Type", "Business", "Tools", "Profile", "Team", "Ready"];
+    if (userType === 'organisation') return ["Type", "Organisation", "Profile", "Departments", "HR Setup", "Ready"];
     return ["Type", "Contact"];
   };
 
@@ -379,8 +379,8 @@ const OnboardingPage = () => {
               </motion.div>
             )}
 
-            {/* Small Business: Step 1 - Business Setup */}
-            {userType === 'small-business' && step === 1 && (
+            {/* Team: Step 1 - Business Setup */}
+            {userType === 'team' && step === 1 && (
               <motion.div key="sb-step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
                 <div className="space-y-2 mb-10 text-center sm:text-left">
                   <h2 className="font-display text-2xl sm:text-3xl font-black tracking-tight uppercase leading-tight">Set up your business.</h2>
@@ -436,8 +436,8 @@ const OnboardingPage = () => {
               </motion.div>
             )}
 
-            {/* Step 2 (SB) / Step 1 (LB) / Step 1 (Solo) - Pick Your Modules */}
-            {((userType === 'small-business' && step === 2) || (userType === 'large-business' && step === 1) || (userType === 'solo' && step === 1)) && (
+            {/* Step 2 (Team) / Step 1 (Organisation) / Step 1 (Solo) - Pick Your Modules */}
+            {((userType === 'team' && step === 2) || (userType === 'organisation' && step === 1) || (userType === 'solo' && step === 1)) && (
               <motion.div key="modules" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
                 <div className="space-y-2 mb-10 text-center sm:text-left">
                   <h2 className="font-display text-2xl sm:text-3xl font-black tracking-tight uppercase leading-tight">
@@ -450,9 +450,9 @@ const OnboardingPage = () => {
                   </p>
                 </div>
 
-                {userType === 'large-business' && (
+                {userType === 'organisation' && (
                   <div className="mb-6 p-4 bg-primary/5 rounded-2xl border-2 border-primary/10 flex items-center justify-between">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Large business tier: all modules active by default</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Organisation tier: all modules active by default</p>
                     <Button 
                       variant="ghost" 
                       size="sm" 
@@ -505,8 +505,8 @@ const OnboardingPage = () => {
               </motion.div>
             )}
 
-            {/* Step 3 (SB) / Step 2 (LB) - Your Profile */}
-            {((userType === 'small-business' && step === 3) || (userType === 'large-business' && step === 2)) && (
+            {/* Step 3 (Team) / Step 2 (Organisation) - Your Profile */}
+            {((userType === 'team' && step === 3) || (userType === 'organisation' && step === 2)) && (
               <motion.div key="profile" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
                 <div className="space-y-2 mb-10 text-center sm:text-left">
                   <h2 className="font-display text-2xl sm:text-3xl font-black tracking-tight uppercase leading-tight">Tell us about yourself.</h2>
@@ -554,8 +554,8 @@ const OnboardingPage = () => {
               </motion.div>
             )}
 
-            {/* Step 4 (SB) - Invite Your Team */}
-            {userType === 'small-business' && step === 4 && (
+            {/* Step 4 (Team) - Invite Your Team */}
+            {userType === 'team' && step === 4 && (
               <motion.div key="sb-team" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
                 <div className="space-y-2 mb-10 text-center sm:text-left">
                   <h2 className="font-display text-2xl sm:text-3xl font-black tracking-tight uppercase leading-tight">Who else is on your team?</h2>
@@ -649,8 +649,8 @@ const OnboardingPage = () => {
               </motion.div>
             )}
 
-            {/* Step 3 (LB) - First Department */}
-            {userType === 'large-business' && step === 3 && (
+            {/* Step 3 (Organisation) - First Department */}
+            {userType === 'organisation' && step === 3 && (
               <motion.div key="lb-dept" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
                 <div className="space-y-2 mb-10 text-center sm:text-left">
                   <h2 className="font-display text-2xl sm:text-3xl font-black tracking-tight uppercase leading-tight">Set up your first department.</h2>
@@ -695,8 +695,8 @@ const OnboardingPage = () => {
               </motion.div>
             )}
 
-            {/* Step 4 (LB) - HR Access */}
-            {userType === 'large-business' && step === 4 && (
+            {/* Step 4 (Organisation) - HR Access */}
+            {userType === 'organisation' && step === 4 && (
               <motion.div key="lb-hr" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
                 <div className="space-y-2 mb-10 text-center sm:text-left">
                   <h2 className="font-display text-2xl sm:text-3xl font-black tracking-tight uppercase leading-tight">Who manages your people?</h2>
@@ -753,7 +753,7 @@ const OnboardingPage = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-[9px] font-black uppercase text-muted-foreground">Tier</span>
                     <span className="text-[10px] font-black uppercase text-foreground">
-                      {userType === 'solo' ? 'Solo' : userType === 'small-business' ? 'Small Business' : 'Large Business'}
+                      {userType === 'solo' ? 'Solo' : userType === 'team' ? 'Team' : 'Organisation'}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
