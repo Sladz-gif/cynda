@@ -250,7 +250,7 @@ const AppLayout = () => {
                   exit={{ height: 0, opacity: 0 }}
                   className="bg-primary border-b border-primary/20 overflow-hidden shadow-glow-sm"
                 >
-                  <div className="px-6 py-3 flex items-center justify-between">
+                  <div className="px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
                         <Zap className="w-4 h-4 text-white animate-pulse" />

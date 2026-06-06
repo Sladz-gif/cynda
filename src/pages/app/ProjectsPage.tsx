@@ -531,46 +531,48 @@ const ProjectsPage = () => {
       {/* List View */}
       {view === "list" && (
         <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-secondary/20 border-b border-border">
-                <th className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-4">Task Name</th>
-                <th className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-4">Assignee</th>
-                <th className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-4">Due Date</th>
-                <th className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-4">Priority</th>
-                <th className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-4">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {tasks.map((task) => (
-                <tr key={task.id} onClick={() => setSelectedTask(task)} className="hover:bg-secondary/10 cursor-pointer transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary" />
-                      <p className="text-sm font-bold text-foreground">{task.title}</p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-[9px] font-bold text-accent-foreground">{task.assignee}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-xs font-medium text-muted-foreground">{task.due}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-1.5 h-1.5 rounded-full ${priorityDot[task.priority]}`} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">{task.priority}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-secondary text-muted-foreground">{task.status}</span>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[700px]">
+              <thead>
+                <tr className="bg-secondary/20 border-b border-border">
+                  <th className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-4">Task Name</th>
+                  <th className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-4">Assignee</th>
+                  <th className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-4">Due Date</th>
+                  <th className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-4">Priority</th>
+                  <th className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-4">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {tasks.map((task) => (
+                  <tr key={task.id} onClick={() => setSelectedTask(task)} className="hover:bg-secondary/10 cursor-pointer transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle2 className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary" />
+                        <p className="text-sm font-bold text-foreground">{task.title}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-[9px] font-bold text-accent-foreground">{task.assignee}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-xs font-medium text-muted-foreground">{task.due}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${priorityDot[task.priority]}`} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">{task.priority}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-secondary text-muted-foreground">{task.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

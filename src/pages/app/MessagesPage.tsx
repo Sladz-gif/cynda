@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useState, useEffect } from "react";
 import { Hash, Send, Paperclip, Smile, Search, Plus, Bot, Pin, Reply, MoreHorizontal, Mic, AtSign, X, ChevronDown, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -121,11 +122,19 @@ const statusColor: Record<string, string> = {
 };
 
 const MessagesPage = () => {
+  const isMobile = useIsMobile();
   const [activeChannel, setActiveChannel] = useState("general");
   const [input, setInput] = useState("");
-  const [threadOpen, setThreadOpen] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [threadOpen, setThreadOpen] = useState<string | null>(null);
   const [hoveredMsg, setHoveredMsg] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Auto-close sidebar on mobile
+  useEffect(() => {
+    if (isMobile) setIsSidebarOpen(false);
+    else setIsSidebarOpen(true);
+  }, [isMobile]);
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -149,77 +158,114 @@ const MessagesPage = () => {
         </Badge>
       </div>
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden relative">
       {/* Channel sidebar */}
-      <div className="w-64 border-r border-border flex flex-col bg-card">
-        <div className="p-3 border-b border-border">
-          <button
-            onClick={() => setSearchOpen(!searchOpen)}
-            className="flex items-center gap-2 w-full h-8 px-2 rounded-lg border border-border bg-background text-xs text-muted-foreground hover:border-primary/30 transition-colors"
+      <AnimatePresence mode="wait">
+        {isSidebarOpen && (
+          <motion.div 
+            initial={isMobile ? { x: -280 } : { width: 0 }}
+            animate={isMobile ? { x: 0 } : { width: 256 }}
+            exit={isMobile ? { x: -280 } : { width: 0 }}
+            className={cn(
+              "border-r border-border flex flex-col bg-card z-30",
+              isMobile ? "absolute inset-y-0 left-0 w-[280px] shadow-2xl" : "relative"
+            )}
           >
-            <Search className="w-3.5 h-3.5" />
-            <span>Search chat</span>
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-2">
-          {/* Channels */}
-          <div className="flex items-center justify-between px-2 py-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Channels</span>
-            <button className="text-muted-foreground hover:text-foreground transition-colors"><Plus className="w-3.5 h-3.5" /></button>
-          </div>
-          {channels.map((ch) => (
-            <button
-              key={ch.name}
-              onClick={() => setActiveChannel(ch.name)}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
-                activeChannel === ch.name ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-secondary"
-              }`}
-            >
-              <Hash className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="flex-1 text-left truncate">{ch.name}</span>
-              {ch.pinned && <Pin className="w-2.5 h-2.5 text-muted-foreground/50" />}
-              {ch.unread > 0 && (
-                <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-medium">
-                  {ch.unread}
-                </span>
+            <div className="p-3 border-b border-border flex items-center justify-between">
+              <button
+                onClick={() => setSearchOpen(!searchOpen)}
+                className="flex items-center gap-2 flex-1 h-8 px-2 rounded-lg border border-border bg-background text-xs text-muted-foreground hover:border-primary/30 transition-colors"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span>Search chat</span>
+              </button>
+              {isMobile && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 ml-2" onClick={() => setIsSidebarOpen(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
               )}
-            </button>
-          ))}
+            </div>
 
-          {/* DMs */}
-          <div className="flex items-center justify-between px-2 py-1.5 mt-4">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Direct Messages</span>
-            <button className="text-muted-foreground hover:text-foreground transition-colors"><Plus className="w-3.5 h-3.5" /></button>
-          </div>
-          {directMessages.map((dm) => (
-            <button
-              key={dm.name}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-secondary transition-colors"
-            >
-              <div className="relative flex-shrink-0">
-                <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-[10px] font-semibold text-accent-foreground">
-                  {dm.avatar}
-                </div>
-                <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-card ${statusColor[dm.status]}`} />
+            <div className="flex-1 overflow-y-auto p-2">
+              {/* Channels */}
+              <div className="flex items-center justify-between px-2 py-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Channels</span>
+                <button className="text-muted-foreground hover:text-foreground transition-colors"><Plus className="w-3.5 h-3.5" /></button>
               </div>
-              <div className="min-w-0 flex-1 text-left">
-                <span className="text-sm block truncate">{dm.name}</span>
-                <span className="text-[10px] text-muted-foreground/60 block truncate">{dm.lastMsg}</span>
+              {channels.map((ch) => (
+                <button
+                  key={ch.name}
+                  onClick={() => {
+                    setActiveChannel(ch.name);
+                    if (isMobile) setIsSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
+                    activeChannel === ch.name ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-secondary"
+                  }`}
+                >
+                  <Hash className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="flex-1 text-left truncate">{ch.name}</span>
+                  {ch.pinned && <Pin className="w-2.5 h-2.5 text-muted-foreground/50" />}
+                  {ch.unread > 0 && (
+                    <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-medium">
+                      {ch.unread}
+                    </span>
+                  )}
+                </button>
+              ))}
+
+              {/* DMs */}
+              <div className="flex items-center justify-between px-2 py-1.5 mt-4">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Direct Messages</span>
+                <button className="text-muted-foreground hover:text-foreground transition-colors"><Plus className="w-3.5 h-3.5" /></button>
               </div>
-            </button>
-          ))}
-        </div>
-      </div>
+              {directMessages.map((dm) => (
+                <button
+                  key={dm.name}
+                  onClick={() => isMobile && setIsSidebarOpen(false)}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-secondary transition-colors"
+                >
+                  <div className="relative flex-shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-[10px] font-semibold text-accent-foreground">
+                      {dm.avatar}
+                    </div>
+                    <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-card ${statusColor[dm.status]}`} />
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <span className="text-sm block truncate">{dm.name}</span>
+                    <span className="text-[10px] text-muted-foreground/60 block truncate">{dm.lastMsg}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && isSidebarOpen && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-20"
+        />
+      )}
 
       {/* Chat area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Channel header */}
         <div className="h-12 px-4 border-b border-border flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
+            {!isSidebarOpen && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 mr-1" onClick={() => setIsSidebarOpen(true)}>
+                <MessageSquare className="w-4 h-4" />
+              </Button>
+            )}
             <Hash className="w-4 h-4 text-muted-foreground" />
             <span className="font-display font-semibold text-sm">#{activeChannel}</span>
-            <span className="text-xs text-muted-foreground">24 members</span>
+            <span className="hidden sm:inline text-xs text-muted-foreground">24 members</span>
           </div>
           <div className="flex items-center gap-1">
             <button className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">

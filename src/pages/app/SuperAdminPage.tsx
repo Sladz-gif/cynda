@@ -334,20 +334,20 @@ const SuperAdminPage = () => {
       </div>
 
       <Tabs defaultValue="accounts" className="w-full">
-        <TabsList className="bg-muted/50 p-1 rounded-2xl mb-8">
-          <TabsTrigger value="accounts" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm">
+        <TabsList className="bg-muted/50 p-1 rounded-2xl mb-8 flex overflow-x-auto no-scrollbar justify-start md:justify-center">
+          <TabsTrigger value="accounts" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
             <Building2 className="w-3.5 h-3.5 mr-2" /> Accounts & Users
           </TabsTrigger>
-          <TabsTrigger value="support" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsTrigger value="support" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
             <LifeBuoy className="w-3.5 h-3.5 mr-2" /> Customer Service
           </TabsTrigger>
-          <TabsTrigger value="waitlist" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsTrigger value="waitlist" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
             <BellRing className="w-3.5 h-3.5 mr-2" /> Feature Waitlist
           </TabsTrigger>
-          <TabsTrigger value="codes" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsTrigger value="codes" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
             <Ticket className="w-3.5 h-3.5 mr-2" /> Redemption Codes
           </TabsTrigger>
-          <TabsTrigger value="logs" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsTrigger value="logs" className="rounded-xl px-6 py-2.5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
             <Clock className="w-3.5 h-3.5 mr-2" /> System Logs
           </TabsTrigger>
         </TabsList>

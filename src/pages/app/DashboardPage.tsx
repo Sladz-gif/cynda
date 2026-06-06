@@ -138,11 +138,11 @@ const DashboardPage = () => {
           <p className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">
             Cynda · Work OS
           </p>
-          <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-foreground uppercase leading-tight">
+          <h1 className="font-display text-xl sm:text-3xl lg:text-4xl font-black tracking-tight text-foreground uppercase leading-tight truncate">
             {greeting}, {activeUser?.chatName?.split(".")[0] || activeUser?.name?.split(" ")[0] || "there"}.
           </h1>
-          <div className="flex flex-wrap gap-2 mt-2">
-            <p className="text-xs sm:text-sm text-muted-foreground max-w-xl leading-relaxed">
+          <div className="flex flex-wrap gap-2 mt-1 sm:mt-2">
+            <p className="text-[10px] sm:text-sm text-muted-foreground max-w-xl leading-relaxed">
               One place for clients, finance, projects, people, and day‑to‑day tools — with{" "}
               <span className="text-primary font-semibold">Cyndi</span> woven through the stack.
             </p>
