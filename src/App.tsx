@@ -13,7 +13,7 @@ import MessagesPage from "./pages/app/MessagesPage";
 import ProjectsPage from "./pages/app/ProjectsPage";
 import MyTasksPage from "./pages/app/MyTasksPage";
 import InboxPage from "./pages/app/InboxPage";
-import AutomationComingSoonPage from "./pages/app/AutomationComingSoonPage";
+import AutomationPage from "./pages/app/AutomationPage";
 import FormsPage from "./pages/app/FormsPage";
 import CRMPage from "./pages/app/CRMPage";
 import FinancePage from "./pages/app/FinancePage";
@@ -80,7 +80,7 @@ const App = () => {
                 <Route path="my-tasks" element={<MyTasksPage />} />
                 <Route path="inbox" element={<InboxPage />} />
                 <Route path="messages" element={<MessagesPage />} />
-                <Route path="automation" element={<AutomationComingSoonPage />} />
+                <Route path="automation" element={<AutomationPage />} />
                 <Route path="forms" element={<FormsPage />} />
                 <Route path="crm" element={<CRMPage />} />
                 <Route path="crm/import-history" element={<CRMImportHistoryPage />} />
