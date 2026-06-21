@@ -185,6 +185,7 @@ const AppLayout = () => {
     if (segment === "automation" && effectiveTools.includes("automation")) return true;
     if (segment === "forms" && effectiveTools.includes("forms")) return true;
     if (segment === "my-tasks" && effectiveTools.includes("tasks")) return true;
+    if (["kanban", "list-view", "timeline", "calendar", "resource-management"].includes(segment) && effectiveTools.includes("tasks")) return true;
 
     if (segment === "surveillance") {
       return isAdmin && userType !== "solo";

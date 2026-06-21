@@ -997,7 +997,7 @@ const FinancePage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {[
                     { label: "Total Revenue", value: `$${revenueTotal.toLocaleString()}`, change: "+12.5%", icon: DollarSign, color: "text-green-500" },
-                    { label: "Net Profit", value: `$${netIncome.toLocaleString()}`, change: `${profitMargin.toFixed(1)}% margin`, icon: TrendingUp, color: "text-primary" },
+                    { label: "Net Profit", value: `$${netProfit.toLocaleString()}`, change: `${profitMargin.toFixed(1)}% margin`, icon: TrendingUp, color: "text-primary" },
                     { label: "Burn Rate", value: `$${burnRate.toLocaleString()}/mo`, change: "-2.4%", icon: Clock, color: "text-primary" },
                   ].map((stat) => {
                     const StatIcon = stat.icon;
@@ -1416,8 +1416,8 @@ const FinancePage = () => {
                             <p className="text-[10px] font-black uppercase tracking-widest text-primary">Net Operating Income</p>
                             <p className="text-xs text-muted-foreground font-medium mt-1">Earnings before interest and taxes (EBIT)</p>
                           </div>
-                          <p className={cn("text-3xl font-display font-black", netIncome >= 0 ? "text-primary" : "text-destructive")}>
-                            ${netIncome.toLocaleString()}
+                          <p className={cn("text-3xl font-display font-black", netProfit >= 0 ? "text-primary" : "text-destructive")}>
+                            ${netProfit.toLocaleString()}
                           </p>
                         </div>
                       </div>
