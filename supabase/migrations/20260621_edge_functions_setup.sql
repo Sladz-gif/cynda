@@ -1,6 +1,7 @@
 -- supabase/migrations/20260621_edge_functions_setup.sql
--- Enable the pg_cron extension
+-- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
 
 -- Example: Schedule contact-birthday function daily at 9 AM UTC
 -- After deploying the edge function, replace the URL with your actual function URL
@@ -11,7 +12,10 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 --   SELECT
 --     net.http_post(
 --       url := 'https://YOUR-PROJECT-REF.supabase.co/functions/v1/contact-birthday',
---       headers := '{"Content-Type": "application/json", "Authorization": "Bearer YOUR-SERVICE-ROLE-KEY"}'::jsonb,
+--       headers := jsonb_build_object(
+--         'Content-Type', 'application/json',
+--         'Authorization', 'Bearer YOUR-SERVICE-ROLE-KEY'
+--       ),
 --       body := '{}'::jsonb
 --     )
 --   $$
