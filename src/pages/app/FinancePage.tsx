@@ -47,6 +47,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn, exportToCSV } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -56,6 +62,7 @@ const FinancePage = () => {
   // Finance module component
   const { 
     userType, 
+    subscriptionTier,
     selectedModules = [], 
     crmContacts = [], 
     setCyndiOpen, 
@@ -368,6 +375,15 @@ const FinancePage = () => {
   };
 
    const handleExport = () => {
+    if (subscriptionTier === 'trial') {
+      toast({ 
+        title: "Export not available", 
+        description: "Upgrade your account to export data.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     let data: any[] = [];
     const filename = `finance_${activeTool}`;
     
@@ -907,9 +923,26 @@ const FinancePage = () => {
             <Button variant="outline" size="sm" className="rounded-xl h-9 whitespace-nowrap" onClick={() => setIsFileUploadOpen(true)}>
               <Upload className="w-4 h-4 mr-1.5" /> Import File
             </Button>
-            <Button variant="outline" size="sm" className="rounded-xl h-9 whitespace-nowrap" onClick={handleExport}>
-              <Download className="w-4 h-4 mr-1.5" /> Export
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="rounded-xl h-9 whitespace-nowrap" 
+                    onClick={handleExport}
+                    disabled={subscriptionTier === 'trial'}
+                  >
+                    <Download className="w-4 h-4 mr-1.5" /> Export
+                  </Button>
+                </TooltipTrigger>
+                {subscriptionTier === 'trial' && (
+                  <TooltipContent>
+                    <p>Upgrade to export data</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
             <Button
               size="sm"
               className="rounded-xl h-9 bg-primary hover:bg-primary/90 text-white shadow-sm whitespace-nowrap"

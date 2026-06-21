@@ -44,6 +44,12 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // --- Types ---
 
@@ -159,6 +165,7 @@ const FormsPage = () => {
     addBase,
     updateBase,
     deleteBase,
+    subscriptionTier,
   } = useIndustryStore();
   const activeUser = currentUser || adminProfile;
 
@@ -405,9 +412,36 @@ const FormsPage = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="rounded-xl" onClick={() => toast({ title: "Exporting data..." })}>
-              <Download className="w-4 h-4 mr-1.5" /> Export
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="rounded-xl" 
+                    onClick={() => {
+                      if (subscriptionTier === 'trial') {
+                        toast({ 
+                          title: "Export not available", 
+                          description: "Upgrade your account to export data.", 
+                          variant: "destructive" 
+                        });
+                      } else {
+                        toast({ title: "Exporting data..." });
+                      }
+                    }}
+                    disabled={subscriptionTier === 'trial'}
+                  >
+                    <Download className="w-4 h-4 mr-1.5" /> Export
+                  </Button>
+                </TooltipTrigger>
+                {subscriptionTier === 'trial' && (
+                  <TooltipContent>
+                    <p>Upgrade to export data</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
             {activeTab === 'overview' && (
               <Button size="sm" className="rounded-xl" onClick={() => setIsCreateFormOpen(true)}>
                 <Plus className="w-4 h-4 mr-1.5" /> New Form
