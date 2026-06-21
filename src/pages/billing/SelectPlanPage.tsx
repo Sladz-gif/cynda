@@ -66,7 +66,7 @@ const plans: Plan[] = [
       "Per-person tool assignment",
       "Activity surveillance for admins",
       "Priority support",
-      "Data export/download available"
+      "Data export/download available after trial"
     ],
     icon: Users,
     color: "text-primary"
@@ -89,7 +89,7 @@ const plans: Plan[] = [
       "Hierarchical surveillance and activity logs",
       "Custom department creation",
       "Dedicated account support",
-      "Data export/download available"
+      "Data export/download available after trial"
     ],
     icon: Building2,
     color: "text-purple-600"
