@@ -81,7 +81,7 @@ The Team`;
         actionsTaken: [`Welcome email drafted for: ${companyName}`],
         artifact: { companyName },
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     return new Response(
