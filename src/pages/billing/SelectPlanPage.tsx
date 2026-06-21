@@ -42,7 +42,8 @@ const plans: Plan[] = [
       "Notes, Files, Forms included",
       "Messaging and email coming soon",
       "3-day free trial",
-      "No team features"
+      "No team features",
+      "No data export/download during free trial"
     ],
     icon: User,
     color: "text-blue-600"
@@ -65,7 +66,7 @@ const plans: Plan[] = [
       "Per-person tool assignment",
       "Activity surveillance for admins",
       "Priority support",
-      "3-day free trial"
+      "Data export/download available"
     ],
     icon: Users,
     color: "text-primary"
@@ -88,7 +89,7 @@ const plans: Plan[] = [
       "Hierarchical surveillance and activity logs",
       "Custom department creation",
       "Dedicated account support",
-      "3-day free trial"
+      "Data export/download available"
     ],
     icon: Building2,
     color: "text-purple-600"
