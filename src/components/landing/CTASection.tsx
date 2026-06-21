@@ -18,7 +18,7 @@ const CTASection = () => {
             Every business deserves better tools. Yours is first.
           </h2>
           <p className="text-lg text-muted-foreground mb-10 font-medium">
-            3-day free trial. Credit card required to start.
+            3-day free trial.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button variant="hero" size="lg" className="px-10 h-14 font-black uppercase tracking-widest text-[11px]" asChild>
