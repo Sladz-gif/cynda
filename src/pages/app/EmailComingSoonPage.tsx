@@ -169,10 +169,7 @@ const EmailComingSoonPage = () => {
             )}
           </div>
 
-          {/* local state only (no network). */}
-          <div className="hidden" aria-hidden="true">
-            {submissions.length}
-          </div>
+
         </form>
       </div>
     </motion.div>

@@ -1543,52 +1543,14 @@ const FinancePage = () => {
 
             {activeTool === 'integrations' && (
               <motion.div key="integrations" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {integrations.map((int) => (
-                    <div key={int.id} className="p-6 rounded-[24px] border-2 border-border bg-card hover:border-primary/30 transition-all group">
-                      <div className="flex items-start justify-between mb-6">
-                        <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center">
-                          {int.icon && <int.icon className="w-6 h-6 text-primary" />}
-                        </div>
-                        <Badge className={cn(
-                          "text-[9px] font-black uppercase tracking-widest border-none px-2 py-0.5",
-                          int.status === 'Connected' ? "bg-green-500/10 text-green-600" : "bg-muted text-muted-foreground"
-                        )}>
-                          {int.status}
-                        </Badge>
-                      </div>
-                      <h4 className="text-sm font-black uppercase tracking-tight mb-1">{int.name}</h4>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-6">{int.category}</p>
-                      
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant={int.status === 'Connected' ? "outline" : "default"} 
-                          className="flex-1 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest"
-                          onClick={() => {
-                            setIntegrations(integrations.map(i => i.id === int.id ? { ...i, status: i.status === 'Connected' ? 'Disconnected' : 'Connected' } : i));
-                            toast({ title: int.status === 'Connected' ? "Integration Disconnected" : "Integration Connected" });
-                          }}
-                        >
-                          {int.status === 'Connected' ? "Configure" : "Connect"}
-                        </Button>
-                        {int.status === 'Connected' && (
-                          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/5" onClick={() => {
-                            setIntegrations(integrations.map(i => i.id === int.id ? { ...i, status: 'Disconnected' } : i));
-                            toast({ title: "Integration Removed" });
-                          }}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  
-                  <div className="p-6 rounded-[24px] border-2 border-dashed border-border bg-secondary/5 flex flex-col items-center justify-center text-center group cursor-pointer hover:border-primary/30 transition-all" onClick={() => toast({ title: "Integration Request Sent" })}>
-                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <Plus className="w-6 h-6 text-muted-foreground" />
-                    </div>
-                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Request Integration</p>
+                <div className="p-12 text-center border-4 border-dashed border-border rounded-[48px] bg-secondary/5">
+                  <div className="w-20 h-20 bg-secondary rounded-[32px] flex items-center justify-center mx-auto mb-6">
+                    <Zap className="w-10 h-10 text-muted-foreground" />
                   </div>
+                  <h3 className="text-xl font-black uppercase tracking-tight mb-2">Coming Soon</h3>
+                  <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-8 font-medium">
+                    Integrations with popular financial tools will be available in the next update!
+                  </p>
                 </div>
               </motion.div>
             )}
