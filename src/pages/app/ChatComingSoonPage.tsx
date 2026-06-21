@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIndustryStore } from "@/lib/industry-store";
 
 const FEATURE_COPY =
-  "Real-time team communication with channels, direct messages, and file sharing. No more switching between apps—all your team chat in one place.";
+  "Real-time team communication with channels, direct messages, and file sharing. No more switching between apps, all your team chat in one place.";
 
 const ChatComingSoonPage = () => {
   const { toast } = useToast();

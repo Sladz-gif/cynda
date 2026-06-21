@@ -200,14 +200,14 @@ const SelectPlanPage = () => {
                 <Card className={cn(
                   "h-full relative overflow-hidden border-2 transition-all cursor-pointer",
                   isSelected 
-                    ? "border-primary bg-primary/5 shadow-glow" 
+                    ? "border-primary bg-primary/5" 
                     : "border-border bg-background hover:border-primary/20"
                 )}>
                   <CardHeader className="text-center pb-6">
                     <div className="flex justify-center mb-4">
                       <div className={cn(
                         "w-16 h-16 rounded-2xl flex items-center justify-center",
-                        isSelected ? "bg-primary text-white shadow-glow" : "bg-muted"
+                        isSelected ? "bg-primary text-white" : "bg-muted"
                       )}>
                         <Icon className="w-8 h-8" />
                       </div>
@@ -254,14 +254,14 @@ const SelectPlanPage = () => {
                     </div>
                     
                     <Button 
-                      onClick={() => handlePlanSelect(plan.id)}
-                      className={cn(
-                        "w-full h-14 rounded-2xl font-black uppercase tracking-widest text-xs transition-all",
-                        isSelected 
-                          ? "bg-primary text-white shadow-glow hover:shadow-glow-lg" 
-                          : "bg-muted text-foreground hover:bg-primary hover:text-white"
-                      )}
-                    >
+                    onClick={() => handlePlanSelect(plan.id)}
+                    className={cn(
+                      "w-full h-14 rounded-2xl font-black uppercase tracking-widest text-xs transition-all",
+                      isSelected 
+                        ? "bg-primary text-white" 
+                        : "bg-muted text-foreground hover:bg-primary hover:text-white"
+                    )}
+                  >
                       {isSelected ? "Continue with this plan" : "Select this plan"}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>

@@ -4,14 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { 
   CreditCard, 
-  Smartphone, 
   ArrowLeft, 
   ArrowRight,
   Check,
@@ -21,8 +17,6 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useIndustryStore } from "@/lib/industry-store";
 import { useToast } from "@/hooks/use-toast";
-import PhoneInput from "@/components/ui/PhoneInput";
-import { usePaystackPayment } from 'react-paystack';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
@@ -33,7 +27,6 @@ const CheckoutPage = () => {
   const planId = searchParams.get('plan') || 'solo';
   const isAnnual = searchParams.get('annual') === 'true';
   
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'momo'>('card');
   const [isLoading, setIsLoading] = useState(false);
   
   // Form states
@@ -41,11 +34,8 @@ const CheckoutPage = () => {
   const [cardNumber, setCardNumber] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
-  const [billingCountry, setBillingCountry] = useState('Ghana');
+  const [billingCountry, setBillingCountry] = useState('');
   const [saveCard, setSaveCard] = useState(false);
-  
-  const [momoNetwork, setMomoNetwork] = useState('mtn');
-  const [momoPhone, setMomoPhone] = useState('');
 
   // Plan pricing
   const getPlanDetails = () => {
@@ -93,36 +83,11 @@ const CheckoutPage = () => {
 
   const cardType = getCardType(cardNumber);
 
-  // Paystack configuration
-  const config = {
-    reference: (new Date()).getTime().toString(),
-    email: adminProfile?.email || "user@cyndawork.com",
-    amount: Math.round(total * 100), // in pesewas/kobo
-    publicKey: 'pk_test_dummy_key_replace_when_backend_ready', // Mock key
-  };
-
-  const initializePayment = usePaystackPayment(config);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // For now simulate the integration with a mock since the real key isn't ready
-      // In production, uncomment the below initialization to launch the popup
-      /*
-      initializePayment({
-        onSuccess: (reference) => {
-          toast({ title: "Payment successful", description: "Your subscription has been activated." });
-          navigate('/billing/success');
-        },
-        onClose: () => {
-          setIsLoading(false);
-          toast({ title: "Payment cancelled", description: "You closed the payment popup." });
-        }
-      });
-      */
-      
       // Temporary simulated wrap while we await real key
       await new Promise(resolve => setTimeout(resolve, 2000));
       
@@ -246,204 +211,81 @@ const CheckoutPage = () => {
           >
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg font-black uppercase tracking-tight">How do you want to pay?</CardTitle>
+                <CardTitle className="text-lg font-black uppercase tracking-tight">Payment Details</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   
-                  {/* Payment Method Tabs */}
-                  <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as any)}>
-                    <div className="grid grid-cols-2 gap-4">
-                      <Label
-                        htmlFor="card"
-                        className={cn(
-                          "flex flex-col items-center justify-center p-4 rounded-2xl border-2 cursor-pointer transition-all",
-                          paymentMethod === 'card' 
-                            ? "border-primary bg-primary/5" 
-                            : "border-border hover:border-primary/20"
-                        )}
-                      >
-                        <RadioGroupItem value="card" id="card" className="sr-only" />
-                        <CreditCard className="w-6 h-6 mb-2" />
-                        <span className="text-sm font-medium">Card</span>
-                      </Label>
-                      
-                      <Label
-                        htmlFor="momo"
-                        className={cn(
-                          "flex flex-col items-center justify-center p-4 rounded-2xl border-2 cursor-pointer transition-all",
-                          paymentMethod === 'momo' 
-                            ? "border-primary bg-primary/5" 
-                            : "border-border hover:border-primary/20"
-                        )}
-                      >
-                        <RadioGroupItem value="momo" id="momo" className="sr-only" />
-                        <Smartphone className="w-6 h-6 mb-2" />
-                        <span className="text-sm font-medium">Mobile Money</span>
-                      </Label>
-                    </div>
-                  </RadioGroup>
-
-                  {paymentMethod === 'card' ? (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Cardholder Name</Label>
-                        <Input
-                          value={cardholderName}
-                          onChange={(e) => setCardholderName(e.target.value)}
-                          placeholder="John Doe"
-                          className="h-12 rounded-xl"
-                          required
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Card Number</Label>
-                        <div className="relative">
-                          <Input
-                            value={cardNumber}
-                            onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                            placeholder="1234 5678 9012 3456"
-                            className="h-12 rounded-xl pl-16"
-                            maxLength={19}
-                            required
-                          />
-                          <div className="absolute left-4 top-1/2 -translate-y-1/2 flex gap-2">
-                            <CreditCard className={cn("w-6 h-4", cardType ? 'text-primary' : 'text-muted-foreground')} />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Expiry Date</Label>
-                          <Input
-                            value={expiryDate}
-                            onChange={(e) => setExpiryDate(formatExpiryDate(e.target.value))}
-                            placeholder="MM/YY"
-                            className="h-12 rounded-xl"
-                            maxLength={5}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest ml-1">CVV</Label>
-                          <Input
-                            value={cvv}
-                            onChange={(e) => setCvv(e.target.value.replace(/\D/g, ''))}
-                            placeholder="123"
-                            className="h-12 rounded-xl"
-                            maxLength={4}
-                            required
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Billing Country</Label>
-                        <select
-                          value={billingCountry}
-                          onChange={(e) => setBillingCountry(e.target.value)}
-                          className="w-full h-12 rounded-xl border-2 border-border bg-background px-4 font-medium"
-                          required
-                        >
-                          <option value="Ghana">Ghana</option>
-                          <option value="Nigeria">Nigeria</option>
-                          <option value="Kenya">Kenya</option>
-                          <option value="South Africa">South Africa</option>
-                        </select>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="save-card"
-                          checked={saveCard}
-                          onCheckedChange={(checked) => setSaveCard(checked as boolean)}
-                        />
-                        <Label htmlFor="save-card" className="text-sm font-medium cursor-pointer">
-                          Save this card for future payments
-                        </Label>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <p className="text-sm font-medium text-muted-foreground">Pay with Mobile Money (MTN, Vodafone, AirtelTigo)</p>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Network</Label>
-                        <RadioGroup value={momoNetwork} onValueChange={setMomoNetwork}>
-                          <div className="grid grid-cols-3 gap-4">
-                            <Label
-                              htmlFor="mtn"
-                              className={cn(
-                                "flex flex-col items-center justify-center p-4 rounded-2xl border-2 cursor-pointer transition-all",
-                                momoNetwork === 'mtn' 
-                                  ? "border-primary bg-primary/5" 
-                                  : "border-border hover:border-primary/20"
-                              )}
-                            >
-                              <RadioGroupItem value="mtn" id="mtn" className="sr-only" />
-                              <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-black text-yellow-900 mb-2">
-                                MTN
-                              </div>
-                            </Label>
-                            
-                            <Label
-                              htmlFor="vodafone"
-                              className={cn(
-                                "flex flex-col items-center justify-center p-4 rounded-2xl border-2 cursor-pointer transition-all",
-                                momoNetwork === 'vodafone' 
-                                  ? "border-primary bg-primary/5" 
-                                  : "border-border hover:border-primary/20"
-                              )}
-                            >
-                              <RadioGroupItem value="vodafone" id="vodafone" className="sr-only" />
-                              <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-xs font-black text-white mb-2">
-                                VDF
-                              </div>
-                            </Label>
-                            
-                            <Label
-                              htmlFor="airteltigo"
-                              className={cn(
-                                "flex flex-col items-center justify-center p-4 rounded-2xl border-2 cursor-pointer transition-all",
-                                momoNetwork === 'airteltigo' 
-                                  ? "border-primary bg-primary/5" 
-                                  : "border-border hover:border-primary/20"
-                              )}
-                            >
-                              <RadioGroupItem value="airteltigo" id="airteltigo" className="sr-only" />
-                              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-xs font-black text-white mb-2">
-                                AT
-                              </div>
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
-                      
-                      <PhoneInput
-                        label="Phone Number"
-                        value={momoPhone}
-                        onChange={setMomoPhone}
-                        placeholder="Enter your MoMo number"
+                  {/* Payment Method: Card Only */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Cardholder Name</Label>
+                      <Input
+                        value={cardholderName}
+                        onChange={(e) => setCardholderName(e.target.value)}
+                        placeholder="John Doe"
+                        className="h-12 rounded-xl"
                         required
                       />
-                      
-                      <div className="p-4 rounded-2xl bg-muted/30 border-2 border-border/50">
-                        <p className="text-sm font-medium mb-2">How it works:</p>
-                        <ol className="space-y-1 text-sm text-muted-foreground">
-                          <li>1. Click Pay below</li>
-                          <li>2. Approve the prompt on your phone</li>
-                          <li>3. Done! Your subscription activates</li>
-                        </ol>
-                      </div>
-
-                      <p className="text-xs text-muted-foreground text-center">We support GHS, NGN, KES, and USD.</p>
                     </div>
-                  )}
+                    
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Card Number</Label>
+                      <div className="relative">
+                        <Input
+                          value={cardNumber}
+                          onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                          placeholder="1234 5678 9012 3456"
+                          className="h-12 rounded-xl pl-16"
+                          maxLength={19}
+                          required
+                        />
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 flex gap-2">
+                          <CreditCard className={cn("w-6 h-4", cardType ? 'text-primary' : 'text-muted-foreground')} />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Expiry Date</Label>
+                        <Input
+                          value={expiryDate}
+                          onChange={(e) => setExpiryDate(formatExpiryDate(e.target.value))}
+                          placeholder="MM/YY"
+                          className="h-12 rounded-xl"
+                          maxLength={5}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">CVV</Label>
+                        <Input
+                          value={cvv}
+                          onChange={(e) => setCvv(e.target.value.replace(/\D/g, ''))}
+                          placeholder="123"
+                          className="h-12 rounded-xl"
+                          maxLength={4}
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Billing Country</Label>
+                      <Input
+                        value={billingCountry}
+                        onChange={(e) => setBillingCountry(e.target.value)}
+                        placeholder="Country"
+                        className="h-12 rounded-xl"
+                        required
+                      />
+                    </div>
+                  </div>
 
                   <Button
                     type="submit"
-                    className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs shadow-glow transition-all"
+                    className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs transition-all"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -458,7 +300,7 @@ const CheckoutPage = () => {
                   
                   <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                     <Shield className="w-4 h-4" />
-                    <span>Secured by Paystack</span>
+                    <span>Secure payment</span>
                   </div>
                 </form>
               </CardContent>

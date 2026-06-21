@@ -49,11 +49,6 @@ const CoFounderSection = () => {
 
   return (
     <section id="ai" className="py-24 relative overflow-hidden bg-muted/30">
-      {/* Background Elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-primary/5 rounded-full blur-[100px]" />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-primary/5 rounded-full blur-[100px]" />
-      </div>
 
       <div className="container px-4 mx-auto relative z-10">
         <div className="max-w-4xl mx-auto">
@@ -74,7 +69,7 @@ const CoFounderSection = () => {
             {/* Feature 1: Skill Analysis */}
             <motion.div 
               whileHover={{ y: -5 }}
-              className="p-8 rounded-3xl border-2 border-border bg-card shadow-sm hover:shadow-glow-sm transition-all"
+              className="p-8 rounded-3xl border-2 border-border bg-card shadow-sm transition-all"
             >
               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                 <Brain className="w-6 h-6 text-primary" />
@@ -88,7 +83,7 @@ const CoFounderSection = () => {
             {/* Feature 2: All Fields Expertise */}
             <motion.div 
               whileHover={{ y: -5 }}
-              className="p-8 rounded-3xl border-2 border-border bg-card shadow-sm hover:shadow-glow-sm transition-all"
+              className="p-8 rounded-3xl border-2 border-border bg-card shadow-sm  transition-all"
             >
               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                 <Palette className="w-6 h-6 text-primary" />
@@ -102,7 +97,7 @@ const CoFounderSection = () => {
             {/* Feature 3: Strategic Support */}
             <motion.div 
               whileHover={{ y: -5 }}
-              className="p-8 rounded-3xl border-2 border-border bg-card shadow-sm hover:shadow-glow-sm transition-all"
+              className="p-8 rounded-3xl border-2 border-border bg-card shadow-sm  transition-all"
             >
               <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-6">
                 <LineChart className="w-6 h-6 text-blue-500" />
@@ -116,7 +111,7 @@ const CoFounderSection = () => {
             {/* Feature 4: Execution Engine */}
             <motion.div 
               whileHover={{ y: -5 }}
-              className="p-8 rounded-3xl border-2 border-border bg-card shadow-sm hover:shadow-glow-sm transition-all"
+              className="p-8 rounded-3xl border-2 border-border bg-card shadow-sm  transition-all"
             >
               <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center mb-6">
                 <Rocket className="w-6 h-6 text-green-500" />
@@ -136,7 +131,7 @@ const CoFounderSection = () => {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogTrigger asChild>
-                  <Button size="lg" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest shadow-glow">
+                  <Button size="lg" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest">
                     Let me know when it's ready
                   </Button>
                 </DialogTrigger>
@@ -174,7 +169,7 @@ const CoFounderSection = () => {
                     <Button 
                       type="submit" 
                       disabled={isLoading || isSuccess}
-                      className="w-full h-14 rounded-2xl font-black uppercase tracking-widest shadow-glow"
+                      className="w-full h-14 rounded-2xl font-black uppercase tracking-widest"
                     >
                       {isLoading ? (
                         <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />

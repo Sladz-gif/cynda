@@ -6,11 +6,6 @@ import { Link } from "react-router-dom";
 const HeroSection = () => {
   return (
     <section className="pt-48 pb-32 px-4 md:px-8 relative overflow-hidden bg-background">
-      {/* Subtle gradient orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full bg-accent/5 blur-3xl" />
-      </div>
 
       <div className="container mx-auto relative z-10">
         <div className="max-w-4xl mx-auto text-center">
@@ -21,7 +16,7 @@ const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-bold uppercase tracking-widest mb-8 border border-primary/20"
           >
-            <Zap className="w-4 h-4" /> Built in Ghana. Built for Africa.
+            <Zap className="w-4 h-4" /> With Cynda every day is a holiday
           </motion.div>
 
           {/* Headline */}
@@ -31,7 +26,7 @@ const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] mb-6"
           >
-            Your business runs on too many tabs. Fix that.
+            Increase productivity by 100% with one workspace
           </motion.h1>
 
           {/* Subtext */}
@@ -41,7 +36,7 @@ const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed font-medium"
           >
-            Cynda is the one workspace where African businesses manage clients, projects, money, and people  without juggling seven apps and a spreadsheet.
+            Cynda is the one workspace where businesses manage clients, projects, money, and people without juggling seven apps and a spreadsheet.
           </motion.p>
 
           {/* CTAs */}
@@ -156,8 +151,7 @@ const HeroSection = () => {
               </div>
             </div>
 
-            {/* Floating glow behind preview */}
-            <div className="absolute -inset-4 -z-10 rounded-2xl bg-primary/5 blur-2xl" />
+            
           </motion.div>
         </div>
       </div>

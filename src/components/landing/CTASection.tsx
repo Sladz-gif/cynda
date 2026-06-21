@@ -6,10 +6,6 @@ import { Link } from "react-router-dom";
 const CTASection = () => {
   return (
     <section className="py-32 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/5 blur-[100px]" />
-      </div>
-
       <div className="container relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -19,10 +15,10 @@ const CTASection = () => {
           className="max-w-2xl mx-auto text-center"
         >
           <h2 className="font-display text-4xl sm:text-5xl font-black tracking-tight mb-6 text-foreground">
-            Africa's businesses deserve better tools. Yours is first.
+            Every business deserves better tools. Yours is first.
           </h2>
           <p className="text-lg text-muted-foreground mb-10 font-medium">
-            3-day free trial. No credit card. No pressure.
+            3-day free trial. Credit card required to start.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button variant="hero" size="lg" className="px-10 h-14 font-black uppercase tracking-widest text-[11px]" asChild>

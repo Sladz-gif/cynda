@@ -100,10 +100,6 @@ const PricingSection = () => {
 
   return (
     <section id="pricing" className="py-32 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-primary/5 blur-[100px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] rounded-full bg-primary/3 blur-[120px]" />
-      </div>
 
       <div className="container relative z-10">
         {/* Header */}
@@ -134,7 +130,7 @@ const PricingSection = () => {
             <Label htmlFor="billing-toggle" className={cn("text-sm font-medium flex items-center gap-2", isAnnual && "text-foreground")}>
               Annual
               <Badge variant="secondary" className="text-xs font-bold text-white bg-gradient-to-r from-primary to-primary/80 border-0 shadow-sm px-2 py-0.5 animate-pulse-soft">
-                Save 20% with Paystack
+                Save 20% annually
               </Badge>
             </Label>
           </div>
@@ -168,16 +164,16 @@ const PricingSection = () => {
                 )}
                 
                 <Card className={cn(
-                  "h-full relative overflow-hidden transition-all hover:shadow-glow",
+                  "h-full relative overflow-hidden transition-all",
                   plan.isPopular 
-                    ? "border-0 shadow-glow bg-gradient-to-b from-primary/10 to-background ring-4 ring-primary/20"
+                    ? "border-0 bg-gradient-to-b from-primary/10 to-background ring-4 ring-primary/20"
                     : "border-2 border-border bg-background hover:border-primary/20"
                 )}>
                   <CardHeader className="text-center pb-6">
                     <div className="flex justify-center mb-4">
                       <div className={cn(
                         "w-16 h-16 rounded-2xl flex items-center justify-center",
-                        plan.isPopular ? "bg-gradient-to-br from-primary to-primary/80 text-white shadow-glow" : "bg-muted"
+                        plan.isPopular ? "bg-gradient-to-br from-primary to-primary/80 text-white" : "bg-muted"
                       )}>
                         <Icon className="w-8 h-8" />
                       </div>
@@ -228,7 +224,7 @@ const PricingSection = () => {
                       className={cn(
                         "w-full h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all",
                         plan.isPopular 
-                          ? "bg-primary text-white shadow-glow hover:shadow-glow-lg" 
+                          ? "bg-primary text-white" 
                           : "bg-muted text-foreground hover:bg-primary hover:text-white"
                       )}
                     >
@@ -253,7 +249,6 @@ const PricingSection = () => {
           className="max-w-6xl mx-auto mb-24"
         >
           <div className="rounded-3xl border-2 border-border bg-card p-8 md:p-12 overflow-hidden relative group hover:border-primary/20 transition-all">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-primary/10 transition-all" />
             
             <div className="flex flex-col lg:flex-row items-center justify-between gap-12 relative z-10">
               <div className="flex-1 space-y-6 text-center lg:text-left">
@@ -296,7 +291,7 @@ const PricingSection = () => {
                     <span className="text-lg text-muted-foreground font-bold">/month</span>
                   </div>
                 </div>
-                <Button size="lg" className="h-14 px-12 rounded-2xl font-black uppercase tracking-widest shadow-glow w-full sm:w-auto" asChild>
+                <Button size="lg" className="h-14 px-12 rounded-2xl font-black uppercase tracking-widest w-full sm:w-auto" asChild>
                   <a href="mailto:sales@cynda.co">Contact Sales</a>
                 </Button>
               </div>
@@ -313,7 +308,7 @@ const PricingSection = () => {
           className="text-center mb-20"
         >
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            We accept Mobile Money (MTN, Vodafone, AirtelTigo), card, and bank transfer.
+            We accept card, bank transfer, and mobile money.
           </p>
         </motion.div>
 

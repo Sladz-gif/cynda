@@ -45,7 +45,7 @@ interface Field {
   options?: string[];
 }
 
-interface Record {
+interface FormRecord {
   id: string;
   data: { [key: string]: any };
 }
@@ -54,7 +54,7 @@ interface Table {
   id: string;
   name: string;
   fields: Field[];
-  records: Record[];
+  records: FormRecord[];
   views: {
     id: string;
     name: string;
@@ -85,12 +85,12 @@ export const createFormsSlice: StateCreator<FormsSlice> = (set) => ({
   bases: [],
   addForm: (form) => set((state) => ({ forms: [form, ...state.forms] })),
   updateForm: (id, updates) => set((state) => ({
-    forms: state.forms.map((f) => f.id === id ? { ...f, ...updates } : f))
+    forms: state.forms.map((f) => f.id === id ? { ...f, ...updates } : f)
   })),
   deleteForm: (id) => set((state) => ({ forms: state.forms.filter((f) => f.id !== id) })),
   addBase: (base) => set((state) => ({ bases: [base, ...state.bases] })),
   updateBase: (id, updates) => set((state) => ({
-    bases: state.bases.map((b) => b.id === id ? { ...b, ...updates } : b))
+    bases: state.bases.map((b) => b.id === id ? { ...b, ...updates } : b)
   })),
   deleteBase: (id) => set((state) => ({ bases: state.bases.filter((b) => b.id !== id) }))
 });
