@@ -20,7 +20,7 @@ const AISection = () => {
               <Sparkles className="w-4 h-4" /> AI-Powered
             </div>
             <h2 className="font-display text-4xl sm:text-5xl font-black tracking-tight mb-6">
-              Meet Cyndi — your AI business partner
+              Meet Cyndi  your AI business partner
             </h2>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-medium">
               Cyndi reads your documents, maps your data, drafts your updates, and keeps your workspace running. Like having a smart EA who never sleeps and never needs orientation.

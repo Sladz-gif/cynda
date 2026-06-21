@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AppLayout from "./layouts/AppLayout";
+import { ScrollToTop } from "./components/ScrollToTop";
 import OnboardingPage from "./pages/app/OnboardingPage";
 import DashboardPage from "./pages/app/DashboardPage";
 import MessagesPage from "./pages/app/MessagesPage";
@@ -17,7 +18,7 @@ import FormsPage from "./pages/app/FormsPage";
 import CRMPage from "./pages/app/CRMPage";
 import FinancePage from "./pages/app/FinancePage";
 import HRPage from "./pages/app/HRPage";
-import ChatPage from "./pages/app/ChatPage";
+import ChatComingSoonPage from "./pages/app/ChatComingSoonPage";
 import NotesPage from "./pages/app/NotesPage";
 import FilesPage from "./pages/app/FilesPage";
 import SettingsPage from "./pages/app/SettingsPage";
@@ -52,6 +53,7 @@ const App = () => {
       <ThemeProvider>
         <TooltipProvider>
           <BrowserRouter>
+            <ScrollToTop />
             <Toaster />
             <Sonner />
             <Analytics />
@@ -108,7 +110,7 @@ const App = () => {
                 <Route path="timeline" element={<ProjectsPage />} />
                 <Route path="calendar" element={<ProjectsPage />} />
                 <Route path="resource-management" element={<ProjectsPage />} />
-                <Route path="chat" element={<ChatPage />} />
+                <Route path="chat" element={<ChatComingSoonPage />} />
                 <Route path="notes" element={<NotesPage />} />
                 <Route path="files" element={<FilesPage />} />
                 <Route path="settings" element={<SettingsPage />} />

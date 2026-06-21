@@ -106,6 +106,11 @@ type LeaveRequest = {
 // --- Initial States ---
 
 const HRPage = () => {
+  const MOCK_EMPLOYEES: Employee[] = [];
+  const MOCK_JOBS: Job[] = [];
+  const MOCK_SURVEILLANCE: any[] = [];
+  const MOCK_TEAMS: Team[] = [];
+  
   const { 
     userType, 
     selectedModules = [], 
@@ -179,6 +184,13 @@ const HRPage = () => {
    const tools = useMemo(() => {
      const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
      if (userType === 'enterprise' || userType === 'organisation') return hrNavigationTools;
+     
+     if (userType === 'solo') {
+       // For solo users, only show basic HR tools
+       return hrNavigationTools.filter(tool => 
+         ['hr-dashboard', 'time-off', 'hr-time-tracking', 'hr-payroll', 'performance'].includes(tool.id)
+       );
+     }
      
      const filtered = hrNavigationTools.filter(item => safeModules.includes(item.id));
      
@@ -370,13 +382,25 @@ const HRPage = () => {
 
    const filteredEmployees = useMemo(() => {
      const allEmployees = staffList;
+     if (userType === 'solo') {
+       // For solo users, only show their own profile if available, otherwise empty
+       const activeUserId = (currentUser?.id || adminProfile?.id);
+       return allEmployees.filter(emp => 
+         emp.id === activeUserId
+       ).filter(emp => 
+         emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+         (emp.role && emp.role.toLowerCase().includes(searchQuery.toLowerCase())) ||
+         (emp.department && emp.department.toLowerCase().includes(searchQuery.toLowerCase())) ||
+         (emp.chatName && emp.chatName.toLowerCase().includes(searchQuery.toLowerCase()))
+       );
+     }
      return allEmployees.filter(emp => 
        emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
        (emp.role && emp.role.toLowerCase().includes(searchQuery.toLowerCase())) ||
        (emp.department && emp.department.toLowerCase().includes(searchQuery.toLowerCase())) ||
        (emp.chatName && emp.chatName.toLowerCase().includes(searchQuery.toLowerCase()))
      );
-   }, [searchQuery, staffList]);
+   }, [searchQuery, staffList, userType, currentUser, adminProfile]);
 
   return (
     <div className="space-y-6">

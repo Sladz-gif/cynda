@@ -1,6 +1,6 @@
 # Issue: Dashboard / app appears blank
 
-This document describes blank-screen symptoms and how the app mounts today. **Update (2026):** the Zustand `persist` **full-screen hydration gate was removed** from `AppLayout` — `useHydration()` now resolves immediately for the frontend-first build, so you should not stay stuck on “Initializing Workspace…” for that reason alone.
+This document describes blank-screen symptoms and how the app mounts today. **Update (2026):** the Zustand `persist` **full-screen hydration gate was removed** from `AppLayout`  `useHydration()` now resolves immediately for the frontend-first build, so you should not stay stuck on “Initializing Workspace…” for that reason alone.
 
 ---
 
@@ -8,9 +8,9 @@ This document describes blank-screen symptoms and how the app mounts today. **Up
 
 | Appearance | Likely layer |
 |------------|----------------|
-| **Pure white / nothing** | React never mounted, root crash, or extension blocking JS — check **Console** first. |
-| **“Initializing Workspace…”** (legacy) | Previously: `AppLayout` waited on `useHydration()` / Zustand `persist`. If you still see this string, search the repo — it should no longer be in `AppLayout`. |
-| **Very minimal page** | Empty `selectedModules` or route guard — see store defaults and `hasAccess` in `AppLayout`. |
+| **Pure white / nothing** | React never mounted, root crash, or extension blocking JS  check **Console** first. |
+| **“Initializing Workspace…”** (legacy) | Previously: `AppLayout` waited on `useHydration()` / Zustand `persist`. If you still see this string, search the repo  it should no longer be in `AppLayout`. |
+| **Very minimal page** | Empty `selectedModules` or route guard  see store defaults and `hasAccess` in `AppLayout`. |
 | **“Access Denied”** | `hasAccess === false` → `ForbiddenPage` instead of `Outlet`. |
 
 ---

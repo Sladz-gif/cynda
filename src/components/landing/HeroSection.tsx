@@ -41,7 +41,7 @@ const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed font-medium"
           >
-            Cynda is the one workspace where African businesses manage clients, projects, money, and people — without juggling seven apps and a spreadsheet.
+            Cynda is the one workspace where African businesses manage clients, projects, money, and people  without juggling seven apps and a spreadsheet.
           </motion.p>
 
           {/* CTAs */}
@@ -54,7 +54,7 @@ const HeroSection = () => {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button variant="hero" size="lg" className="px-8 h-12 relative z-20 font-black uppercase tracking-widest text-[11px]" asChild>
                 <Link to="/signup" className="flex items-center justify-center gap-2">
-                  Start free — no card needed
+                  Start free  no card needed
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>

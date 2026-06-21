@@ -34,6 +34,24 @@ export interface WorkspaceExpense {
   status: string;
 }
 
+export interface WorkspacePayroll {
+  id: string;
+  employee: string;
+  role: string;
+  amount: number;
+  date: string;
+  status: string;
+}
+
+export interface WorkspaceAsset {
+  id: string;
+  item: string;
+  serial: string;
+  value: number;
+  date: string;
+  status: string;
+}
+
 export interface Notification {
   id: string;
   source: string;
@@ -61,6 +79,8 @@ export interface WorkspaceSlice {
   projects: WorkspaceProject[];
   invoices: WorkspaceInvoice[];
   expenses: WorkspaceExpense[];
+  payroll: WorkspacePayroll[];
+  assets: WorkspaceAsset[];
   setSelectedModules: (modules: string[]) => void;
   setThemeSettings: (settings: Partial<ThemeSettings>) => void;
   markNotificationRead: (id: string) => void;
@@ -71,6 +91,8 @@ export interface WorkspaceSlice {
   addProject: (project: WorkspaceProject) => void;
   addInvoice: (invoice: WorkspaceInvoice) => void;
   addExpense: (expense: WorkspaceExpense) => void;
+  addPayroll: (payroll: WorkspacePayroll) => void;
+  addAsset: (asset: WorkspaceAsset) => void;
   seedNotifications: () => void;
 }
 
@@ -106,6 +128,8 @@ export const createWorkspaceSlice: StateCreator<WorkspaceSlice> = (set) => ({
   projects: [],
   invoices: [],
   expenses: [],
+  payroll: [],
+  assets: [],
   setSelectedModules: (modules) => set({ selectedModules: Array.isArray(modules) ? modules : [] }),
   setThemeSettings: (settings) =>
     set((state) => ({
@@ -131,6 +155,8 @@ export const createWorkspaceSlice: StateCreator<WorkspaceSlice> = (set) => ({
   addProject: (project) => set((state) => ({ projects: [...state.projects, project] })),
   addInvoice: (invoice) => set((state) => ({ invoices: [...state.invoices, invoice] })),
   addExpense: (expense) => set((state) => ({ expenses: [...state.expenses, expense] })),
+  addPayroll: (payroll) => set((state) => ({ payroll: [...state.payroll, payroll] })),
+  addAsset: (asset) => set((state) => ({ assets: [...state.assets, asset] })),
   seedNotifications: () => set((state) => {
     const samples: Notification[] = [
       { id: "n1", source: "System", title: "Welcome to Cynda", message: "Your workspace is ready. Explore the modules to get started.", read: false, timestamp: new Date().toISOString(), type: 'system' },

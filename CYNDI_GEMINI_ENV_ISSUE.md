@@ -31,8 +31,8 @@ into the client via `define` as **`__CYNDA_GEMINI_KEY__`**, and `src/lib/gemini.
 
 ### 2. Secrets in `.env.example` instead of `.env`
 
-- **`.env`** — local secrets, listed in `.gitignore`; this is where real keys belong.  
-- **`.env.example`** — template only; safe to commit; must use placeholders, not real keys.
+- **`.env`**  local secrets, listed in `.gitignore`; this is where real keys belong.  
+- **`.env.example`**  template only; safe to commit; must use placeholders, not real keys.
 
 Putting a real key only in `.env.example` does not configure the app correctly and risks leaking the key if that file is committed.
 

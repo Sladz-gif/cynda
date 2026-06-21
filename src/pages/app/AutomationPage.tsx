@@ -59,8 +59,8 @@ const AutomationPage = () => {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const navItems = [
-    { id: "my-automations", label: "My Automations", icon: Zap },
-    { id: "library", label: "Automation Library", icon: LayoutDashboard },
+    { id: "my-automations", label: "Active Automations", icon: Zap },
+    { id: "library", label: "All Automations", icon: LayoutDashboard },
     { id: "run-log", label: "Run Log", icon: History },
   ];
 
@@ -106,20 +106,35 @@ const AutomationPage = () => {
     }
   };
 
-  const handleOpenConfig = (template: AutomationTemplate) => {
+  const handleOpenConfig = (template: AutomationTemplate, currentConfig?: Record<string, unknown>) => {
     setConfiguringTemplate(template);
-    setConfigData({}); // Reset config
+    setConfigData(currentConfig || { timing: template.defaultTiming || "" }); // Reset config with timing
     setIsConfigOpen(true);
   };
 
   const handleActivate = () => {
     if (!configuringTemplate) return;
-    activateAutomation(configuringTemplate.id, configData);
-    setIsConfigOpen(false);
-    toast({ 
-      title: "Automation Activated", 
-      description: `${configuringTemplate.name} is now running in your workspace.` 
-    });
+
+    // Check if this is editing an existing automation or activating a new one
+    const existingAutomation = activeAutomations.find(a => a.templateId === configuringTemplate.id);
+
+    if (existingAutomation) {
+      // Update existing automation config
+      updateAutomationConfig(existingAutomation.id, configData);
+      setIsConfigOpen(false);
+      toast({
+        title: "Automation Updated",
+        description: `${configuringTemplate.name} configuration has been saved.`
+      });
+    } else {
+      // Activate new automation
+      activateAutomation(configuringTemplate.id, configData);
+      setIsConfigOpen(false);
+      toast({
+        title: "Automation Activated",
+        description: `${configuringTemplate.name} is now running in your workspace.`
+      });
+    }
   };
 
   const getDepartmentColor = (dept: string) => {
@@ -241,6 +256,20 @@ const AutomationPage = () => {
                             Triggered by {automation.triggeredRecord || 'events'}
                           </p>
                         </div>
+                        {(() => {
+                          const template = automationLibrary.find(t => t.id === automation.templateId);
+                          if (template?.configurableTiming && automation.config?.timing) {
+                            return (
+                              <div className="flex items-start gap-3">
+                                <div className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                <p className="text-xs font-bold text-muted-foreground">
+                                  Schedule: {automation.config.timing}
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
 
                       <div className="flex items-center justify-between pt-6 border-t border-border/50">
@@ -248,13 +277,21 @@ const AutomationPage = () => {
                           <Button variant="ghost" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest" onClick={() => setActiveTab("run-log")}>
                             <History className="w-3.5 h-3.5 mr-1.5" /> Log
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest">
-                            <Settings className="w-3.5 h-3.5 mr-1.5" /> Config
-                          </Button>
+                          {(() => {
+                            const template = automationLibrary.find(t => t.id === automation.templateId);
+                            if (template?.configurableTiming) {
+                              return (
+                                <Button variant="ghost" size="sm" className="h-8 text-[9px] font-black uppercase tracking-widest" onClick={() => handleOpenConfig(template, automation.config)}>
+                                  <Settings className="w-3.5 h-3.5 mr-1.5" /> Config
+                                </Button>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-xl"
                           onClick={() => handleDelete(automation.id)}
                         >
@@ -319,54 +356,79 @@ const AutomationPage = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredLibrary.map((template) => (
-                  <motion.div 
-                    key={template.id}
-                    layout
-                    className="p-6 rounded-[32px] border-2 border-border bg-card hover:border-primary/30 transition-all group flex flex-col"
-                  >
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center text-primary group-hover:bg-primary/10 transition-colors">
-                        <Zap className="w-6 h-6" />
-                      </div>
-                      <Badge variant="outline" className={cn(
-                        "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
-                        getDepartmentColor(template.department)
-                      )}>
-                        {template.department}
-                      </Badge>
-                    </div>
-
-                    <h3 className="text-lg font-black uppercase tracking-tight text-foreground mb-4">{template.name}</h3>
-                    
-                    <div className="space-y-4 flex-1">
-                      <div className="space-y-1">
-                        <span className="text-[9px] font-black text-primary uppercase tracking-widest">When:</span>
-                        <p className="text-xs font-bold text-muted-foreground leading-relaxed">{template.triggerDescription}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-[9px] font-black text-primary uppercase tracking-widest">Then:</span>
-                        <p className="text-xs font-bold text-muted-foreground leading-relaxed">{template.actionDescription}</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-8 pt-6 border-t border-border/50 flex items-center justify-between">
-                      {template.isGeminiPowered && (
-                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-500/5 text-blue-600">
-                          <Bot className="w-3.5 h-3.5" />
-                          <span className="text-[9px] font-black uppercase tracking-widest">Powered by Cyndi</span>
-                        </div>
+                {filteredLibrary.map((template) => {
+                  const isActive = activeAutomations.some(a => a.templateId === template.id);
+                  return (
+                    <motion.div
+                      key={template.id}
+                      layout
+                      className={cn(
+                        "p-6 rounded-[32px] border-2 bg-card hover:border-primary/30 transition-all group flex flex-col",
+                        isActive ? "border-primary/30 bg-primary/5" : "border-border"
                       )}
-                      <Button 
-                        size="sm" 
-                        className="rounded-xl font-black uppercase tracking-widest text-[9px] h-9"
-                        onClick={() => handleOpenConfig(template)}
-                      >
-                        Activate <Plus className="ml-1.5 w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </motion.div>
-                ))}
+                    >
+                      <div className="flex items-start justify-between mb-6">
+                        <div className={cn(
+                          "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
+                          isActive ? "bg-primary text-white" : "bg-secondary text-primary group-hover:bg-primary/10"
+                        )}>
+                          <Zap className="w-6 h-6" />
+                        </div>
+                        <Switch
+                          checked={isActive}
+                          onCheckedChange={() => {
+                            if (isActive) {
+                              const automation = activeAutomations.find(a => a.templateId === template.id);
+                              if (automation) deactivateAutomation(automation.id);
+                              toast({ title: "Automation Deactivated", description: `${template.name} has been turned off.` });
+                            } else {
+                              if (template.configurableTiming) {
+                                handleOpenConfig(template);
+                              } else {
+                                activateAutomation(template.id, {});
+                                toast({ title: "Automation Activated", description: `${template.name} is now running.` });
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+
+                      <h3 className="text-lg font-black uppercase tracking-tight text-foreground mb-4">{template.name}</h3>
+
+                      <div className="space-y-4 flex-1">
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-black text-primary uppercase tracking-widest">When:</span>
+                          <p className="text-xs font-bold text-muted-foreground leading-relaxed">{template.triggerDescription}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-black text-primary uppercase tracking-widest">Then:</span>
+                          <p className="text-xs font-bold text-muted-foreground leading-relaxed">{template.actionDescription}</p>
+                        </div>
+                        {template.configurableTiming && template.defaultTiming && (
+                          <div className="space-y-1">
+                            <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Schedule:</span>
+                            <p className="text-xs font-bold text-muted-foreground leading-relaxed">{template.defaultTiming}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-8 pt-6 border-t border-border/50 flex items-center justify-between">
+                        <Badge variant="outline" className={cn(
+                          "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
+                          getDepartmentColor(template.department)
+                        )}>
+                          {template.department}
+                        </Badge>
+                        {template.isGeminiPowered && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-500/5 text-blue-600">
+                            <Bot className="w-3.5 h-3.5" />
+                            <span className="text-[9px] font-black uppercase tracking-widest">AI</span>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
             </motion.div>
           )}
@@ -494,8 +556,23 @@ const AutomationPage = () => {
                 </div>
               </div>
 
-              {/* Mock Configuration Fields based on Template */}
+              {/* Configuration Fields based on Template */}
               <div className="grid gap-4">
+                {configuringTemplate?.configurableTiming && (
+                  <div className="grid gap-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Schedule Timing</Label>
+                    <Input
+                      value={configData.timing || configuringTemplate.defaultTiming || ""}
+                      onChange={(e) => setConfigData({ ...configData, timing: e.target.value })}
+                      placeholder={configuringTemplate.defaultTiming || "e.g., Monday 9:00 AM"}
+                      className="h-11 rounded-xl border-2 font-bold text-xs"
+                    />
+                    <p className="text-[10px] text-muted-foreground font-medium">
+                      Set when this automation should run. Default: {configuringTemplate.defaultTiming}
+                    </p>
+                  </div>
+                )}
+
                 {configuringTemplate?.id === 'follow-up-reminder' && (
                   <div className="grid gap-2">
                     <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Days of Inactivity</Label>
@@ -507,7 +584,7 @@ const AutomationPage = () => {
                     </select>
                   </div>
                 )}
-                
+
                 <div className="flex items-center justify-between p-4 rounded-xl border-2 border-border bg-card">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600">

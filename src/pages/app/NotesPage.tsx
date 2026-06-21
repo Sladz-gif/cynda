@@ -49,7 +49,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useIndustryStore } from "@/lib/industry-store";
+import { useIndustryStore, Note } from "@/lib/industry-store";
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from "@/components/ui/select";
@@ -109,15 +109,25 @@ const FOLDERS = ["All Notes", "Brand", "Engineering", "Sales", "HR", "Product", 
 const INITIAL_PAGES: Page[] = [];
 
 const NotesPage = () => {
-  const [pages, setPages] = useState<Page[]>(INITIAL_PAGES);
-  const [activePageId, setActivePageId] = useState<string | null>(INITIAL_PAGES[0].id);
   const [activeFolder, setActiveFolder] = useState("All Notes");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedNoteForAccess, setSelectedNoteForAccess] = useState<Page | null>(null);
   const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
   const [shareSearchQuery, setShareSearchQuery] = useState("");
 
-  const { currentUser, adminProfile, staffList } = useIndustryStore();
+  const { 
+    currentUser, 
+    adminProfile, 
+    staffList, 
+    notes, 
+    addNote, 
+    updateNote, 
+    deleteNote: deleteNoteFromStore,
+    restoreNote: restoreNoteFromStore
+  } = useIndustryStore();
+  
+  // Get activePageId from first note if available, otherwise null
+  const [activePageId, setActivePageId] = useState<string | null>(notes[0]?.id || null);
   const activeUser = currentUser || adminProfile;
   const isMobile = useIsMobile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobile);
@@ -130,31 +140,28 @@ const NotesPage = () => {
   const isDeptHead = activeUser?.role === 'Super Admin' || activeUser?.role?.includes('Director') || activeUser?.role?.includes('Manager');
 
   const visiblePages = useMemo(() => {
-    if (isDeptHead) return pages;
-    return pages.filter(p => 
+    if (isDeptHead) return notes;
+    return notes.filter(p => 
       p.access.some(a => a.userId === activeUser?.id || a.userId === 'admin')
     );
-  }, [pages, isDeptHead, activeUser]);
+  }, [notes, isDeptHead, activeUser]);
 
   const handleGrantAccess = (noteId: string, staff: any) => {
-    setPages(prev => prev.map(p => {
-      if (p.id === noteId) {
-        if (p.access.find(a => a.userId === staff.id)) return p;
-        return { ...p, access: [...p.access, { userId: staff.id, name: staff.name, role: 'Viewer' }] };
-      }
-      return p;
-    }));
+    updateNote(noteId, { 
+      access: [
+        ...(visiblePages.find(p => p.id === noteId)?.access || []),
+        { userId: staff.id, name: staff.name, role: 'Viewer' }
+      ] 
+    });
     setShareSearchQuery("");
     toast({ title: "Access Granted", description: `${staff.name} can now view this note.` });
   };
 
   const handleRevokeAccess = (noteId: string, userId: string) => {
-    setPages(prev => prev.map(p => {
-      if (p.id === noteId) {
-        return { ...p, access: p.access.filter(a => a.userId !== userId) };
-      }
-      return p;
-    }));
+    const note = visiblePages.find(p => p.id === noteId);
+    if (note) {
+      updateNote(noteId, { access: note.access.filter(a => a.userId !== userId) });
+    }
     toast({ title: "Access Revoked" });
   };
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -233,7 +240,7 @@ const NotesPage = () => {
   // --- Actions ---
 
   const createPage = useCallback((parentId?: string) => {
-    const newPage: Page = {
+    const newPage: Note = {
       id: Math.random().toString(36).substr(2, 9),
       title: 'Untitled',
       folder: activeFolder !== "All Notes" ? activeFolder : undefined,
@@ -245,10 +252,10 @@ const NotesPage = () => {
       parentId,
       access: [{ userId: activeUser?.id || 'current', name: activeUser?.name || "User", role: 'Owner' }]
     };
-    setPages(prev => [...prev, newPage]);
+    addNote(newPage);
     setActivePageId(newPage.id);
     toast({ title: "New Page Created", description: "Start typing to edit your new note." });
-  }, [activeFolder, toast, activeUser]);
+  }, [activeFolder, toast, activeUser, addNote]);
 
   // Two-step Delete Confirmation
   const [isDeleteModal1Open, setIsDeleteModal1Open] = useState(false);
@@ -268,14 +275,9 @@ const NotesPage = () => {
   const finalizeDelete = () => {
     if (itemToDelete) {
       const { id, permanently } = itemToDelete;
-      if (permanently) {
-        setPages(prev => prev.filter(p => p.id !== id));
-        if (activePageId === id) setActivePageId(null);
-        toast({ title: "Page Deleted Permanently" });
-      } else {
-        setPages(prev => prev.map(p => p.id === id ? { ...p, isArchived: true } : p));
-        toast({ title: "Moved to Trash", description: "You can restore it from the archive." });
-      }
+      deleteNoteFromStore(id, permanently);
+      if (activePageId === id) setActivePageId(notes.find(n => !n.isArchived)?.id || null);
+      toast({ title: permanently ? "Page Deleted Permanently" : "Moved to Trash", description: permanently ? "" : "You can restore it from the archive." });
       setIsDeleteModal2Open(false);
       setItemToDelete(null);
     }
@@ -286,17 +288,16 @@ const NotesPage = () => {
   }, [handleDeletePage]);
 
   const restorePage = useCallback((id: string) => {
-    setPages(prev => prev.map(p => p.id === id ? { ...p, isArchived: false } : p));
+    restoreNoteFromStore(id);
     toast({ title: "Page Restored" });
-  }, [toast]);
-
-  const updatePage = useCallback((id: string, updates: Partial<Page>) => {
-    setPages(prev => prev.map(p => p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p));
-  }, []);
+  }, [toast, restoreNoteFromStore]);
 
   const toggleFavorite = useCallback((id: string) => {
-    setPages(prev => prev.map(p => p.id === id ? { ...p, isFavorite: !p.isFavorite } : p));
-  }, []);
+    const note = notes.find(n => n.id === id);
+    if (note) {
+      updateNote(id, { isFavorite: !note.isFavorite });
+    }
+  }, [notes, updateNote]);
 
   const insertTable = useCallback(() => {
     const quill = quillRef.current?.getEditor();
@@ -342,16 +343,16 @@ const NotesPage = () => {
             quill.insertEmbed(range.index, 'image', base64);
           }
         } else if (activePageId) {
-          updatePage(activePageId, { coverImage: base64 });
+          updateNote(activePageId, { coverImage: base64 });
         }
       };
       reader.readAsDataURL(file);
     }
-  }, [activePageId, updatePage]);
+  }, [activePageId, updateNote]);
 
   // --- Components ---
 
-  const PageItem = ({ page, depth = 0 }: { page: Page; depth?: number }) => {
+  const PageItem = ({ page, depth = 0 }: { page: Note; depth?: number }) => {
     const hasChildren = visiblePages.some(p => p.parentId === page.id && !p.isArchived);
     const [isOpen, setIsOpen] = useState(false);
 
@@ -391,17 +392,17 @@ const NotesPage = () => {
                   {page.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
-                  const newPage = { ...page, id: Math.random().toString(36).substr(2, 9), title: `${page.title} (Copy)` };
-                  setPages(prev => [...prev, newPage]);
+                  const newPage: Note = { ...page, id: Math.random().toString(36).substr(2, 9), title: `${page.title} (Copy)` };
+                  addNote(newPage);
                 }}>
                   <Copy className="w-4 h-4 mr-2" /> Duplicate
                 </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger><Layers className="w-4 h-4 mr-2" /> Move to</DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
-                    <DropdownMenuItem onClick={() => updatePage(page.id, { parentId: undefined })}>Root</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => updateNote(page.id, { parentId: undefined })}>Root</DropdownMenuItem>
                     {visiblePages.filter(p => p.id !== page.id && !p.isArchived).map(p => (
-                      <DropdownMenuItem key={p.id} onClick={() => updatePage(page.id, { parentId: p.id })}>{p.title}</DropdownMenuItem>
+                      <DropdownMenuItem key={p.id} onClick={() => updateNote(page.id, { parentId: p.id })}>{p.title}</DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
@@ -768,7 +769,7 @@ const NotesPage = () => {
                             const icons = ['📄', '📝', '🚀', '🎨', '💼', '📅', '💡', '📊', '🔧', '📦'];
                             const currentIdx = icons.indexOf(activePage.icon || '📄');
                             const nextIcon = icons[(currentIdx + 1) % icons.length];
-                            updatePage(activePage.id, { icon: nextIcon });
+                            updateNote(activePage.id, { icon: nextIcon });
                           }}
                         >
                           <Plus className="w-3 h-3" />
@@ -780,7 +781,7 @@ const NotesPage = () => {
                         className="w-full bg-transparent border-none focus:outline-none text-3xl md:text-5xl font-display font-bold placeholder:text-muted-foreground/10 text-foreground tracking-tight"
                         placeholder="Untitled Note"
                         value={activePage.title}
-                        onChange={(e) => updatePage(activePage.id, { title: e.target.value })}
+                        onChange={(e) => updateNote(activePage.id, { title: e.target.value })}
                       />
                     </div>
                   </div>
@@ -801,7 +802,7 @@ const NotesPage = () => {
                     ref={quillRef}
                     theme="snow"
                     value={activePage.content || ""}
-                    onChange={(content) => updatePage(activePage.id, { content })}
+                    onChange={(content) => updateNote(activePage.id, { content })}
                     modules={{ toolbar: false }}
                     formats={editorFormats}
                     placeholder="Press '/' for commands..."

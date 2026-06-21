@@ -72,9 +72,9 @@ const PerformancePage = () => {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-[1600px] mx-auto pb-24">
       <div className="rounded-2xl border-2 border-primary/25 bg-primary/5 px-4 py-3">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Version 1.2 preview — Performance</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Version 1.2 preview  Performance</p>
         <p className="text-sm text-muted-foreground mt-1 max-w-4xl">
-          Real-time leaderboards, filters, score breakdowns, and achievements are fully explorable below. Live scoring from your workspace, global opt-out, and shareable cards connect when v1.2 ships — try{" "}
+          Real-time leaderboards, filters, score breakdowns, and achievements are fully explorable below. Live scoring from your workspace, global opt-out, and shareable cards connect when v1.2 ships  try{" "}
           <span className="text-foreground font-semibold">Share my performance</span> for the notice.
         </p>
       </div>
@@ -268,7 +268,7 @@ const PerformancePage = () => {
               </Avatar>
               <div>
                 <p className="font-bold">{me?.name ?? "You"}</p>
-                <p className="text-xs text-muted-foreground">Rank #{myRow?.rank ?? "—"} · Score {myRow?.score ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">Rank #{myRow?.rank ?? ""} · Score {myRow?.score ?? ""}</p>
               </div>
             </div>
           </div>

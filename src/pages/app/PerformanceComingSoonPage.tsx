@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIndustryStore } from "@/lib/industry-store";
 
 const FEATURE_COPY =
-  "See who is leading the pack. Real-time rankings for individuals, teams, departments, and companies — local, continental, and global. Powered by verified work data from inside your workspace.";
+  "See who is leading the pack. Real-time rankings for individuals, teams, departments, and companies  local, continental, and global. Powered by verified work data from inside your workspace.";
 
 const PerformanceComingSoonPage = () => {
   const { toast } = useToast();
@@ -139,7 +139,7 @@ const PerformanceComingSoonPage = () => {
                 className="h-11 rounded-xl text-sm font-medium"
               />
               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-relaxed opacity-70">
-                Get notified faster — WhatsApp messages go out before emails on launch day
+                Get notified faster  WhatsApp messages go out before emails on launch day
               </p>
             </div>
           </div>

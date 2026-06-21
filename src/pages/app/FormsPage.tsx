@@ -127,13 +127,11 @@ const FormsPage = () => {
   const [activeTab, setActiveTab] = useState<"overview" | "builder" | "databases" | "responses" | "sharing">("overview");
   
   // Forms State
-  const [forms, setForms] = useState<Form[]>(INITIAL_FORMS);
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [newFormTitle, setNewFormTitle] = useState("");
 
   // Database State
-  const [bases, setBases] = useState<Base[]>(INITIAL_BASES);
   const [selectedBase, setSelectedBase] = useState<Base | null>(null);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [activeView, setActiveView] = useState<string>("");
@@ -149,7 +147,19 @@ const FormsPage = () => {
 
   const [shareSearchQuery, setShareSearchQuery] = useState("");
   const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
-  const { currentUser, adminProfile, staffList } = useIndustryStore();
+  const {
+    currentUser,
+    adminProfile,
+    staffList,
+    forms,
+    addForm,
+    updateForm,
+    deleteForm,
+    bases,
+    addBase,
+    updateBase,
+    deleteBase,
+  } = useIndustryStore();
   const activeUser = currentUser || adminProfile;
 
   const isDeptHead = activeUser?.role === 'Super Admin' || activeUser?.role?.includes('Director') || activeUser?.role?.includes('Manager');
@@ -170,21 +180,15 @@ const FormsPage = () => {
 
   const handleGrantAccess = (id: string, staff: any) => {
     if (activeTab === 'databases') {
-      setBases(prev => prev.map(b => {
-        if (b.id === id) {
-          if (b.access.find(a => a.userId === staff.id)) return b;
-          return { ...b, access: [...b.access, { userId: staff.id, name: staff.name, role: 'Editor' }] };
-        }
-        return b;
-      }));
+      const base = bases.find(b => b.id === id);
+      if (base && !base.access.find(a => a.userId === staff.id)) {
+        updateBase(id, { access: [...base.access, { userId: staff.id, name: staff.name, role: 'Editor' }] });
+      }
     } else {
-      setForms(prev => prev.map(f => {
-        if (f.id === id) {
-          if (f.access.find(a => a.userId === staff.id)) return f;
-          return { ...f, access: [...f.access, { userId: staff.id, name: staff.name, role: 'Editor' }] };
-        }
-        return f;
-      }));
+      const form = forms.find(f => f.id === id);
+      if (form && !form.access.find(a => a.userId === staff.id)) {
+        updateForm(id, { access: [...form.access, { userId: staff.id, name: staff.name, role: 'Editor' }] });
+      }
     }
     setShareSearchQuery("");
     toast({ title: "Access Granted", description: `${staff.name} can now access this ${activeTab === 'databases' ? 'database' : 'form'}.` });
@@ -192,19 +196,15 @@ const FormsPage = () => {
 
   const handleRevokeAccess = (id: string, userId: string) => {
     if (activeTab === 'databases') {
-      setBases(prev => prev.map(b => {
-        if (b.id === id) {
-          return { ...b, access: b.access.filter(a => a.userId !== userId) };
-        }
-        return b;
-      }));
+      const base = bases.find(b => b.id === id);
+      if (base) {
+        updateBase(id, { access: base.access.filter(a => a.userId !== userId) });
+      }
     } else {
-      setForms(prev => prev.map(f => {
-        if (f.id === id) {
-          return { ...f, access: f.access.filter(a => a.userId !== userId) };
-        }
-        return f;
-      }));
+      const form = forms.find(f => f.id === id);
+      if (form) {
+        updateForm(id, { access: form.access.filter(a => a.userId !== userId) });
+      }
     }
     toast({ title: "Access Revoked" });
   };
@@ -223,7 +223,7 @@ const FormsPage = () => {
       responses: [],
       access: [{ userId: activeUser?.id || 'current', name: activeUser?.name || "User", role: 'Owner' }]
     };
-    setForms(prev => [form, ...prev]);
+    addForm(form);
     setSelectedForm(form);
     setActiveTab("builder");
     setIsCreateFormOpen(false);
@@ -241,7 +241,7 @@ const FormsPage = () => {
       options: ['multiple_choice', 'checkboxes', 'dropdown'].includes(type) ? ["Option 1"] : undefined
     };
     const updatedForm = { ...selectedForm, questions: [...selectedForm.questions, newQuestion] };
-    setForms(prev => prev.map(f => f.id === selectedForm.id ? updatedForm : f));
+    updateForm(selectedForm.id, updatedForm);
     setSelectedForm(updatedForm);
     toast({ title: "Question Added" });
   };
@@ -266,21 +266,21 @@ const FormsPage = () => {
       const { id, type } = itemToDelete;
       if (type === 'question' && selectedForm) {
         const updatedForm = { ...selectedForm, questions: selectedForm.questions.filter(q => q.id !== id) };
-        setForms(prev => prev.map(f => f.id === selectedForm.id ? updatedForm : f));
+        updateForm(selectedForm.id, updatedForm);
         setSelectedForm(updatedForm);
         toast({ title: "Question Deleted" });
       } else if (type === 'record' && selectedBase && selectedTable) {
-        setBases(prev => prev.map(b => b.id === selectedBase.id ? {
-          ...b,
-          tables: b.tables.map(t => t.id === selectedTable.id ? {
+        const updatedBase = {
+          ...selectedBase,
+          tables: selectedBase.tables.map(t => t.id === selectedTable.id ? {
             ...t,
             records: t.records.filter(r => r.id !== id)
           } : t)
-        } : b));
-        setSelectedTable(prev => prev ? {
-          ...prev,
-          records: prev.records.filter(r => r.id !== id)
-        } : null);
+        };
+        updateBase(selectedBase.id, updatedBase);
+        const updatedTable = updatedBase.tables.find(t => t.id === selectedTable.id) || null;
+        setSelectedBase(updatedBase);
+        setSelectedTable(updatedTable);
         toast({ title: "Record Deleted" });
       }
       setIsDeleteModal2Open(false);
@@ -298,7 +298,7 @@ const FormsPage = () => {
       ...selectedForm, 
       questions: selectedForm.questions.map(q => q.id === qId ? { ...q, ...updates } : q) 
     };
-    setForms(prev => prev.map(f => f.id === selectedForm.id ? updatedForm : f));
+    updateForm(selectedForm.id, updatedForm);
     setSelectedForm(updatedForm);
   };
 
@@ -308,7 +308,7 @@ const FormsPage = () => {
     if (!question) return;
     const newQuestion = { ...question, id: Math.random().toString(36).substr(2, 9), title: `${question.title} (Copy)` };
     const updatedForm = { ...selectedForm, questions: [...selectedForm.questions, newQuestion] };
-    setForms(prev => prev.map(f => f.id === selectedForm.id ? updatedForm : f));
+    updateForm(selectedForm.id, updatedForm);
     setSelectedForm(updatedForm);
     toast({ title: "Question Duplicated" });
   };
@@ -332,8 +332,9 @@ const FormsPage = () => {
       records: [],
       views: [{ id: "v1", name: "Grid View", type: "grid" }]
     };
-    setBases(prev => prev.map(b => b.id === selectedBase.id ? { ...b, tables: [...b.tables, newTable] } : b));
-    setSelectedBase(prev => prev ? { ...prev, tables: [...prev.tables, newTable] } : null);
+    const updatedBase = { ...selectedBase, tables: [...selectedBase.tables, newTable] };
+    updateBase(selectedBase.id, updatedBase);
+    setSelectedBase(updatedBase);
     setSelectedTable(newTable);
     toast({ title: "Table Added" });
   };
@@ -344,11 +345,14 @@ const FormsPage = () => {
       id: Math.random().toString(36).substr(2, 9),
       data: {}
     };
-    setBases(prev => prev.map(b => b.id === selectedBase.id ? {
-      ...b,
-      tables: b.tables.map(t => t.id === selectedTable.id ? { ...t, records: [...t.records, newRecord] } : t)
-    } : b));
-    setSelectedTable(prev => prev ? { ...prev, records: [...prev.records, newRecord] } : null);
+    const updatedBase = {
+      ...selectedBase,
+      tables: selectedBase.tables.map(t => t.id === selectedTable.id ? { ...t, records: [...t.records, newRecord] } : t)
+    };
+    updateBase(selectedBase.id, updatedBase);
+    const updatedTable = updatedBase.tables.find(t => t.id === selectedTable.id) || null;
+    setSelectedBase(updatedBase);
+    setSelectedTable(updatedTable);
     toast({ title: "Record Added" });
   };
 
@@ -359,11 +363,14 @@ const FormsPage = () => {
       name: "New Field",
       type
     };
-    setBases(prev => prev.map(b => b.id === selectedBase.id ? {
-      ...b,
-      tables: b.tables.map(t => t.id === selectedTable.id ? { ...t, fields: [...t.fields, newField] } : t)
-    } : b));
-    setSelectedTable(prev => prev ? { ...prev, fields: [...prev.fields, newField] } : null);
+    const updatedBase = {
+      ...selectedBase,
+      tables: selectedBase.tables.map(t => t.id === selectedTable.id ? { ...t, fields: [...t.fields, newField] } : t)
+    };
+    updateBase(selectedBase.id, updatedBase);
+    const updatedTable = updatedBase.tables.find(t => t.id === selectedTable.id) || null;
+    setSelectedBase(updatedBase);
+    setSelectedTable(updatedTable);
     toast({ title: "Field Added" });
   };
 
@@ -553,13 +560,13 @@ const FormsPage = () => {
                       <CardContent className="pt-6 space-y-4">
                         <Input 
                           value={selectedForm.title} 
-                          onChange={(e) => setForms(prev => prev.map(f => f.id === selectedForm.id ? { ...f, title: e.target.value } : f))}
+                          onChange={(e) => updateForm(selectedForm.id, { title: e.target.value })}
                           className="text-2xl font-bold border-none px-0 h-auto focus-visible:ring-0 bg-transparent"
                           placeholder="Form Title"
                         />
                         <Textarea 
                           value={selectedForm.description}
-                          onChange={(e) => setForms(prev => prev.map(f => f.id === selectedForm.id ? { ...f, description: e.target.value } : f))}
+                          onChange={(e) => updateForm(selectedForm.id, { description: e.target.value })}
                           className="text-sm text-muted-foreground border-none px-0 h-auto min-h-[60px] focus-visible:ring-0 resize-none bg-transparent"
                           placeholder="Form description..."
                         />
@@ -660,9 +667,6 @@ const FormsPage = () => {
                   <CardContent className="space-y-2">
                     <Button className="w-full justify-start rounded-xl h-10 text-xs font-bold uppercase tracking-widest" onClick={() => addQuestion('short_answer')}>
                       <Plus className="w-4 h-4 mr-2" /> Add Question
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start rounded-xl h-10 text-xs font-bold uppercase tracking-widest" onClick={() => toast({ title: "Theme panel opened" })}>
-                      <Palette className="w-4 h-4 mr-2" /> Customize Theme
                     </Button>
                     <Button variant="outline" className="w-full justify-start rounded-xl h-10 text-xs font-bold uppercase tracking-widest" onClick={() => toast({ title: "Previewing form..." })}>
                       <Eye className="w-4 h-4 mr-2" /> Preview
@@ -834,17 +838,17 @@ const FormsPage = () => {
                                     value={record.data[field.id] || ""} 
                                     onChange={(e) => {
                                       const newData = { ...record.data, [field.id]: e.target.value };
-                                      setBases(prev => prev.map(b => b.id === selectedBase.id ? {
-                                        ...b,
-                                        tables: b.tables.map(t => t.id === selectedTable.id ? {
+                                      const updatedBase = {
+                                        ...selectedBase,
+                                        tables: selectedBase.tables.map(t => t.id === selectedTable.id ? {
                                           ...t,
                                           records: t.records.map(r => r.id === record.id ? { ...r, data: newData } : r)
                                         } : t)
-                                      } : b));
-                                      setSelectedTable(prev => prev ? {
-                                        ...prev,
-                                        records: prev.records.map(r => r.id === record.id ? { ...r, data: newData } : r)
-                                      } : null);
+                                      };
+                                      updateBase(selectedBase.id, updatedBase);
+                                      const updatedTable = updatedBase.tables.find(t => t.id === selectedTable.id) || null;
+                                      setSelectedBase(updatedBase);
+                                      setSelectedTable(updatedTable);
                                     }}
                                     className="h-7 border-none bg-transparent px-0 focus-visible:ring-0 text-xs"
                                     placeholder="Empty"
@@ -1000,8 +1004,12 @@ const FormsPage = () => {
                       <h4 className="font-bold text-sm">Direct Link</h4>
                     </div>
                     <div className="flex gap-2">
-                      <Input value="https://cynda.app/f/creative-req" readOnly className="h-9 text-xs rounded-lg" />
-                      <Button size="sm" className="rounded-lg h-9" onClick={() => toast({ title: "Link copied!" })}>Copy</Button>
+                      <Input value={selectedForm ? `https://cynda.app/f/${selectedForm.id}` : "https://cynda.app/f/"} readOnly className="h-9 text-xs rounded-lg" />
+                      <Button size="sm" className="rounded-lg h-9" onClick={() => {
+                        const link = selectedForm ? `https://cynda.app/f/${selectedForm.id}` : "https://cynda.app/f/";
+                        navigator.clipboard.writeText(link);
+                        toast({ title: "Link copied!" });
+                      }}>Copy</Button>
                     </div>
                   </CardContent>
                 </Card>

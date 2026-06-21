@@ -17,7 +17,7 @@ const CRMImportHistoryPage = () => {
           </Button>
           <h1 className="font-display text-2xl font-black uppercase tracking-tight text-foreground">Import history</h1>
           <p className="text-sm text-muted-foreground mt-2 max-w-xl">
-            Logs for data migrations and AI-mapped imports (see CYNDA_DOCUMENTATION.md — Clients → Import History).
+            Logs for data migrations and AI-mapped imports (see CYNDA_DOCUMENTATION.md  Clients → Import History).
           </p>
         </div>
       </div>

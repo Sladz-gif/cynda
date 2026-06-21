@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIndustryStore } from "@/lib/industry-store";
 
 const FEATURE_COPY =
-  "Find work. Post campaigns. Hire talent. Right here in Cynda. The Cynda Marketplace connects African professionals, agencies, and businesses — backed by real performance data, not vanity ratings. Coming soon to Ghana and beyond.";
+  "Find work. Post campaigns. Hire talent. Right here in Cynda. The Cynda Marketplace connects African professionals, agencies, and businesses  backed by real performance data, not vanity ratings. Coming soon to Ghana and beyond.";
 
 const MarketplaceComingSoonPage = () => {
   const { toast } = useToast();
@@ -139,7 +139,7 @@ const MarketplaceComingSoonPage = () => {
                 className="h-11 rounded-xl text-sm font-medium"
               />
               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-relaxed opacity-70">
-                Get notified faster — WhatsApp messages go out before emails on launch day
+                Get notified faster  WhatsApp messages go out before emails on launch day
               </p>
             </div>
           </div>

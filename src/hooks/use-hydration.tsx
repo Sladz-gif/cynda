@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 
 /**
- * Hydration hook — simplified for frontend-first build.
+ * Hydration hook  simplified for frontend-first build.
  * Returns true immediately. No persist gate.
  * Backend integration will reintroduce proper loading state.
  */

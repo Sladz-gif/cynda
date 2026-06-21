@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 import { Kanban, Users, Receipt, UserCheck } from "lucide-react";
 
 const features = [
-  { icon: Users, title: "CRM", description: "Your clients, pipelines, and follow-ups — in one place that actually remembers everything." },
-  { icon: Receipt, title: "Finance", description: "Invoices, expenses, payroll, and Mobile Money — built for how African businesses actually get paid." },
+  { icon: Users, title: "CRM", description: "Your clients, pipelines, and follow-ups  in one place that actually remembers everything." },
+  { icon: Receipt, title: "Finance", description: "Invoices, expenses, payroll, and Mobile Money  built for how African businesses actually get paid." },
   { icon: Kanban, title: "Projects", description: "Tasks, boards, and deadlines your whole team can see. No more \"I didn't know that was due.\"" },
   { icon: UserCheck, title: "HR", description: "Onboard staff, approve leave, and manage your team without a dedicated HR department." },
 ];

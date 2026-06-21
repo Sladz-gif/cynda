@@ -143,7 +143,7 @@ const DashboardPage = () => {
           </h1>
           <div className="flex flex-wrap gap-2 mt-1 sm:mt-2">
             <p className="text-[10px] sm:text-sm text-muted-foreground max-w-xl leading-relaxed">
-              One place for clients, finance, projects, people, and day‑to‑day tools — with{" "}
+              One place for clients, finance, projects, people, and day‑to‑day tools  with{" "}
               <span className="text-primary font-semibold">Cyndi</span> woven through the stack.
             </p>
           </div>
@@ -237,10 +237,10 @@ const DashboardPage = () => {
                   <div>
                     <h3 className="font-display text-sm font-black uppercase tracking-tight text-foreground">{dept.label}</h3>
                     <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                      {key === "CRM" && "Clients, pipelines, campaigns, and sales — all tracked automatically."}
-                      {key === "Finance" && "Cash position, invoices, expenses, and payroll — linked directly to your work."}
-                      {key === "Projects" && "Tasks, boards, timelines, and resources — so nothing slips."}
-                      {key === "HR" && "Directory, hiring, onboarding, and leave — managed without the paperwork."}
+                      {key === "CRM" && "Clients, pipelines, campaigns, and sales  all tracked automatically."}
+                      {key === "Finance" && "Cash position, invoices, expenses, and payroll  linked directly to your work."}
+                      {key === "Projects" && "Tasks, boards, timelines, and resources  so nothing slips."}
+                      {key === "HR" && "Directory, hiring, onboarding, and leave  managed without the paperwork."}
                       {key === "Other" && "Messaging, email, notes, automations, forms, and files."}
                     </p>
                   </div>
@@ -334,7 +334,7 @@ const DashboardPage = () => {
         <div className="flex-1 space-y-2">
           <h2 className="font-display text-base font-black uppercase tracking-tight text-foreground">Cyndi</h2>
           <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
-            Cyndi reads your documents, parses your data, and takes action in your workspace. Open the panel anytime — like asking your smartest colleague a question.
+            Cyndi reads your documents, parses your data, and takes action in your workspace. Open the panel anytime  like asking your smartest colleague a question.
           </p>
         </div>
         <Button
@@ -353,7 +353,7 @@ const DashboardPage = () => {
           <DialogHeader>
             <DialogTitle className="font-display font-black uppercase tracking-tight text-2xl">Create task</DialogTitle>
             <DialogDescription className="text-xs font-medium text-muted-foreground">
-              Adds to your workspace task list — refine details anytime in Projects.
+              Adds to your workspace task list  refine details anytime in Projects.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">

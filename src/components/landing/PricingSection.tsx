@@ -342,7 +342,7 @@ const PricingSection = () => {
                 What happens after the trial?
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground">
-                You choose a plan and enter payment details. If you don't, your workspace pauses — nothing is deleted. Your data stays safe for 30 days.
+                You choose a plan and enter payment details. If you don't, your workspace pauses  nothing is deleted. Your data stays safe for 30 days.
               </AccordionContent>
             </AccordionItem>
 

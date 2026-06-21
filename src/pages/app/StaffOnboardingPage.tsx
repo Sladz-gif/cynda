@@ -120,12 +120,7 @@ const StaffOnboardingPage = () => {
     setIsParsing(true);
     // Simulate Cyndi AI Parsing
     setTimeout(() => {
-      const mockParsed = [
-        { id: '1', name: "Sarah Chen", email: "sarah@company.com", role: "Manager", department: "Engineering", title: "Lead Developer", confidence: 'High', suggestedTools: ['tasks', 'chat', 'notes', 'files'] },
-        { id: '2', name: "Marcus Johnson", email: "marcus@company.com", role: "Employee", department: "Design", title: "UI Designer", confidence: 'High', suggestedTools: ['tasks', 'chat', 'notes', 'files'] },
-        { id: '3', name: "Elena Rodriguez", email: "elena@company.com", role: "Manager", department: "Operations", title: "Operations Head", confidence: 'Medium', suggestedTools: ['tasks', 'chat', 'notes'] },
-        { id: '4', name: "David Kim", email: "david@company.com", role: "Employee", department: "Marketing", title: "Growth lead", confidence: 'Low', suggestedTools: ['marketing', 'crm-dashboard', 'chat'] },
-      ];
+      const mockParsed: any[] = [];
       
       setMappings([
         { fileColumn: 'Full Name', mappedTo: 'Name', confidence: 'High' },

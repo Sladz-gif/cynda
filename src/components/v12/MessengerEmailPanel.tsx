@@ -53,7 +53,7 @@ function cyndaAddressFromName(name?: string) {
   return `${base}@cynda.xyz`;
 }
 
-/** v1.2 @cynda.xyz email client — embedded in Messenger (`/app/messages?tab=email`). */
+/** v1.2 @cynda.xyz email client  embedded in Messenger (`/app/messages?tab=email`). */
 const MessengerEmailPanel = () => {
   const { adminProfile, currentUser } = useIndustryStore();
   const active = currentUser || adminProfile;
@@ -119,7 +119,7 @@ const MessengerEmailPanel = () => {
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Email @cynda.xyz · v1.2 preview</p>
           <p className="text-xs text-muted-foreground mt-0.5 max-w-3xl">
-            Same client as the full spec: folders, reading pane, compose. Live send/receive and OAuth ship in v1.2 — use Send or connect to see “coming soon”.
+            Same client as the full spec: folders, reading pane, compose. Live send/receive and OAuth ship in v1.2  use Send or connect to see “coming soon”.
           </p>
         </div>
         <Badge variant="outline" className="shrink-0 border-primary/40 text-[9px] font-black uppercase tracking-widest">
@@ -356,7 +356,7 @@ const MessengerEmailPanel = () => {
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] font-black uppercase text-muted-foreground">To</Label>
-              <Input value={composeTo} onChange={(e) => setComposeTo(e.target.value)} placeholder="Recipients — autocomplete from CRM when live" className="rounded-xl text-xs" />
+              <Input value={composeTo} onChange={(e) => setComposeTo(e.target.value)} placeholder="Recipients  autocomplete from CRM when live" className="rounded-xl text-xs" />
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] font-black uppercase text-muted-foreground">Subject</Label>

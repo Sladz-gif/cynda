@@ -205,10 +205,10 @@ const SignUpPage = () => {
       console.error("Sign up error:", error);
       toast({
         title: "Error",
-        description: "Something went wrong on our end. Your information is safe — try again.",
+        description: "Something went wrong on our end. Your information is safe  try again.",
         variant: "destructive"
       });
-      setErrors({ general: "Something went wrong on our end. Your information is safe — try again." });
+      setErrors({ general: "Something went wrong on our end. Your information is safe  try again." });
     } finally {
       setIsLoading(false);
     }
@@ -234,7 +234,7 @@ const SignUpPage = () => {
           <div className="space-y-4">
             <h1 className="text-4xl font-display font-black uppercase tracking-tighter">Welcome to Cynda, {firstName}.</h1>
             <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest opacity-80">
-              Your workspace is being set up — this takes about 10 seconds.
+              Your workspace is being set up  this takes about 10 seconds.
             </p>
           </div>
           <div className="w-48 h-1 bg-secondary mx-auto rounded-full overflow-hidden">
@@ -579,7 +579,7 @@ const SignUpPage = () => {
                     htmlFor="terms" 
                     className="text-[11px] font-medium text-muted-foreground leading-relaxed cursor-pointer"
                   >
-                    By creating an account you agree to our <Link to="/terms" className="text-primary font-black hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-primary font-black hover:underline">Privacy Policy</Link>. We wrote them in plain English — they're worth a read.
+                    By creating an account you agree to our <Link to="/terms" className="text-primary font-black hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-primary font-black hover:underline">Privacy Policy</Link>. We wrote them in plain English  they're worth a read.
                   </Label>
                 </div>
               </div>

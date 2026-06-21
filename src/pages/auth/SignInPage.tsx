@@ -27,7 +27,7 @@ function getTimeBasedGreeting(): { greeting: string; message: string } {
   } else {
     return {
       greeting: "Good evening",
-      message: "Working late — we've got you."
+      message: "Working late  we've got you."
     };
   }
 }

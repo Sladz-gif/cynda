@@ -78,7 +78,7 @@ const SurveillancePage = () => {
           </p>
           <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
             A single place to review who did what across CRM, Finance, HR, Files, and Automations. Filters and the table below are fully explorable. Streaming ingestion, retention policies, SIEM export, and alerts will
-            connect when your workspace enables the production surveillance layer — use <span className="text-foreground font-semibold">Export</span> or <span className="text-foreground font-semibold">Create alert</span> for the
+            connect when your workspace enables the production surveillance layer  use <span className="text-foreground font-semibold">Export</span> or <span className="text-foreground font-semibold">Create alert</span> for the
             coming-soon notice.
           </p>
         </div>

@@ -84,7 +84,7 @@ const ResetPasswordPage = () => {
         navigate("/app/dashboard", { replace: true });
       }, 2000); // Slightly longer to show success message
     } catch {
-      setSubmitError("Something went wrong on our end. Try again — your information is safe.");
+      setSubmitError("Something went wrong on our end. Try again  your information is safe.");
     } finally {
       setIsLoading(false);
     }

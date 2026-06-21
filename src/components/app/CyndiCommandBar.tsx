@@ -57,14 +57,7 @@ const CyndiCommandBar = ({ open, onOpenChange }: Props) => {
     onOpenChange(false);
   };
 
-  const mockSearchResults = [
-    { id: '1', type: 'contact', name: 'Sarah Chen', detail: 'Manager at Acme Corp', icon: User, path: '/app/crm' },
-    { id: '2', type: 'task', name: 'Review Q3 Financials', detail: 'Project Alpha • Due Tomorrow', icon: CheckCircle, path: '/app/projects' },
-    { id: '3', type: 'deal', name: 'Enterprise License', detail: 'Acme Corp • $50,000 • Proposal', icon: Briefcase, path: '/app/crm' },
-    { id: '4', type: 'file', name: 'payroll_march_2024.pdf', detail: 'Finance • Uploaded 2 days ago', icon: File, path: '/app/file-management' },
-    { id: '5', type: 'note', name: 'Engineering Wiki', detail: 'Shared with 12 people', icon: FileText, path: '/app/notes' },
-    { id: '6', type: 'employee', name: 'Marcus Johnson', detail: 'Product Designer • Engineering', icon: UserCheck, path: '/app/hr' },
-  ];
+  const mockSearchResults: any[] = [];
 
   const filteredResults = search.length > 0 
     ? mockSearchResults.filter(r => r.name.toLowerCase().includes(search.toLowerCase()) || r.detail.toLowerCase().includes(search.toLowerCase()))

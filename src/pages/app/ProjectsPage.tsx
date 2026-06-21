@@ -74,6 +74,7 @@ const ProjectsPage = () => {
   } = useIndustryStore();
   const location = useLocation();
   const navigate = useNavigate();
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   
   const allViews = [
     { id: "kanban", label: "Board", icon: KanbanIcon },
@@ -85,7 +86,7 @@ const ProjectsPage = () => {
 
   const views = useMemo(() => {
     const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
-    if (userType === 'enterprise' || userType === 'organisation') return allViews;
+    if (userType === 'enterprise' || userType === 'organisation' || userType === 'solo') return allViews;
     
     // Map internal view IDs to industry-store tool IDs
     const idMap: Record<string, string> = {
@@ -715,35 +716,83 @@ const ProjectsPage = () => {
       {view === "calendar" && (
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="font-display font-bold text-lg uppercase tracking-widest">March 2026</h3>
+            <h3 className="font-display font-bold text-lg uppercase tracking-widest">
+              {currentMonth.toLocaleString("default", { month: "long" })} {currentMonth.getFullYear()}
+            </h3>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="rounded-lg h-8 px-3">Prev</Button>
-              <Button variant="outline" size="sm" className="rounded-lg h-8 px-3">Next</Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="rounded-lg h-8 px-3"
+                onClick={() => {
+                  setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
+                }}
+              >
+                Prev
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="rounded-lg h-8 px-3"
+                onClick={() => {
+                  setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+                }}
+              >
+                Next
+              </Button>
             </div>
           </div>
           <div className="grid grid-cols-7 gap-px bg-border rounded-xl overflow-hidden border border-border">
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
               <div key={d} className="bg-secondary/30 px-2 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{d}</div>
             ))}
-            {Array.from({ length: 35 }, (_, i) => {
-              const day = i - 1; 
-              const dateNum = day + 1;
-              const isCurrentMonth = dateNum >= 1 && dateNum <= 31;
-              const isToday = dateNum === 23;
-              const tasksOnDay = isCurrentMonth ? tasks.filter((t) => t.due.includes(String(dateNum)) && t.due.includes("Mar")) : [];
-              return (
-                <div key={i} className={`bg-card min-h-[100px] p-2 hover:bg-secondary/5 transition-colors cursor-pointer border-none ${!isCurrentMonth ? "opacity-30" : ""}`}>
-                  <span className={`text-xs font-bold ${isToday ? "bg-primary text-primary-foreground w-6 h-6 rounded-full flex items-center justify-center shadow-md shadow-primary/20" : "text-muted-foreground"}`}>
-                    {isCurrentMonth ? dateNum : ""}
-                  </span>
-                  <div className="mt-2 space-y-1">
-                    {tasksOnDay.map((t) => (
-                      <div key={t.id} className="text-[9px] font-bold px-2 py-1 rounded bg-primary/10 text-primary truncate border border-primary/20">{t.title}</div>
-                    ))}
+            {(() => {
+              const year = currentMonth.getFullYear();
+              const month = currentMonth.getMonth();
+              const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday
+              const daysInMonth = new Date(year, month + 1, 0).getDate();
+              const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1; // Adjust to Monday start
+              const totalDays = 35; // 5 weeks display
+              const today = new Date();
+              const currentDate = today.getDate();
+              const currentMonthNum = today.getMonth();
+              const currentYearNum = today.getFullYear();
+              
+              const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+              const currentMonthName = monthNames[month];
+              
+              return Array.from({ length: totalDays }, (_, i) => {
+                const dayNum = i - adjustedFirstDay;
+                const isCurrentMonth = dayNum >= 1 && dayNum <= daysInMonth;
+                const isToday = isCurrentMonth && dayNum === currentDate && month === currentMonthNum && year === currentYearNum;
+                
+                const tasksOnDay = isCurrentMonth 
+                  ? tasks.filter(t => {
+                      // Try to match both "Mar 23" and "03-23-2026" formats
+                      const taskDate = t.due || "";
+                      const dayStr = String(dayNum);
+                      return (
+                        taskDate.includes(currentMonthName) && taskDate.includes(dayStr) ||
+                        taskDate.includes(`${String(month + 1).padStart(2, "0")}-${dayStr.padStart(2, "0")}`) ||
+                        taskDate.includes(`${dayStr} ${currentMonthName}`)
+                      );
+                    }) 
+                  : [];
+                
+                return (
+                  <div key={i} className={`bg-card min-h-[100px] p-2 hover:bg-secondary/5 transition-colors cursor-pointer border-none ${!isCurrentMonth ? "opacity-30" : ""}`}>
+                    <span className={`text-xs font-bold ${isToday ? "bg-primary text-primary-foreground w-6 h-6 rounded-full flex items-center justify-center shadow-md shadow-primary/20" : "text-muted-foreground"}`}>
+                      {isCurrentMonth ? dayNum : ""}
+                    </span>
+                    <div className="mt-2 space-y-1">
+                      {tasksOnDay.map((t) => (
+                        <div key={t.id} className="text-[9px] font-bold px-2 py-1 rounded bg-primary/10 text-primary truncate border border-primary/20">{t.title}</div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         </div>
       )}

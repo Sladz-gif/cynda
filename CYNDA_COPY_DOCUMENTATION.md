@@ -22,8 +22,8 @@ This document contains all text, labels, descriptions, and UI copy for the Cynda
 **Hero Section**
 - "Built in Ghana. Built for Africa."
 - "Your business runs on too many tabs. Fix that."
-- "Cynda is the one workspace where African businesses manage clients, projects, money, and people — without juggling seven apps and a spreadsheet."
-- "Start free — no card needed"
+- "Cynda is the one workspace where African businesses manage clients, projects, money, and people  without juggling seven apps and a spreadsheet."
+- "Start free  no card needed"
 - "See how it works"
 
 **Problem Section (New)**
@@ -40,13 +40,13 @@ This document contains all text, labels, descriptions, and UI copy for the Cynda
 - "Cynda replaces the stack you've been patching together since Day 1."
 
 **Feature Cards**
-- "CRM" - Your clients, pipelines, and follow-ups — in one place that actually remembers everything.
-- "Finance" - Invoices, expenses, payroll, and Mobile Money — built for how African businesses actually get paid.
+- "CRM" - Your clients, pipelines, and follow-ups  in one place that actually remembers everything.
+- "Finance" - Invoices, expenses, payroll, and Mobile Money  built for how African businesses actually get paid.
 - "Projects" - Tasks, boards, and deadlines your whole team can see. No more "I didn't know that was due."
 - "HR" - Onboard staff, approve leave, and manage your team without a dedicated HR department.
 
 **Cyndi Section (AI)**
-- "Meet Cyndi — your AI business partner"
+- "Meet Cyndi  your AI business partner"
 - "Cyndi reads your documents, maps your data, drafts your updates, and keeps your workspace running. Like having a smart EA who never sleeps and never needs orientation."
 - "Talk to Cyndi"
 
@@ -155,7 +155,7 @@ This document contains all text, labels, descriptions, and UI copy for the Cynda
 **Header**
 - "Cynda · Work OS"
 - "Good morning, [name]. Here's where things stand."
-- "One place for clients, finance, projects, people, and day‑to‑day tools — with Cyndi woven through the stack."
+- "One place for clients, finance, projects, people, and day‑to‑day tools  with Cyndi woven through the stack."
 
 **Trial Banner**
 - "You're on the free trial"
@@ -171,10 +171,10 @@ This document contains all text, labels, descriptions, and UI copy for the Cynda
 **Departments Section**
 - "Your business at a glance"
 - Department descriptions:
-  - CRM: "Clients, pipelines, campaigns, and sales — all tracked automatically."
-  - Finance: "Cash position, invoices, expenses, and payroll — linked directly to your work."
-  - Projects: "Tasks, boards, timelines, and resources — so nothing slips."
-  - HR: "Directory, hiring, onboarding, and leave — managed without the paperwork."
+  - CRM: "Clients, pipelines, campaigns, and sales  all tracked automatically."
+  - Finance: "Cash position, invoices, expenses, and payroll  linked directly to your work."
+  - Projects: "Tasks, boards, timelines, and resources  so nothing slips."
+  - HR: "Directory, hiring, onboarding, and leave  managed without the paperwork."
   - Other: "Messaging, email, notes, automations, forms, and files."
 - "Go to Tools" / "Request Access" / "Unlock Department"
 
@@ -186,12 +186,12 @@ This document contains all text, labels, descriptions, and UI copy for the Cynda
 - "Unlimited seats, real control" - Add your whole team. Set permissions. Scale without chaos.
 
 **Cyndi Section**
-- "Cyndi reads your documents, parses your data, and takes action in your workspace. Open the panel anytime — like asking your smartest colleague a question."
+- "Cyndi reads your documents, parses your data, and takes action in your workspace. Open the panel anytime  like asking your smartest colleague a question."
 - "Ask Cyndi"
 
 **Create Task Dialog**
 - "Create task"
-- "Adds to your workspace task list — refine details anytime in Projects."
+- "Adds to your workspace task list  refine details anytime in Projects."
 - "Title"
 - "e.g. Send the revised proposal"
 - "Let Cyndi handle it"
@@ -675,8 +675,8 @@ This document contains all text, labels, descriptions, and UI copy for the Cynda
 ### Performance Page (`src/pages/app/PerformancePage.tsx`)
 
 **Header**
-- "Version 1.2 preview — Performance"
-- "Real-time leaderboards, filters, score breakdowns, and achievements are fully explorable below. Live scoring from your workspace, global opt-out, and shareable cards connect when v1.2 ships — try Share my performance for the notice."
+- "Version 1.2 preview  Performance"
+- "Real-time leaderboards, filters, score breakdowns, and achievements are fully explorable below. Live scoring from your workspace, global opt-out, and shareable cards connect when v1.2 ships  try Share my performance for the notice."
 
 **Hero**
 - "Global #1 right now"
@@ -747,7 +747,7 @@ This document contains all text, labels, descriptions, and UI copy for the Cynda
 **Header**
 - "Back to CRM"
 - "Import history"
-- "Logs for data migrations and AI-mapped imports (see CYNDA_DOCUMENTATION.md — Clients → Import History)."
+- "Logs for data migrations and AI-mapped imports (see CYNDA_DOCUMENTATION.md  Clients → Import History)."
 
 **Import List**
 - "Recent imports"
@@ -772,7 +772,7 @@ This document contains all text, labels, descriptions, and UI copy for the Cynda
 - "Submitted" / "Local preview"
 - "Email"
 - "WhatsApp number (optional)"
-- "Get notified faster — WhatsApp messages go out before emails on launch day"
+- "Get notified faster  WhatsApp messages go out before emails on launch day"
 - "Let me know when it's ready"
 - "You're on the list. We'll reach out the moment it's live."
 
@@ -784,7 +784,7 @@ This document contains all text, labels, descriptions, and UI copy for the Cynda
 
 **Feature Description**
 - "Find work. Post campaigns. Hire talent. Right here in Cynda."
-- "The Cynda Marketplace connects African professionals, agencies, and businesses — backed by real performance data, not vanity ratings. Coming soon to Ghana and beyond."
+- "The Cynda Marketplace connects African professionals, agencies, and businesses  backed by real performance data, not vanity ratings. Coming soon to Ghana and beyond."
 
 **Waitlist Form**
 - "Marketplace"
@@ -793,15 +793,15 @@ This document contains all text, labels, descriptions, and UI copy for the Cynda
 - "Submitted" / "Local preview"
 - "Email"
 - "WhatsApp number (optional)"
-- "Get notified faster — WhatsApp messages go out before emails on launch day"
+- "Get notified faster  WhatsApp messages go out before emails on launch day"
 - "Let me know when it's ready"
 - "You're on the list. We'll reach out the moment it's live."
 
 ### Marketplace Page (`src/pages/app/MarketplacePage.tsx`)
 
 **Header**
-- "Version 1.2 preview — Cynda Marketplace"
-- "Browse categories, filters, listing detail, packages, campaigns UI, and dashboards. Orders, payments, OAuth, promotions, and applications stay disabled until launch — use Order now, Apply, or Promote to see the coming-soon toast."
+- "Version 1.2 preview  Cynda Marketplace"
+- "Browse categories, filters, listing detail, packages, campaigns UI, and dashboards. Orders, payments, OAuth, promotions, and applications stay disabled until launch  use Order now, Apply, or Promote to see the coming-soon toast."
 - "Workspace: [userType] · guest browsing on marketing site will mirror this layout in v1.2"
 
 **Tabs**
@@ -810,7 +810,7 @@ This document contains all text, labels, descriptions, and UI copy for the Cynda
 
 **Discover Tab**
 - "Hire and sell on verified performance"
-- "Listings show real Cynda Performance Scores, completion rates, and tenure — not vanity stars alone. Featured carousel and trending searches rotate with live demand in v1.2."
+- "Listings show real Cynda Performance Scores, completion rates, and tenure  not vanity stars alone. Featured carousel and trending searches rotate with live demand in v1.2."
 - "Search listings, sellers, campaigns…"
 - Categories: "All", [category list]
 - "Filters"
@@ -828,12 +828,12 @@ This document contains all text, labels, descriptions, and UI copy for the Cynda
 - "Preview"
 - "Campaigns"
 - "Hiring & open calls"
-- "Post roles, shortlist applicants, and message candidates — UI ships in v1.2 with Performance-backed applications."
+- "Post roles, shortlist applicants, and message candidates  UI ships in v1.2 with Performance-backed applications."
 - "Post campaign"
 
 **My Marketplace Tab**
 - "My marketplace"
-- "Tabs for My listings, Orders, Applications, Saved, and Promotions — fully interactive once v1.2 is live."
+- "Tabs for My listings, Orders, Applications, Saved, and Promotions  fully interactive once v1.2 is live."
 - "My listings"
 - "My orders"
 - "Applications"
@@ -1035,7 +1035,7 @@ This document contains all text, labels, descriptions, and UI copy for the Cynda
 
 **Header**
 - "Surveillance · activity & audit trail"
-- "A single place to review who did what across CRM, Finance, HR, Files, and Automations. Filters and the table below are fully explorable. Streaming ingestion, retention policies, SIEM export, and alerts will connect when your workspace enables the production surveillance layer — use Export or Create alert for the coming-soon notice."
+- "A single place to review who did what across CRM, Finance, HR, Files, and Automations. Filters and the table below are fully explorable. Streaming ingestion, retention policies, SIEM export, and alerts will connect when your workspace enables the production surveillance layer  use Export or Create alert for the coming-soon notice."
 - "Preview data"
 
 **Stats**
@@ -1364,11 +1364,11 @@ Cynda speaks like a sharp, friendly co-founder who grew up in Ghana and built a 
 - Say "your business" not "your organization"
 - Say "team members" not "users"
 - Say "get paid" not "process transactions"
-- Say "Cyndi" (AI) and "Cynda" (platform) — always
+- Say "Cyndi" (AI) and "Cynda" (platform)  always
 - Reference African payment methods by name: MTN Mobile Money, Vodafone Cash, AirtelTigo, Paystack
-- Don't say "transform your workflow" — say what actually changes
+- Don't say "transform your workflow"  say what actually changes
 - Use present tense: "Cynda tracks your clients" not "Cynda will help you track"
-- Avoid filler CTAs like "Learn more" — be specific: "See how Finance works"
+- Avoid filler CTAs like "Learn more"  be specific: "See how Finance works"
 
 ### What makes Cynda different in one sentence
 *"The only Work OS built to understand how African businesses actually run."*
@@ -1408,6 +1408,6 @@ Cynda speaks like a sharp, friendly co-founder who grew up in Ghana and built a 
 
 ---
 
-*Cynda Copy Rewrite — Pink Cow Edition*
+*Cynda Copy Rewrite  Pink Cow Edition*
 *Positioning: African SMEs → Ghana first, expand across the continent*
 *Last updated: June 2026*

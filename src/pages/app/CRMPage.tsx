@@ -158,8 +158,8 @@ const CRMPage = () => {
   ], []);
 
   const navItems = useMemo(() => {
-    // If Admin, show everything
-    if (isDeptHead) return allNavItems;
+    // If Admin or Solo user, show everything
+    if (isDeptHead || userType === 'solo') return allNavItems;
     
     // For regular users, show based on effective tools
     const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
@@ -168,7 +168,7 @@ const CRMPage = () => {
       return safeModules.includes(item.id);
     });
     return filtered;
-  }, [selectedModules, isDeptHead, allNavItems]);
+  }, [selectedModules, isDeptHead, userType, allNavItems]);
 
   const [tab, setTab] = useState<string>(navItems[0]?.id || "crm");
 
@@ -639,11 +639,11 @@ const CRMPage = () => {
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-xs font-bold text-foreground uppercase tracking-tight whitespace-nowrap">
-                            {crmCompanies.find(c => c.id === contact.companyId)?.name || "—"}
+                            {crmCompanies.find(c => c.id === contact.companyId)?.name || ""}
                           </span>
                         </td>
                         <td className="hidden md:table-cell px-6 py-4">
-                          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{contact.role || "—"}</span>
+                          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{contact.role || ""}</span>
                         </td>
                         <td className="px-6 py-4">
                           <Badge className={cn(

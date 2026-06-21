@@ -94,7 +94,7 @@ const AppTopBar = ({ title }: AppTopBarProps) => {
             className="h-8 gap-1 px-2 sm:px-3 rounded-lg uppercase font-black text-[9px] tracking-widest border border-border/80 bg-secondary/80 hover:bg-secondary"
             onClick={() => {
               setCyndiDraft(
-                `I'm in ${title}. Help me with a task in this part of Cynda — suggest steps, draft content, or break the work down.`
+                `I'm in ${title}. Help me with a task in this part of Cynda  suggest steps, draft content, or break the work down.`
               );
               setCyndiOpen(true);
             }}

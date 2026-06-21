@@ -281,7 +281,7 @@ const OnboardingPage = () => {
         Reset App State
       </button>
 
-      {/* Left panel — branding */}
+      {/* Left panel  branding */}
       <div className="hidden lg:flex w-[420px] bg-gradient-dark flex-col justify-between p-10 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-primary/10 blur-[120px]" />
@@ -316,7 +316,7 @@ const OnboardingPage = () => {
         </div>
       </div>
 
-      {/* Right panel — content */}
+      {/* Right panel  content */}
       <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 md:p-10 lg:p-12 overflow-y-auto">
         <div className="w-full max-w-xl py-8 sm:py-12">
           {/* Mobile progress indicator */}

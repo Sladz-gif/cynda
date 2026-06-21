@@ -73,7 +73,7 @@ const ForgotPasswordPage = () => {
       }
     } catch (error) {
       console.error("Reset error:", error);
-      setErrors({ general: "Something went wrong on our end. Try again — your information is safe." });
+      setErrors({ general: "Something went wrong on our end. Try again  your information is safe." });
       setIsLoading(false);
     }
   };

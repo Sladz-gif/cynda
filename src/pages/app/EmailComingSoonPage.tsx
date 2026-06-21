@@ -140,7 +140,7 @@ const EmailComingSoonPage = () => {
                 className="h-11 rounded-xl text-sm font-medium"
               />
               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-relaxed opacity-70">
-                Get notified faster — WhatsApp messages go out before emails on launch day
+                Get notified faster  WhatsApp messages go out before emails on launch day
               </p>
             </div>
           </div>

@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useIndustryStore, Staff, CRMContact } from "@/lib/industry-store";
 import { useLocation } from "react-router-dom";
-// Email UI removed from Chat — keep chat-only experience.
+// Email UI removed from Chat  keep chat-only experience.
 import {
   Dialog,
   DialogContent,

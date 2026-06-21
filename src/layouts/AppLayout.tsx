@@ -1,7 +1,7 @@
 import { Outlet, useLocation, Navigate, Link } from "react-router-dom";
 import AppSidebar from "@/components/app/AppSidebar";
 import AppTopBar from "@/components/app/AppTopBar";
-import CyndiPanel from "@/components/app/CyndiPanel";
+import CyndiComingSoonPanel from "@/components/app/CyndiComingSoonPanel";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useIndustryStore, DEPARTMENTS, Staff, Notification, DEFAULT_SELECTED_MODULES } from "@/lib/industry-store";
@@ -296,7 +296,7 @@ const AppLayout = () => {
                     transition={{ type: "spring", damping: 30, stiffness: 300 }}
                     className="fixed inset-y-0 right-0 z-[100] w-full sm:w-[400px] md:w-[450px] lg:w-[500px] flex min-h-0 flex-col bg-card shadow-[-20px_0_60px_-15px_rgba(0,0,0,0.3)] border-l border-border"
                   >
-                    <CyndiPanel onClose={() => setCyndiOpen(false)} />
+                    <CyndiComingSoonPanel onClose={() => setCyndiOpen(false)} />
                   </motion.div>
                 )}
               </AnimatePresence>

@@ -135,8 +135,8 @@ export async function callGemini(prompt: string, context: any = {}): Promise<str
 
 /**
  * Dedicated callCyndi function for conversational AI.
- * @param priorMessages — thread before this turn (exclude the message you are sending now)
- * @param newUserText — current user message only
+ * @param priorMessages  thread before this turn (exclude the message you are sending now)
+ * @param newUserText  current user message only
  */
 export async function callCyndi(
   priorMessages: { role: string; content: string }[],

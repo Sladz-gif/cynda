@@ -3,18 +3,21 @@ import { persist } from "zustand/middleware";
 import { TOOL_METADATA } from "./tool-metadata";
 import { createAuthSlice, AuthSlice, UserType, SubscriptionTier, AdminProfile, Staff } from "./auth-slice";
 import { createCRMSlice, CRMSlice, CRMContact, CRMCompany, CRMDeal } from "./crm-slice";
-import { createWorkspaceSlice, WorkspaceSlice, WorkspaceTask, WorkspaceProject, WorkspaceInvoice, WorkspaceExpense, Notification, ThemeSettings, DEFAULT_SELECTED_MODULES, TRIAL_ALLOWED_TOOLS } from "./workspace-slice";
+import { createWorkspaceSlice, WorkspaceSlice, WorkspaceTask, WorkspaceProject, WorkspaceInvoice, WorkspaceExpense, WorkspacePayroll, WorkspaceAsset, Notification, ThemeSettings, DEFAULT_SELECTED_MODULES, TRIAL_ALLOWED_TOOLS } from "./workspace-slice";
 import { createAutomationSlice, AutomationSlice, AutomationTemplate, ActiveAutomation, AutomationLog, AutomationDepartment } from "./automation-slice";
 import { createPeopleSlice, PeopleSlice, ExternalContact, ExternalAccount, StaffCustomField, CustomDepartment } from "./people-slice";
+import { createNotesSlice, NotesSlice, Note } from "./notes-slice";
+import { createFormsSlice, FormsSlice } from "./forms-slice";
 import { User, Building2, Users, Globe, LucideIcon } from "lucide-react";
 
 // Re-export types for backward compatibility
 export type { 
   UserType, SubscriptionTier, AdminProfile, Staff, 
   CRMContact, CRMCompany, CRMDeal,
-  WorkspaceTask, WorkspaceProject, WorkspaceInvoice, WorkspaceExpense, Notification, ThemeSettings,
+  WorkspaceTask, WorkspaceProject, WorkspaceInvoice, WorkspaceExpense, WorkspacePayroll, WorkspaceAsset, Notification, ThemeSettings,
   AutomationTemplate, ActiveAutomation, AutomationLog, AutomationDepartment,
-  ExternalContact, ExternalAccount, StaffCustomField, CustomDepartment
+  ExternalContact, ExternalAccount, StaffCustomField, CustomDepartment,
+  Note, NotesSlice
 };
 
 export { DEFAULT_SELECTED_MODULES, TRIAL_ALLOWED_TOOLS };
@@ -106,7 +109,7 @@ export const DEPARTMENTS = {
   },
 };
 
-export type IndustryState = AuthSlice & CRMSlice & WorkspaceSlice & AutomationSlice & PeopleSlice;
+export type IndustryState = AuthSlice & CRMSlice & WorkspaceSlice & AutomationSlice & PeopleSlice & NotesSlice & FormsSlice;
 
 export const useIndustryStore = create<IndustryState>()(
   persist(
@@ -116,6 +119,8 @@ export const useIndustryStore = create<IndustryState>()(
       ...createWorkspaceSlice(...a),
       ...createAutomationSlice(...a),
       ...createPeopleSlice(...a),
+      ...createNotesSlice(...a),
+      ...createFormsSlice(...a),
       // Override logout to clear all relevant slices if needed
       logout: () => {
         const [set] = a;

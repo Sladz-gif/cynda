@@ -16,19 +16,19 @@
     --popover: 30 20% 96%;
     --popover-foreground: 228 45% 8%;
 
-    /* Burning Orange — Primary */
+    /* Burning Orange  Primary */
     --primary: 24 100% 50%;
     --primary-foreground: 0 0% 100%;
 
-    /* Pale Cashmere — Secondary */
+    /* Pale Cashmere  Secondary */
     --secondary: 25 25% 87%;
     --secondary-foreground: 228 45% 8%;
 
-    /* Burning Orange — Accent */
+    /* Burning Orange  Accent */
     --accent: 24 100% 50%;
     --accent-foreground: 0 0% 100%;
 
-    /* Muted — Cinnamon Ice */
+    /* Muted  Cinnamon Ice */
     --muted: 22 30% 76%;
     --muted-foreground: 228 35% 22%;
 
@@ -40,7 +40,7 @@
     --ring: 24 100% 50%;
     --radius: 0.75rem;
 
-    /* Wahoo — deep navy for sections */
+    /* Wahoo  deep navy for sections */
     --wahoo: 230 32% 23%;
     --wahoo-foreground: 30 20% 96%;
 

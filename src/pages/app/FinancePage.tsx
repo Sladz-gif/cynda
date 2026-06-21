@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { 
-  TrendingUp, TrendingDown, DollarSign, Download, Plus, Search, 
+import {
+  TrendingUp, TrendingDown, DollarSign, Download, Plus, Search,
   Calendar, FileText, Target, PieChart as PieChartIcon, ArrowRight,
-  Filter, MoreHorizontal, LayoutDashboard, Receipt, Wallet, 
+  Filter, MoreHorizontal, LayoutDashboard, Receipt, Wallet,
   CreditCard, Users, Clock, ShieldCheck, Globe, Zap, CheckCircle2,
   AlertCircle, Package, Building2, Landmark, History, Link2, ExternalLink,
-  Edit, Trash2, MoreVertical, Send, Eye, BarChart3, Check, User, Bot
+  Edit, Trash2, MoreVertical, Send, Eye, BarChart3, Check, User, Bot, Upload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -64,6 +64,10 @@ const FinancePage = () => {
     addInvoice: storeAddInvoice,
     expenses: storeExpenses = [],
     addExpense: storeAddExpense,
+    payroll: storePayroll = [],
+    addPayroll: storeAddPayroll,
+    assets: storeAssets = [],
+    addAsset: storeAddAsset,
   } = useIndustryStore();
   const { toast } = useToast();
   const location = useLocation();
@@ -86,7 +90,7 @@ const FinancePage = () => {
 
   const tools = useMemo(() => {
     const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
-    if (userType === 'enterprise' || userType === 'organisation') return allTools;
+    if (userType === 'enterprise' || userType === 'organisation' || userType === 'solo') return allTools;
     
     const filtered = allTools.filter(item => safeModules.includes(item.id));
     
@@ -131,7 +135,7 @@ const FinancePage = () => {
     storeExpenses.filter(e => e.status === 'Approved').reduce((sum, e) => sum + e.amount, 0)
   , [storeExpenses]);
 
-  const netIncome = revenueTotal - expenseTotal;
+  const netProfit = revenueTotal - expenseTotal;
   const burnRate = expenseTotal / 6; // Average over 6 months
   const profitMargin = revenueTotal > 0 ? (netProfit / revenueTotal) * 100 : 0;
 
@@ -190,9 +194,21 @@ const FinancePage = () => {
     }));
   }, [storeExpenses]);
 
-  const [payroll, setPayroll] = useState<{ id: string; employee: string; role: string; amount: string; status: string }[]>([]);
+  const [payroll, setPayroll] = useState<{ id: string; employee: string; role: string; amount: string; status: string }[]>(storePayroll.map(p => ({
+    id: p.id,
+    employee: p.employee,
+    role: p.role,
+    amount: `$${p.amount.toLocaleString()}`,
+    status: p.status
+  })));
 
-  const [inventory, setInventory] = useState<{ id: string; item: string; serial: string; value: string; status: string }[]>([]);
+  const [inventory, setInventory] = useState<{ id: string; item: string; serial: string; value: string; status: string }[]>(storeAssets.map(a => ({
+    id: a.id,
+    item: a.item,
+    serial: a.serial,
+    value: `$${a.value.toLocaleString()}`,
+    status: a.status
+  })));
 
   const [timeEntries, setTimeEntries] = useState<{ id: string; employee: string; project: string; hours: string; date: string; status: string }[]>([]);
 
@@ -203,6 +219,12 @@ const FinancePage = () => {
   ]);
 
   const [integrations, setIntegrations] = useState<{ id: string; name: string; category: string; status: string; icon: any }[]>([]);
+
+  // File Upload State
+  const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [extractedData, setExtractedData] = useState<any>(null);
 
   const [documents, setDocuments] = useState<{ id: string; name: string; type: string; size: string; date: string }[]>([]);
 
@@ -231,6 +253,8 @@ const FinancePage = () => {
   const [newInvoice, setNewInvoice] = useState({ client: "", amount: "", date: new Date().toISOString().split('T')[0] });
   const [newExpense, setNewExpense] = useState({ category: "", amount: "", date: new Date().toISOString().split('T')[0] });
   const [newPayment, setNewPayment] = useState({ method: "Bank Transfer", amount: "", date: new Date().toISOString().split('T')[0], type: "Inbound" as const });
+  const [newPayroll, setNewPayroll] = useState({ employee: "", role: "", amount: "", status: "Pending" });
+  const [newAsset, setNewAsset] = useState({ item: "", serial: "", value: "", status: "Active" });
 
   const [isClientPopoverOpen, setIsClientPopoverOpen] = useState(false);
 
@@ -282,20 +306,66 @@ const FinancePage = () => {
    };
 
    const handleAddPayment = () => {
-     if (!newPayment.amount) return;
-     const payment = {
-       id: `TRX-${Math.floor(100 + Math.random() * 900)}`,
-       method: newPayment.method,
-       amount: `$${Number(newPayment.amount).toLocaleString()}`,
-       date: newPayment.date,
-       status: "Completed" as const,
-       type: newPayment.type
-     };
-     setPayments([payment, ...payments]);
-     setIsAddPaymentOpen(false);
-     setNewPayment({ method: "Bank Transfer", amount: "", date: new Date().toISOString().split('T')[0], type: "Inbound" as const });
-     toast({ title: "Payment Recorded", description: "The transaction has been logged successfully." });
-   };
+    if (!newPayment.amount) return;
+    const payment = {
+      id: `TRX-${Math.floor(100 + Math.random() * 900)}`,
+      method: newPayment.method,
+      amount: `$${Number(newPayment.amount).toLocaleString()}`,
+      date: newPayment.date,
+      status: "Completed" as const,
+      type: newPayment.type
+    };
+    setPayments([payment, ...payments]);
+    setIsAddPaymentOpen(false);
+    setNewPayment({ method: "Bank Transfer", amount: "", date: new Date().toISOString().split('T')[0], type: "Inbound" as const });
+    toast({ title: "Payment Recorded", description: "The transaction has been logged successfully." });
+  };
+
+  const handleAddPayroll = () => {
+    if (!newPayroll.employee || !newPayroll.role || !newPayroll.amount) return;
+    const payrollEntry = {
+      id: `PYR-${Math.floor(100 + Math.random() * 900)}`,
+      employee: newPayroll.employee,
+      role: newPayroll.role,
+      amount: Number(newPayroll.amount),
+      date: new Date().toISOString().split('T')[0],
+      status: newPayroll.status
+    };
+    storeAddPayroll(payrollEntry);
+    setPayroll([{
+      id: payrollEntry.id,
+      employee: payrollEntry.employee,
+      role: payrollEntry.role,
+      amount: `$${payrollEntry.amount.toLocaleString()}`,
+      status: payrollEntry.status
+    }, ...payroll]);
+    setIsAddPayrollOpen(false);
+    setNewPayroll({ employee: "", role: "", amount: "", status: "Pending" });
+    toast({ title: "Payroll Processed", description: `Payroll for ${newPayroll.employee} has been created.` });
+  };
+
+  const handleAddAsset = () => {
+    if (!newAsset.item || !newAsset.serial || !newAsset.value) return;
+    const asset = {
+      id: `AST-${Math.floor(100 + Math.random() * 900)}`,
+      item: newAsset.item,
+      serial: newAsset.serial,
+      value: Number(newAsset.value),
+      date: new Date().toISOString().split('T')[0],
+      status: newAsset.status
+    };
+    storeAddAsset(asset);
+    setInventory([{
+      id: asset.id,
+      item: asset.item,
+      serial: asset.serial,
+      value: `$${asset.value.toLocaleString()}`,
+      status: asset.status
+    }, ...inventory]);
+    setIsAddAssetOpen(false);
+    setNewAsset({ item: "", serial: "", value: "", status: "Active" });
+    toast({ title: "Asset Added", description: `Asset ${newAsset.item} has been registered.` });
+  };
 
    const handleExport = () => {
     let data: any[] = [];
@@ -318,6 +388,65 @@ const FinancePage = () => {
       description: `Your ${activeTool} data has been exported.` 
     });
    };
+
+  const handleFileUpload = async () => {
+    if (!uploadedFile) return;
+
+    setIsProcessingFile(true);
+    setExtractedData(null);
+
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append("file", uploadedFile);
+      formData.append("department", "finance");
+      formData.append("business_id", "default"); // TODO: Get actual business_id from store
+
+      // Try to call Python automation service
+      const response = await fetch("http://localhost:8000/file-processing/extract", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to process file");
+      }
+
+      const data = await response.json();
+
+      setExtractedData({
+        fileName: data.file_name,
+        fileType: data.file_type,
+        extractedRecords: data.extracted_records,
+        summary: data.summary,
+      });
+
+      toast({
+        title: "File Processed",
+        description: `AI has extracted ${data.extracted_records.length} records from ${uploadedFile.name}.`
+      });
+    } catch (error) {
+      console.error("File upload error:", error);
+      // Use mock data when service is unavailable (development mode)
+      const mockData = {
+        fileName: uploadedFile.name,
+        fileType: uploadedFile.type,
+        extractedRecords: [
+          { type: "Invoice", client: "Sample Client", amount: 5000, date: "2024-01-15" },
+          { type: "Expense", category: "Office Supplies", amount: 250, date: "2024-01-16" },
+          { type: "Expense", category: "Travel", amount: 1200, date: "2024-01-17" },
+        ],
+        summary: "Successfully extracted 3 financial records from your file."
+      };
+      setExtractedData(mockData);
+      toast({
+        title: "File Processed (Mock Mode)",
+        description: `AI has extracted ${mockData.extractedRecords.length} records from ${uploadedFile.name}.`
+      });
+    } finally {
+      setIsProcessingFile(false);
+    }
+  };
 
    // Two-step Delete Confirmation
    const [isDeleteModal1Open, setIsDeleteModal1Open] = useState(false);
@@ -555,6 +684,216 @@ const FinancePage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Add Payroll Dialog */}
+      <Dialog open={isAddPayrollOpen} onOpenChange={setIsAddPayrollOpen}>
+        <DialogContent className="sm:max-w-[450px] rounded-[32px]">
+          <DialogHeader>
+            <DialogTitle className="font-black text-xl uppercase tracking-tight">Run Payroll</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Employee Name</Label>
+              <Input 
+                placeholder="John Doe" 
+                value={newPayroll.employee}
+                onChange={(e) => setNewPayroll({...newPayroll, employee: e.target.value})}
+                className="h-12 rounded-xl border-2 font-bold"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Role</Label>
+              <Input 
+                placeholder="Software Engineer" 
+                value={newPayroll.role}
+                onChange={(e) => setNewPayroll({...newPayroll, role: e.target.value})}
+                className="h-12 rounded-xl border-2 font-bold"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Amount ($)</Label>
+                <Input 
+                  type="number"
+                  placeholder="5000" 
+                  value={newPayroll.amount}
+                  onChange={(e) => setNewPayroll({...newPayroll, amount: e.target.value})}
+                  className="h-12 rounded-xl border-2 font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Status</Label>
+                <Select 
+                  defaultValue="Pending"
+                  onValueChange={(v) => setNewPayroll({...newPayroll, status: v})}
+                >
+                  <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex flex-col gap-3">
+            <Button onClick={handleAddPayroll} className="w-full h-12 rounded-xl shadow-glow uppercase font-black tracking-widest text-xs">Run Payroll</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Asset Dialog */}
+      <Dialog open={isAddAssetOpen} onOpenChange={setIsAddAssetOpen}>
+        <DialogContent className="sm:max-w-[450px] rounded-[32px]">
+          <DialogHeader>
+            <DialogTitle className="font-black text-xl uppercase tracking-tight">Add Asset</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Item Name</Label>
+              <Input 
+                placeholder="MacBook Pro" 
+                value={newAsset.item}
+                onChange={(e) => setNewAsset({...newAsset, item: e.target.value})}
+                className="h-12 rounded-xl border-2 font-bold"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Serial Number</Label>
+              <Input 
+                placeholder="C02X12345678" 
+                value={newAsset.serial}
+                onChange={(e) => setNewAsset({...newAsset, serial: e.target.value})}
+                className="h-12 rounded-xl border-2 font-bold"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Value ($)</Label>
+                <Input 
+                  type="number"
+                  placeholder="2000" 
+                  value={newAsset.value}
+                  onChange={(e) => setNewAsset({...newAsset, value: e.target.value})}
+                  className="h-12 rounded-xl border-2 font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Status</Label>
+                <Select 
+                  defaultValue="Active"
+                  onValueChange={(v) => setNewAsset({...newAsset, status: v})}
+                >
+                  <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Retired">Retired</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex flex-col gap-3">
+            <Button onClick={handleAddAsset} className="w-full h-12 rounded-xl shadow-glow uppercase font-black tracking-widest text-xs">Add Asset</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* File Upload Dialog */}
+      <Dialog open={isFileUploadOpen} onOpenChange={setIsFileUploadOpen}>
+        <DialogContent className="sm:max-w-[500px] rounded-[32px]">
+          <DialogHeader>
+            <DialogTitle className="font-black text-xl uppercase tracking-tight">Import Finance Data</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Upload a CSV, XLSX, or PDF file and AI will extract and arrange the information for you.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {!extractedData ? (
+              <div className="border-2 border-dashed border-border rounded-2xl p-8 text-center hover:border-primary/50 transition-colors">
+                <input
+                  type="file"
+                  id="file-upload"
+                  className="hidden"
+                  accept=".csv,.xlsx,.pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setUploadedFile(file);
+                  }}
+                />
+                <label htmlFor="file-upload" className="cursor-pointer">
+                  <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-sm font-bold mb-2">Click to upload or drag and drop</p>
+                  <p className="text-xs text-muted-foreground">CSV, XLSX, or PDF up to 10MB</p>
+                </label>
+                {uploadedFile && (
+                  <div className="mt-4 p-3 bg-secondary/30 rounded-xl">
+                    <p className="text-xs font-bold">{uploadedFile.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{(uploadedFile.size / 1024).toFixed(2)} KB</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-4 bg-primary/10 rounded-xl border border-primary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bot className="w-4 h-4 text-primary" />
+                    <span className="text-xs font-black uppercase tracking-widest text-primary">AI Extraction Complete</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{extractedData.summary}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Extracted Records</p>
+                  {extractedData.extractedRecords.map((record: any, idx: number) => (
+                    <div key={idx} className="p-3 bg-secondary/30 rounded-xl text-xs">
+                      <p className="font-bold">{record.type}: {record.client || record.category}</p>
+                      <p className="text-muted-foreground">Amount: ${record.amount} | Date: {record.date}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex flex-col gap-3">
+            {!extractedData ? (
+              <Button
+                onClick={handleFileUpload}
+                disabled={!uploadedFile || isProcessingFile}
+                className="w-full h-12 rounded-xl shadow-glow uppercase font-black tracking-widest text-xs"
+              >
+                {isProcessingFile ? "Processing..." : "Process with AI"}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  onClick={() => {
+                    setExtractedData(null);
+                    setUploadedFile(null);
+                    setIsFileUploadOpen(false);
+                  }}
+                  className="w-full h-12 rounded-xl shadow-glow uppercase font-black tracking-widest text-xs"
+                >
+                  Import to Finance
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setExtractedData(null);
+                    setUploadedFile(null);
+                  }}
+                  className="w-full h-12 rounded-xl uppercase font-black tracking-widest text-xs"
+                >
+                  Upload Another File
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="flex flex-col gap-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -565,20 +904,23 @@ const FinancePage = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 no-scrollbar">
+            <Button variant="outline" size="sm" className="rounded-xl h-9 whitespace-nowrap" onClick={() => setIsFileUploadOpen(true)}>
+              <Upload className="w-4 h-4 mr-1.5" /> Import File
+            </Button>
             <Button variant="outline" size="sm" className="rounded-xl h-9 whitespace-nowrap" onClick={handleExport}>
               <Download className="w-4 h-4 mr-1.5" /> Export
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               className="rounded-xl h-9 bg-primary hover:bg-primary/90 text-white shadow-sm whitespace-nowrap"
               onClick={handlePrimaryAction}
             >
               <Plus className="w-4 h-4 mr-1.5" />
-              {activeTool === 'invoicing' ? 'New Invoice' : 
-               activeTool === 'expenses' ? 'Log Expense' : 
-               activeTool === 'payroll' ? 'Run Payroll' : 
-               activeTool === 'inventory' ? 'Add Asset' : 
-               activeTool === 'clients' ? 'New Client' : 
+              {activeTool === 'invoicing' ? 'New Invoice' :
+               activeTool === 'expenses' ? 'Log Expense' :
+               activeTool === 'payroll' ? 'Run Payroll' :
+               activeTool === 'inventory' ? 'Add Asset' :
+               activeTool === 'clients' ? 'New Client' :
                activeTool === 'finance-time-tracking' ? 'Log Time' : 'New Entry'}
             </Button>
           </div>

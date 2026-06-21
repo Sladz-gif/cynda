@@ -40,9 +40,9 @@ const MarketplacePage = () => {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-[1600px] mx-auto pb-24">
       <div className="rounded-2xl border-2 border-primary/25 bg-primary/5 px-4 py-3">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Version 1.2 preview — Cynda Marketplace</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Version 1.2 preview  Cynda Marketplace</p>
         <p className="text-sm text-muted-foreground mt-1 max-w-4xl">
-          Browse categories, filters, listing detail, packages, campaigns UI, and dashboards. Orders, payments, OAuth, promotions, and applications stay disabled until launch — use{" "}
+          Browse categories, filters, listing detail, packages, campaigns UI, and dashboards. Orders, payments, OAuth, promotions, and applications stay disabled until launch  use{" "}
           <span className="text-foreground font-semibold">Order now</span>, <span className="text-foreground font-semibold">Apply</span>, or <span className="text-foreground font-semibold">Promote</span> to see the coming-soon toast.
         </p>
         <p className="text-[10px] font-bold text-muted-foreground mt-2 uppercase tracking-wider">Workspace: {userType.replace("-", " ")} · guest browsing on marketing site will mirror this layout in v1.2</p>
@@ -74,7 +74,7 @@ const MarketplacePage = () => {
             <div className="relative z-10 max-w-xl space-y-4">
               <h2 className="font-display text-2xl md:text-4xl font-black uppercase tracking-tight leading-tight">Hire and sell on verified performance</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Listings show real Cynda Performance Scores, completion rates, and tenure — not vanity stars alone. Featured carousel and trending searches rotate with live demand in v1.2.
+                Listings show real Cynda Performance Scores, completion rates, and tenure  not vanity stars alone. Featured carousel and trending searches rotate with live demand in v1.2.
               </p>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -196,7 +196,7 @@ const MarketplacePage = () => {
                 <Briefcase className="w-4 h-4" /> Campaigns
               </p>
               <p className="font-display font-black text-lg uppercase mt-1">Hiring & open calls</p>
-              <p className="text-sm text-muted-foreground mt-1 max-w-xl">Post roles, shortlist applicants, and message candidates — UI ships in v1.2 with Performance-backed applications.</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-xl">Post roles, shortlist applicants, and message candidates  UI ships in v1.2 with Performance-backed applications.</p>
             </div>
             <Button type="button" className="rounded-xl font-black text-[10px] uppercase tracking-widest shadow-glow" onClick={() => comingSoon("Post campaign")}>
               Post campaign
@@ -207,7 +207,7 @@ const MarketplacePage = () => {
         <TabsContent value="mine" className="mt-0 space-y-4">
           <div className="rounded-2xl border-2 border-border bg-card p-6 space-y-4">
             <p className="font-display font-black text-xl uppercase tracking-tight">My marketplace</p>
-            <p className="text-sm text-muted-foreground">Tabs for My listings, Orders, Applications, Saved, and Promotions — fully interactive once v1.2 is live.</p>
+            <p className="text-sm text-muted-foreground">Tabs for My listings, Orders, Applications, Saved, and Promotions  fully interactive once v1.2 is live.</p>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
               {["My listings", "My orders", "Applications", "Saved", "Promotions"].map((x) => (
                 <Button key={x} type="button" variant="outline" className="rounded-xl h-auto py-4 text-[10px] font-black uppercase" onClick={() => comingSoon(x)}>

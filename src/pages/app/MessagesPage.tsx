@@ -6,35 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const channels = [
-  { name: "general", unread: 3, pinned: true },
-  { name: "design", unread: 0, pinned: true },
-  { name: "engineering", unread: 7, pinned: false },
-  { name: "marketing", unread: 1, pinned: false },
-  { name: "announcements", unread: 0, pinned: false },
-  { name: "random", unread: 2, pinned: false },
-  { name: "product-roadmap", unread: 0, pinned: false },
-  { name: "client-sync", unread: 5, pinned: false },
-  { name: "hiring", unread: 0, pinned: false },
-  { name: "finance-ops", unread: 2, pinned: false },
-  { name: "security-alerts", unread: 0, pinned: false },
-  { name: "social-media", unread: 4, pinned: false },
-];
+const channels: { name: string; unread: number; pinned: boolean }[] = [];
 
-const directMessages = [
-  { name: "Sarah Chen", status: "online", avatar: "SC", lastMsg: "Sounds good!" },
-  { name: "Mike Johnson", status: "online", avatar: "MJ", lastMsg: "PR is ready for review" },
-  { name: "Emily Davis", status: "away", avatar: "ED", lastMsg: "Out for lunch" },
-  { name: "Alex Kim", status: "offline", avatar: "AK", lastMsg: "See you tomorrow" },
-  { name: "Rachel Adams", status: "online", avatar: "RA", lastMsg: "Deal closed!" },
-  { name: "David Miller", status: "online", avatar: "DM", lastMsg: "Can you check the logs?" },
-  { name: "Jessica Lee", status: "away", avatar: "JL", lastMsg: "I'll be back in 10 mins" },
-  { name: "Chris Brown", status: "offline", avatar: "CB", lastMsg: "Thanks for the help!" },
-  { name: "Amanda White", status: "online", avatar: "AW", lastMsg: "Let's discuss the new feature" },
-  { name: "Robert Taylor", status: "online", avatar: "RT", lastMsg: "Great work on the dashboard!" },
-  { name: "Linda Wilson", status: "away", avatar: "LW", lastMsg: "I'm in a meeting right now" },
-  { name: "Mark Thompson", status: "offline", avatar: "MT", lastMsg: "I'll send the report tonight" },
-];
+const directMessages: { name: string; status: string; avatar: string; lastMsg: string }[] = [];
 
 type Message = {
   id: string;
@@ -48,72 +22,7 @@ type Message = {
   file?: { name: string; size: string };
 };
 
-const messages: Message[] = [
-  {
-    id: "1", user: "Sarah Chen", avatar: "SC", time: "10:23 AM",
-    content: "Hey team! The new brand guidelines are ready for review. I've uploaded them to the Notes section.",
-    reactions: ["👍 3", "🎉 2"], pinned: true,
-    thread: { count: 4, avatars: ["MJ", "ED"] },
-  },
-  {
-    id: "2", user: "Mike Johnson", avatar: "MJ", time: "10:28 AM",
-    content: "@Alex can you review the color palette section? I think we need to adjust the contrast ratios.",
-  },
-  {
-    id: "3", user: "Emily Davis", avatar: "ED", time: "10:32 AM",
-    content: "Quick question — are we keeping the secondary font or switching to the new one from the proposal?",
-    reactions: ["🤔 1"],
-  },
-  {
-    id: "4", user: "Sarah Chen", avatar: "SC", time: "10:35 AM",
-    content: "We're switching to Space Grotesk for headers. The body text stays as Inter. Let me know if you have concerns!",
-    file: { name: "brand-guidelines-v3.pdf", size: "2.4 MB" },
-  },
-  {
-    id: "5", user: "Alex Kim", avatar: "AK", time: "10:38 AM",
-    content: "Contrast ratios look good on my end. The primary orange passes AA on both light and dark backgrounds. 👌",
-    thread: { count: 2, avatars: ["SC"] },
-  },
-  {
-    id: "6", user: "You", avatar: "JD", time: "10:42 AM",
-    content: "Love the direction. Let's schedule a quick sync tomorrow to finalize everything before the client presentation.",
-    reactions: ["✅ 3", "🙌 1"],
-  },
-  {
-    id: "7", user: "David Miller", avatar: "DM", time: "11:05 AM",
-    content: "Just saw the updated analytics dashboard. The new charts are fantastic!",
-  },
-  {
-    id: "8", user: "Jessica Lee", avatar: "JL", time: "11:12 AM",
-    content: "The HR module is almost done. Just waiting for final feedback on the leave request flow.",
-    reactions: ["🎉 1"],
-  },
-  {
-    id: "9", user: "Sarah Chen", avatar: "SC", time: "11:20 AM",
-    content: "Great job Jessica! Let's review it during the daily sync.",
-  },
-  {
-    id: "10", user: "Mike Johnson", avatar: "MJ", time: "11:35 AM",
-    content: "Has anyone checked the security logs lately? We've seen some unusual activity from a few IPs.",
-  },
-  {
-    id: "11", user: "Alex Kim", avatar: "AK", time: "11:40 AM",
-    content: "I'll take a look right now. Can you send me the IP list?",
-  },
-  {
-    id: "12", user: "Mike Johnson", avatar: "MJ", time: "11:42 AM",
-    content: "Sent to your DMs.",
-  },
-  {
-    id: "13", user: "Emily Davis", avatar: "ED", time: "12:15 PM",
-    content: "Does anyone want to join for lunch? Heading to the new place downstairs.",
-  },
-  {
-    id: "14", user: "Sarah Chen", avatar: "SC", time: "12:18 PM",
-    content: "Count me in! Give me 5 mins to finish this task.",
-    reactions: ["🍔 2"],
-  },
-];
+const messages: Message[] = [];
 
 const statusColor: Record<string, string> = {
   online: "bg-green-500",

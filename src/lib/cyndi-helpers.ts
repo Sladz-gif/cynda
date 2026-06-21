@@ -128,7 +128,7 @@ export function buildCyndiSystemPrompt(workspaceContext: any, state: IndustrySta
   const modules =
     Array.isArray(user?.activeModules) && user.activeModules.length > 0
       ? user.activeModules.join(", ")
-      : "(none listed — treat module-specific questions carefully)";
+      : "(none listed  treat module-specific questions carefully)";
 
   const sessionContext = `
 ## Session context (authoritative; apply on every turn)
