@@ -104,7 +104,11 @@ const AppSidebar = () => {
     // Add Departments to PRIMARY
     Object.values(DEPARTMENTS).forEach(dept => {
       const hasAccessToDept = dept.tools.some(tool => effectiveTools.includes(tool.id));
-      if (hasAccessToDept && ['projects', 'crm', 'finance', 'hr'].includes(dept.id)) {
+      const isSoloUser = userType === 'solo';
+      const isHRDept = dept.id === 'hr';
+      
+      // Solo users should not have access to HR/people features
+      if (hasAccessToDept && ['projects', 'crm', 'finance', 'hr'].includes(dept.id) && !(isSoloUser && isHRDept)) {
         const isPremium = isTrial && !dept.tools.some(tool => TRIAL_ALLOWED_TOOLS.includes(tool.id));
         
         primaryItems.push({

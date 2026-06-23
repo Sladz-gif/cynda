@@ -131,6 +131,7 @@ export const useIndustryStore = create<IndustryState>()(
           selectedModules: [],
           notifications: [],
           trialStartedAt: null,
+          trialMessageCount: 0,
           isOnboarded: false
         });
       },

@@ -7,10 +7,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useIndustryStore, UserType, USER_TYPES } from "@/lib/industry-store";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, Mail, Lock, User, ArrowRight, Bot, CheckCircle2, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { ShieldCheck, Mail, Lock, User, ArrowRight, Bot, CheckCircle2, Eye, EyeOff, AlertCircle, Zap, Sparkles } from "lucide-react";
 import { cn, generateChatName } from "@/lib/utils";
 import * as bcrypt from 'bcryptjs';
-import PhoneInput from "@/components/ui/PhoneInput";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 
 type Strength = "Weak" | "Fair" | "Strong" | "Very Strong";
 
@@ -38,7 +38,7 @@ function validateName(name: string): boolean {
 const SignUpPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setAuthenticated, setAdminProfile, setUserType, setSubscriptionTier, setOnboarded, setTrialStartedAt, isAuthenticated } = useIndustryStore();
+  const { setAuthenticated, setAdminProfile, setUserType, setSubscriptionTier, setOnboarded, setTrialStartedAt, isAuthenticated, setCountryCode } = useIndustryStore();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -299,7 +299,7 @@ const SignUpPage = () => {
           </div>
 
           <p className="text-lg text-muted-foreground font-medium uppercase tracking-widest opacity-60 text-center pt-8">
-            3 days free. No card required.
+            No credit card required.
           </p>
         </div>
       </div>
@@ -313,11 +313,55 @@ const SignUpPage = () => {
         >
           <div className="space-y-2">
             <h2 className="text-3xl font-black uppercase tracking-tight">Your African business, one workspace.</h2>
-            <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest opacity-60">3 days free. No card required.</p>
+            <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest opacity-60">No credit card required.</p>
           </div>
 
           <form onSubmit={handleSignUp} className="space-y-6">
             <div className="space-y-4">
+              {/* Subscription Choice */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <button
+                  type="button"
+                  onClick={() => setSubscriptionChoice("trial")}
+                  className={cn(
+                    "relative p-4 rounded-2xl border-2 transition-all text-left",
+                    subscriptionChoice === "trial" 
+                      ? "border-primary bg-primary/5 shadow-sm" 
+                      : "border-border bg-muted/20 opacity-60 grayscale-[0.5] hover:opacity-100 hover:grayscale-0"
+                  )}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <Zap className={cn("w-5 h-5", subscriptionChoice === "trial" ? "text-primary" : "text-muted-foreground")} />
+                    {subscriptionChoice === "trial" && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest mb-1">Trial</p>
+                  <p className="text-[12px] font-bold leading-tight">Free Access</p>
+                  <p className="text-[8px] font-medium opacity-60 mt-1 uppercase">Tiny bit of Cynda AI</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSubscriptionChoice("paid")}
+                  className={cn(
+                    "relative p-4 rounded-2xl border-2 transition-all text-left overflow-hidden",
+                    subscriptionChoice === "paid" 
+                      ? "border-primary bg-primary/5 shadow-sm" 
+                      : "border-border bg-muted/20 opacity-60 grayscale-[0.5] hover:opacity-100 hover:grayscale-0"
+                  )}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <Sparkles className={cn("w-5 h-5", subscriptionChoice === "paid" ? "text-primary" : "text-muted-foreground")} />
+                    {subscriptionChoice === "paid" && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest mb-1">Go Pro</p>
+                  <p className="text-[12px] font-bold leading-tight">Pay Now</p>
+                  <p className="text-[8px] font-medium opacity-60 mt-1 uppercase">Full Cynda AI Power</p>
+                  <div className="absolute -right-2 -bottom-1 rotate-12 opacity-10">
+                    <Sparkles className="w-12 h-12" />
+                  </div>
+                </button>
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Full name</Label>
                 <div className="relative">
@@ -494,6 +538,9 @@ const SignUpPage = () => {
                 placeholder="Enter phone number"
                 required
                 error={errors.phone}
+                onCountryChange={(country) => {
+                  setCountryCode(country.code);
+                }}
               />
               
               <div className="space-y-4 pt-4">

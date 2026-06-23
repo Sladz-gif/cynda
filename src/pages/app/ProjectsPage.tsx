@@ -441,9 +441,9 @@ const ProjectsPage = () => {
               <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">Productivity Forecast</h4>
               <div className="space-y-4">
                 {[
-                  { label: "Estimated Completion", value: "Apr 12, 2024", icon: Calendar },
+                  { label: "Estimated Completion", value: tasks.length > 0 ? "Calculating..." : "No tasks", icon: Calendar },
                   { label: "Remaining Work", value: `${tasks.filter(t => t.status !== 'done').length} Tasks`, icon: Clock },
-                  { label: "Current Velocity", value: "4.2 tasks/week", icon: Zap },
+                  { label: "Current Velocity", value: "0 tasks/week", icon: Zap },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-secondary/20">
                     <div className="flex items-center gap-2">

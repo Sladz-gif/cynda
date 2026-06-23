@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn, generateChatName, exportToCSV } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import PhoneInput from "@/components/ui/PhoneInput";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 import { useIndustryStore, DEPARTMENTS } from "@/lib/industry-store";
@@ -183,14 +183,13 @@ const HRPage = () => {
 
    const tools = useMemo(() => {
      const safeModules = Array.isArray(selectedModules) ? selectedModules : [];
-     if (userType === 'enterprise' || userType === 'organisation') return hrNavigationTools;
      
+     // Solo users have no access to HR/people features
      if (userType === 'solo') {
-       // For solo users, only show basic HR tools
-       return hrNavigationTools.filter(tool => 
-         ['hr-dashboard', 'time-off', 'hr-time-tracking', 'hr-payroll', 'performance'].includes(tool.id)
-       );
+       return [];
      }
+     
+     if (userType === 'enterprise' || userType === 'organisation') return hrNavigationTools;
      
      const filtered = hrNavigationTools.filter(item => safeModules.includes(item.id));
      
@@ -503,14 +502,7 @@ const HRPage = () => {
                     </div>
                     <div className="h-[240px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={[
-                          { name: 'Oct', value: 18 },
-                          { name: 'Nov', value: 20 },
-                          { name: 'Dec', value: 21 },
-                          { name: 'Jan', value: 22 },
-                          { name: 'Feb', value: 24 },
-                          { name: 'Mar', value: 24 },
-                        ]}>
+                        <AreaChart data={[]}>
                           <defs>
                             <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
@@ -544,12 +536,7 @@ const HRPage = () => {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
-                            data={[
-                              { name: 'Engineering', value: 12 },
-                              { name: 'Design', value: 4 },
-                              { name: 'Marketing', value: 5 },
-                              { name: 'People', value: 3 },
-                            ]}
+                            data={[]}
                             innerRadius={60}
                             outerRadius={80}
                             paddingAngle={5}
@@ -571,11 +558,7 @@ const HRPage = () => {
                       </ResponsiveContainer>
                     </div>
                     <div className="mt-4 space-y-2">
-                      {[
-                        { name: 'Engineering', count: 12, color: 'bg-primary' },
-                        { name: 'Design', count: 4, color: 'bg-blue-500' },
-                        { name: 'Marketing', count: 5, color: 'bg-green-500' },
-                      ].map(dept => (
+                      {[].map(dept => (
                         <div key={dept.name} className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
                           <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${dept.color}`} />
@@ -595,11 +578,14 @@ const HRPage = () => {
                       <Button variant="ghost" size="sm" className="text-xs h-8 rounded-lg" onClick={() => setIsActivityLogOpen(true)}>View All</Button>
                     </div>
                     <div className="space-y-4">
-                      {[
-                        { user: "Sarah Chen", action: "approved a leave request", target: "Alex Rivera", time: "2h ago", icon: CheckCircle2, color: "text-green-500" },
-                        { user: "Elena Rodriguez", action: "posted a new job", target: "Product Manager", time: "5h ago", icon: UserPlus, color: "text-blue-500" },
-                        { user: "System", action: "completed payroll for", target: "March 2024", time: "1d ago", icon: CreditCard, color: "text-primary" },
-                      ].map((item, i) => (
+                      {[].length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-center">
+                          <div className="w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center mb-3">
+                            <Clock className="w-6 h-6 text-muted-foreground opacity-50" />
+                          </div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">No recent activity</p>
+                        </div>
+                      ) : [].map((item, i) => (
                         <div key={i} className="flex gap-4">
                           <div className={`mt-1 p-1.5 rounded-lg bg-secondary/50 ${item.color}`}>
                             <item.icon className="w-3.5 h-3.5" />
@@ -621,11 +607,14 @@ const HRPage = () => {
                       <Button variant="ghost" size="sm" className="text-xs h-8 rounded-lg" onClick={() => setActiveTool('time-off')}>Calendar</Button>
                     </div>
                     <div className="space-y-4">
-                      {[
-                        { title: "Alex Rivera's Birthday", date: "Tomorrow", icon: Cake, color: "text-pink-500" },
-                        { title: "Quarterly Review", date: "March 28", icon: BarChart3, color: "text-primary" },
-                        { title: "Team Lunch", date: "April 2", icon: Coffee, color: "text-blue-500" },
-                      ].map((event, i) => (
+                      {[].length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-center">
+                          <div className="w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center mb-3">
+                            <Calendar className="w-6 h-6 text-muted-foreground opacity-50" />
+                          </div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">No upcoming events</p>
+                        </div>
+                      ) : [].map((event, i) => (
                         <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30">
                           <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg bg-card ${event.color}`}>

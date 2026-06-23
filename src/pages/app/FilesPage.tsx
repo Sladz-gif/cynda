@@ -228,14 +228,14 @@ const FilesPage = () => {
             </div>
             <div className="flex flex-col justify-center h-full">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground opacity-60 mb-2">Total Storage</p>
-              <p className="text-4xl font-black tracking-tighter">12.4 GB</p>
+              <p className="text-4xl font-black tracking-tighter">0 GB</p>
             </div>
           </div>
 
           {[
-            { label: "Recent Files", value: "14", icon: Clock, color: "text-blue-500" },
+            { label: "Recent Files", value: files.length, icon: Clock, color: "text-blue-500" },
             { label: "Starred Items", value: files.filter(f => f.isFavorite).length, icon: Star, color: "text-primary" },
-            { label: "Shared with Me", value: "8", icon: Users, color: "text-green-500" },
+            { label: "Shared with Me", value: files.filter(f => f.access.length > 1).length, icon: Users, color: "text-green-500" },
           ].map((stat) => (
             <div key={stat.label} className="p-6 rounded-[2rem] border-2 border-border bg-card shadow-sm min-h-[140px]">
               <div className={`w-10 h-10 rounded-xl bg-secondary flex items-center justify-center mb-4 ${stat.color}`}>
@@ -275,7 +275,7 @@ const FilesPage = () => {
           <div className="hidden lg:block pt-6 border-t-2 border-border">
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground opacity-40 px-4 mb-4">Quick Folders</h3>
             <div className="space-y-1">
-              {['Projects', 'Finance', 'Marketing', 'Assets'].map((folder) => (
+              {[''].filter(f => f).map((folder) => (
                 <button key={folder} className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-secondary transition-all group">
                   <div className="flex items-center gap-3">
                     <Folder className="w-4 h-4 group-hover:text-primary transition-colors" />

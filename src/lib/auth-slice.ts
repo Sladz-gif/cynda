@@ -34,7 +34,9 @@ export interface AuthSlice {
   isAuthenticated: boolean;
   isOnboarded: boolean;
   trialStartedAt: string | null;
+  trialMessageCount: number;
   needsPasswordReset: boolean;
+  countryCode: string;
   setUserType: (type: UserType) => void;
   setSubscriptionTier: (tier: SubscriptionTier) => void;
   setAdminProfile: (profile: AdminProfile) => void;
@@ -42,7 +44,9 @@ export interface AuthSlice {
   setAuthenticated: (status: boolean) => void;
   setOnboarded: (status: boolean) => void;
   setTrialStartedAt: (date: string | null) => void;
+  incrementTrialMessageCount: () => void;
   setNeedsPasswordReset: (status: boolean) => void;
+  setCountryCode: (code: string) => void;
   logout: () => void;
 }
 
@@ -54,7 +58,9 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set) => ({
   isAuthenticated: false,
   isOnboarded: false,
   trialStartedAt: null,
+  trialMessageCount: 0,
   needsPasswordReset: false,
+  countryCode: "GH",
   setUserType: (type) => set({ userType: type }),
   setSubscriptionTier: (tier) => set({ subscriptionTier: tier }),
   setAdminProfile: (profile) =>
@@ -66,7 +72,9 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set) => ({
   setAuthenticated: (status) => set({ isAuthenticated: status }),
   setOnboarded: (status) => set({ isOnboarded: status }),
   setTrialStartedAt: (date) => set({ trialStartedAt: date }),
+  incrementTrialMessageCount: () => set((state) => ({ trialMessageCount: state.trialMessageCount + 1 })),
   setNeedsPasswordReset: (status) => set({ needsPasswordReset: status }),
+  setCountryCode: (code) => set({ countryCode: code }),
   logout: () =>
     set({
       currentUser: null,
@@ -74,6 +82,7 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set) => ({
       adminProfile: null,
       isOnboarded: false,
       trialStartedAt: null,
+      trialMessageCount: 0,
       needsPasswordReset: false,
     }),
 });

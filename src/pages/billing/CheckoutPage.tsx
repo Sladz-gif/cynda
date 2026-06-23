@@ -2,41 +2,30 @@ import React, { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
 import { 
-  CreditCard, 
   ArrowLeft, 
   ArrowRight,
   Check,
-  Shield
+  Shield,
+  CreditCard
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useIndustryStore } from "@/lib/industry-store";
 import { useToast } from "@/hooks/use-toast";
+import { PaystackCheckout } from "@/components/app/PaystackCheckout";
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { adminProfile, setSubscriptionTier } = useIndustryStore();
+  const { adminProfile, setSubscriptionTier, setUserType } = useIndustryStore();
   
   const planId = searchParams.get('plan') || 'solo';
   const isAnnual = searchParams.get('annual') === 'true';
   
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Form states
-  const [cardholderName, setCardholderName] = useState(adminProfile?.name || '');
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [billingCountry, setBillingCountry] = useState('');
-  const [saveCard, setSaveCard] = useState(false);
-
   // Plan pricing
   const getPlanDetails = () => {
     const plans = {
@@ -59,54 +48,32 @@ const CheckoutPage = () => {
   const tax = subtotal * 0.15; // 15% tax (mock)
   const total = subtotal + tax;
 
-  const formatCardNumber = (value: string) => {
-    const cleaned = value.replace(/\s/g, '');
-    const chunks = cleaned.match(/.{1,4}/g) || [];
-    return chunks.join(' ');
-  };
-
-  const formatExpiryDate = (value: string) => {
-    const cleaned = value.replace(/\D/g, '');
-    if (cleaned.length >= 2) {
-      return cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4);
-    }
-    return cleaned;
-  };
-
-  const getCardType = (number: string) => {
-    const cleaned = number.replace(/\s/g, '');
-    if (cleaned.startsWith('4')) return 'visa';
-    if (cleaned.startsWith('5')) return 'mastercard';
-    if (cleaned.startsWith('506') || cleaned.startsWith('650')) return 'verve';
-    return null;
-  };
-
-  const cardType = getCardType(cardNumber);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      // Temporary simulated wrap while we await real key
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setSubscriptionTier("paid");
-      toast({
-        title: "Payment successful",
-        description: "Your subscription has been activated.",
-      });
-      
+  const handlePaymentSuccess = async (reference: any) => {
+    // TODO: Call a Supabase Edge Function here to VERIFY the payment with Paystack's secret key
+    // For now, we'll simulate it:
+    console.log("Payment reference:", reference);
+    
+    setSubscriptionTier("paid");
+    setUserType(planId as any);
+    toast({
+      title: "Payment Successful!",
+      description: `Your ${plan.name} plan is now active!`,
+    });
+    
+    // Redirect back to where they came from
+    const from = searchParams.get('from');
+    if (from === 'settings') {
+      navigate(`/app/settings?tab=billing`);
+    } else {
       navigate('/billing/success');
-    } catch (error) {
-      toast({
-        title: "Payment failed",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
     }
+  };
+
+  const handlePaymentClose = () => {
+    toast({
+      title: "Payment Cancelled",
+      description: "You can try again anytime.",
+    });
   };
 
   return (
@@ -203,7 +170,7 @@ const CheckoutPage = () => {
             </Card>
           </motion.div>
 
-          {/* Payment Form */}
+          {/* Paystack Checkout */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -211,98 +178,30 @@ const CheckoutPage = () => {
           >
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg font-black uppercase tracking-tight">Payment Details</CardTitle>
+                <CardTitle className="text-lg font-black uppercase tracking-tight">Secure Checkout</CardTitle>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  
-                  {/* Payment Method: Card Only */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Cardholder Name</Label>
-                      <Input
-                        value={cardholderName}
-                        onChange={(e) => setCardholderName(e.target.value)}
-                        placeholder="John Doe"
-                        className="h-12 rounded-xl"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Card Number</Label>
-                      <div className="relative">
-                        <Input
-                          value={cardNumber}
-                          onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                          placeholder="1234 5678 9012 3456"
-                          className="h-12 rounded-xl pl-16"
-                          maxLength={19}
-                          required
-                        />
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 flex gap-2">
-                          <CreditCard className={cn("w-6 h-4", cardType ? 'text-primary' : 'text-muted-foreground')} />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Expiry Date</Label>
-                        <Input
-                          value={expiryDate}
-                          onChange={(e) => setExpiryDate(formatExpiryDate(e.target.value))}
-                          placeholder="MM/YY"
-                          className="h-12 rounded-xl"
-                          maxLength={5}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">CVV</Label>
-                        <Input
-                          value={cvv}
-                          onChange={(e) => setCvv(e.target.value.replace(/\D/g, ''))}
-                          placeholder="123"
-                          className="h-12 rounded-xl"
-                          maxLength={4}
-                          required
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Billing Country</Label>
-                      <Input
-                        value={billingCountry}
-                        onChange={(e) => setBillingCountry(e.target.value)}
-                        placeholder="Country"
-                        className="h-12 rounded-xl"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs transition-all"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        Pay ${total.toFixed(2)}
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    )}
-                  </Button>
-                  
-                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                    <Shield className="w-4 h-4" />
-                    <span>Secure payment</span>
-                  </div>
-                </form>
+              <CardContent className="space-y-6">
+                <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-xl p-4">
+                  <Shield className="w-5 h-5 text-primary" />
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Powered by Paystack — your payment info is encrypted and secure.
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    We accept Visa, Mastercard, Verve, and more.
+                  </p>
+                </div>
+                
+                <PaystackCheckout
+                  amount={total}
+                  email={adminProfile?.email || ''}
+                  planName={plan.name}
+                  onSuccess={handlePaymentSuccess}
+                  onClose={handlePaymentClose}
+                />
               </CardContent>
             </Card>
           </motion.div>

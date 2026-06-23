@@ -39,11 +39,11 @@ const plans: Plan[] = [
     features: [
       "All selected departments and tools",
       "Cynda workspace personalised to your needs",
+      "Unlimited Cyndi AI Copilot",
       "Notes, Files, Forms included",
       "Messaging and email coming soon",
-      "3-day free trial",
       "No team features",
-      "No data export/download during free trial"
+      "No data export/download available"
     ],
     icon: User,
     color: "text-blue-600"
@@ -61,12 +61,13 @@ const plans: Plan[] = [
     exampleYearly: "10 people = $89/month",
     features: [
       "Everything in Solo",
+      "Unlimited Cyndi AI Copilot",
       "Super admin control panel",
       "Staff onboarding via document upload",
       "Per-person tool assignment",
       "Activity surveillance for admins",
       "Priority support",
-      "Data export/download available after trial"
+      "Data export/download available"
     ],
     icon: Users,
     color: "text-primary"
@@ -84,12 +85,13 @@ const plans: Plan[] = [
     exampleYearly: "50 people = $415/month",
     features: [
       "Everything in Team",
+      "Unlimited Cyndi AI Copilot",
       "All modules active by default",
       "HR-led onboarding and org management",
       "Hierarchical surveillance and activity logs",
       "Custom department creation",
       "Dedicated account support",
-      "Data export/download available after trial"
+      "Data export/download available"
     ],
     icon: Building2,
     color: "text-purple-600"
@@ -113,19 +115,9 @@ const SelectPlanPage = () => {
 
   const handlePlanSelect = (planId: string) => {
     setSelectedPlan(planId);
-    setUserType(planId as any);
-    setSubscriptionTier("paid");
     
-    // Check if we came from settings
-    if (searchParams.get('from') === 'settings') {
-      navigate(`/app/settings?tab=billing&cycle=${isAnnual ? 'yearly' : 'monthly'}`);
-      toast({
-        title: "Plan Updated",
-        description: `Your workspace has been successfully moved to the ${planId} plan.`,
-      });
-    } else {
-      navigate(`/billing/checkout?plan=${planId}&annual=${isAnnual}`);
-    }
+    // Always send to checkout, regardless of where they came from
+    navigate(`/billing/checkout?plan=${planId}&annual=${isAnnual}&from=${searchParams.get('from') || ''}`);
   };
 
   return (

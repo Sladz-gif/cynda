@@ -270,7 +270,7 @@ const BillingSection = () => {
       name: 'Solo', 
       price: billingCycle === 'monthly' ? 12 : 10,
       description: 'For the one-person operation that means business.',
-      features: ['All tools included', '3-day free trial', 'No seat fees']
+      features: ['All tools included', 'No seat fees']
     },
     { 
       id: 'team', 
@@ -291,13 +291,7 @@ const BillingSection = () => {
   ];
 
   // Mock billing history data
-  const billingHistory = [
-    { id: '1', date: '2024-03-15', description: 'Team Plan - Monthly', amount: 101.00, status: 'Paid', type: 'subscription' },
-    { id: '2', date: '2024-02-15', description: 'Team Plan - Monthly', amount: 101.00, status: 'Paid', type: 'subscription' },
-    { id: '3', date: '2024-01-15', description: 'Team Plan - Monthly', amount: 101.00, status: 'Paid', type: 'subscription' },
-    { id: '4', date: '2023-12-15', description: 'Team Plan - Monthly', amount: 101.00, status: 'Paid', type: 'subscription' },
-    { id: '5', date: '2023-11-15', description: 'Initial Setup', amount: 0.00, status: 'Paid', type: 'setup' },
-  ];
+  const billingHistory = [];
 
   const currentTier = tiers.find(t => t.id === userType) || tiers[0];
   const nextBillingDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 

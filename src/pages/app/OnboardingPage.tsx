@@ -11,7 +11,7 @@ import { useIndustryStore, USER_TYPES, DEPARTMENTS, UserType, Staff, TRIAL_ALLOW
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import PhoneInput from "@/components/ui/PhoneInput";
+import { PhoneInput, type Country } from "@/components/ui/PhoneInput";
 import { 
   FileUp, Upload, UserPlus, Shield, Sparkles, CheckCircle2,
   Trash2, Plus, Info, Camera, Mail, X, Settings as SettingsIcon, Briefcase
@@ -37,7 +37,7 @@ const OnboardingPage = () => {
   const { 
     userType, setUserType, setSelectedModules, 
     setAdminProfile, selectedModules, addStaff, staffList,
-    setOnboarded, subscriptionTier, isAuthenticated
+    setOnboarded, subscriptionTier, isAuthenticated, setCountryCode
   } = useIndustryStore();
   
   const navigate = useNavigate();
@@ -548,6 +548,9 @@ const OnboardingPage = () => {
                       label="Phone Number (Optional)"
                       value={adminData.phone}
                       onChange={(val) => setAdminData({...adminData, phone: val})}
+                      onCountryChange={(country: Country) => {
+                        setCountryCode(country.code);
+                      }}
                     />
                   </div>
                 </div>

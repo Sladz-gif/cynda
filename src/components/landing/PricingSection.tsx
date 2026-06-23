@@ -40,7 +40,6 @@ const plans: Plan[] = [
       "Cynda workspace personalised to your needs",
       "Notes, Files, Forms included",
       "Messaging and email coming soon",
-      "3-day free trial",
       "No team features"
     ],
     icon: User,
@@ -63,8 +62,7 @@ const plans: Plan[] = [
       "Staff onboarding via document upload",
       "Per-person tool assignment",
       "Activity surveillance for admins",
-      "Priority support",
-      "3-day free trial"
+      "Priority support"
     ],
     isPopular: true,
     icon: Users,
@@ -87,8 +85,7 @@ const plans: Plan[] = [
       "HR-led onboarding and org management",
       "Hierarchical surveillance and activity logs",
       "Custom department creation",
-      "Dedicated account support",
-      "3-day free trial"
+      "Dedicated account support"
     ],
     icon: Building2,
     color: "text-primary"
@@ -229,7 +226,7 @@ const PricingSection = () => {
                       )}
                     >
                       <Link to={`/signup?tier=${plan.id}`} className="flex items-center justify-center gap-2">
-                        Start free trial
+                        Get Started
                         <ArrowRight className="w-4 h-4" />
                       </Link>
                     </Button>

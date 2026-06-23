@@ -10,12 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 const MyTasksPage = () => {
-  const [tasks, setTasks] = useState([
-    { id: "1", title: "Review marketing brief", project: "Q2 Campaign", due: "Today", priority: "high", status: "todo", assignees: ["https://i.pravatar.cc/150?u=a"], subtasks: [{id: "s1", title: "Initial draft", completed: true}], comments: 2 },
-    { id: "2", title: "Update style guide", project: "Design", due: "Today", priority: "medium", status: "todo", assignees: ["https://i.pravatar.cc/150?u=b"], subtasks: [], comments: 0 },
-    { id: "3", title: "Prepare for client meeting", project: "Acme Corp", due: "Tomorrow", priority: "high", status: "todo", assignees: [], subtasks: [], comments: 5 },
-    { id: "4", title: "Write weekly report", project: "Internal", due: "Friday", priority: "low", status: "todo", assignees: [], subtasks: [], comments: 0 },
-  ]);
+  const [tasks, setTasks] = useState([]);
 
   const [isTaskOpen, setIsTaskOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);

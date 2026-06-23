@@ -1,7 +1,7 @@
 import { Outlet, useLocation, Navigate, Link } from "react-router-dom";
 import AppSidebar from "@/components/app/AppSidebar";
 import AppTopBar from "@/components/app/AppTopBar";
-import CyndiComingSoonPanel from "@/components/app/CyndiComingSoonPanel";
+import CyndiPanel from "@/components/app/CyndiPanel";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useIndustryStore, DEPARTMENTS, Staff, Notification, DEFAULT_SELECTED_MODULES } from "@/lib/industry-store";
@@ -159,6 +159,10 @@ const AppLayout = () => {
     // Check if the segment matches a department ID and user has at least one tool in it
     const dept = Object.values(DEPARTMENTS).find(d => d.id === segment);
     if (dept) {
+      // Solo users should not have access to HR/people features
+      if (userType === 'solo' && dept.id === 'hr') {
+        return false;
+      }
       return dept.tools.some(tool => effectiveTools.includes(tool.id));
     }
 
@@ -297,7 +301,7 @@ const AppLayout = () => {
                     transition={{ type: "spring", damping: 30, stiffness: 300 }}
                     className="fixed inset-y-0 right-0 z-[100] w-full sm:w-[400px] md:w-[450px] lg:w-[500px] flex min-h-0 flex-col bg-card shadow-[-20px_0_60px_-15px_rgba(0,0,0,0.3)] border-l border-border"
                   >
-                    <CyndiComingSoonPanel onClose={() => setCyndiOpen(false)} />
+                    <CyndiPanel onClose={() => setCyndiOpen(false)} />
                   </motion.div>
                 )}
               </AnimatePresence>

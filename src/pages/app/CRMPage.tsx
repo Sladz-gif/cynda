@@ -513,9 +513,9 @@ const CRMPage = () => {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {[
-                  { label: "Lead Growth", value: "142", change: "+12.5%", Icon: TrendingUp, color: "text-green-500" },
-                  { label: "Active Campaigns", value: (campaigns || []).filter(c => c.status === 'Running').length, change: "+3", Icon: Zap, color: "text-primary" },
-                  { label: "Engagement Rate", value: "24%", change: "+2.1%", Icon: Activity, color: "text-accent" },
+                  { label: "Lead Growth", value: "0", change: "0%", Icon: TrendingUp, color: "text-green-500" },
+                  { label: "Active Campaigns", value: (campaigns || []).filter(c => c.status === 'Running').length, change: "0", Icon: Zap, color: "text-primary" },
+                  { label: "Engagement Rate", value: "0%", change: "0%", Icon: Activity, color: "text-accent" },
                 ].map((stat) => {
                   const StatIcon = stat.Icon;
                   return (
@@ -538,36 +538,27 @@ const CRMPage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="p-6 rounded-xl border border-border bg-card shadow-sm">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-6">Revenue Growth</h3>
-                <div className="h-[250px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={revenueData}>
-                      <defs>
-                        <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--border))', boxShadow: 'var(--shadow-md)' }}
-                        itemStyle={{ fontSize: '12px', fontWeight: 600 }}
-                      />
-                      <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={1} fill="url(#colorRev)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                <div className="h-[250px] w-full flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center mx-auto mb-3">
+                      <TrendingUp className="w-6 h-6 text-muted-foreground opacity-50" />
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">No revenue data available</p>
+                  </div>
                 </div>
               </div>
 
               <div className="p-6 rounded-xl border border-border bg-card shadow-sm">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-6">Recent Interactions</h3>
                 <div className="space-y-4">
-                  {[
-                    { type: "email", contact: "James Wilson", action: "Replied to intro", time: "5 min ago", Icon: MailOpen },
-                    { type: "call", contact: "Rachel Adams", action: "Discovery call completed", time: "1 hr ago", Icon: Phone },
-                    { type: "meeting", contact: "David Chen", action: "Proposal review scheduled", time: "3 hrs ago", Icon: Calendar },
-                  ].map((act, i) => {
+                  {[].length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                      <div className="w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center mb-3">
+                        <MessageSquare className="w-6 h-6 text-muted-foreground opacity-50" />
+                      </div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">No recent activity</p>
+                    </div>
+                  ) : [].map((act, i) => {
                     const ActIcon = act.Icon;
                     return (
                       <div key={i} className="flex items-center gap-4 p-3 rounded-lg hover:bg-secondary/20 transition-colors cursor-pointer" onClick={() => handleQuickAction(act.type.charAt(0).toUpperCase() + act.type.slice(1), act.contact)}>
