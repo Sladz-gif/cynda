@@ -43,7 +43,6 @@ import PaymentSuccessPage from "./pages/billing/PaymentSuccessPage";
 import PaymentFailedPage from "./pages/billing/PaymentFailedPage";
 
 import { ThemeProvider } from "./components/app/ThemeProvider";
-import { Analytics } from "@vercel/analytics/react";
 
 const queryClient = new QueryClient();
 
@@ -56,7 +55,6 @@ const App = () => {
             <ScrollToTop />
             <Toaster />
             <Sonner />
-            <Analytics />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
