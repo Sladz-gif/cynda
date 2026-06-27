@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PaystackCheckout } from "@/components/app/PaystackCheckout";
 import { countries } from "@/components/ui/PhoneInput";
 import { useCurrency } from "@/lib/useCurrency";
+import { supabase } from "@/lib/supabase";
 
 // Paystack supported currencies
 const PAYSTACK_SUPPORTED_CURRENCIES = ['GHS', 'NGN', 'USD', 'ZAR', 'KES', 'UGX', 'TZS', 'RWF'];
@@ -81,37 +82,79 @@ const CheckoutPage = () => {
   const totalCredits = calculateCredits(totalUSD);
 
   const handlePaymentSuccess = async (reference: any) => {
-    // TODO: Call a Supabase Edge Function here to VERIFY the payment with Paystack's secret key
-    // For now, we'll simulate it:
-    console.log("Payment reference:", reference);
-    
-    // Calculate expiry date
-    const now = new Date();
-    const expiryDate = isAnnual 
-      ? new Date(now.setFullYear(now.getFullYear() + 1)) 
-      : new Date(now.setMonth(now.getMonth() + 1));
-    
-    // Update admin profile with expiry date
-    if (adminProfile) {
-      setAdminProfile({
-        ...adminProfile,
-        subscriptionExpiresAt: expiryDate.toISOString()
+    try {
+      console.log("Payment reference:", reference);
+      
+      // Calculate expiry date
+      const now = new Date();
+      const expiryDate = isAnnual 
+        ? new Date(now.setFullYear(now.getFullYear() + 1)) 
+        : new Date(now.setMonth(now.getMonth() + 1));
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("No authenticated user");
+      }
+      
+      // 1. Update profile in Supabase
+      if (adminProfile) {
+        const updatedProfile = {
+          ...adminProfile,
+          subscriptionExpiresAt: expiryDate.toISOString()
+        };
+        
+        await supabase
+          .from('profiles')
+          .update({
+            subscription_tier: 'paid',
+            user_type: planId,
+            subscription_expires_at: expiryDate.toISOString()
+          })
+          .eq('id', user.id);
+        
+        // Update local store
+        setAdminProfile(updatedProfile);
+      }
+      
+      // 2. Save transaction history
+      await supabase
+        .from('transactions')
+        .insert({
+          profile_id: user.id,
+          paystack_reference: reference?.reference || reference,
+          amount: totalUSD,
+          currency: 'USD',
+          plan_name: plan.name,
+          billing_cycle: isAnnual ? 'Annual' : 'Monthly',
+          credits_awarded: totalCredits,
+          status: 'success'
+        });
+      
+      // 3. Update store
+      setSubscriptionTier("paid");
+      setUserType(planId as any);
+      
+      toast({
+        title: "Payment Successful!",
+        description: `Your ${plan.name} plan is now active!`,
       });
-    }
-    
-    setSubscriptionTier("paid");
-    setUserType(planId as any);
-    toast({
-      title: "Payment Successful!",
-      description: `Your ${plan.name} plan is now active!`,
-    });
-    
-    // Redirect back to where they came from
-    const from = searchParams.get('from');
-    if (from === 'settings') {
-      navigate(`/app/settings?tab=billing`);
-    } else {
-      navigate('/billing/success');
+      
+      // 4. Redirect appropriately
+      const from = searchParams.get('from');
+      if (from === 'settings') {
+        navigate(`/app/settings?tab=billing`);
+      } else {
+        navigate('/app/dashboard');
+      }
+    } catch (error) {
+      console.error("Payment success processing error:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please contact support.",
+        variant: "destructive"
+      });
     }
   };
 

@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIndustryStore, DEPARTMENTS } from "@/lib/industry-store";
 import { cn } from "@/lib/utils";
 import { Link, useSearchParams } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 
 const sections = [
   { id: "profile", label: "Your profile", icon: User },
@@ -250,7 +251,7 @@ const ShortcutsSection = () => {
 const BillingSection = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-  const { userType = 'solo', adminProfile } = useIndustryStore();
+  const { userType = 'solo', adminProfile, subscriptionTier } = useIndustryStore();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   // Update Billing Cycle from Query Param
   useEffect(() => {
@@ -263,6 +264,37 @@ const BillingSection = () => {
   const [subscriptionStatus, setSubscriptionStatus] = useState<'active' | 'cancelled'>('active');
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showUpdatePaymentModal, setShowUpdatePaymentModal] = useState(false);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
+
+  // Fetch transactions
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('profile_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching transactions:', error);
+          return;
+        }
+
+        setTransactions(data || []);
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+      } finally {
+        setLoadingTransactions(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
 
   const tiers = [
     { 
@@ -290,15 +322,20 @@ const BillingSection = () => {
     }
   ];
 
-  // Mock billing history data
-  const billingHistory = [];
-
   const currentTier = tiers.find(t => t.id === userType) || tiers[0];
-  const nextBillingDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
-    month: 'long', 
-    day: 'numeric', 
-    year: 'numeric' 
-  });
+  
+  // Calculate next billing date from admin profile's subscription_expires_at if available
+  const nextBillingDate = adminProfile?.subscriptionExpiresAt 
+    ? new Date(adminProfile.subscriptionExpiresAt).toLocaleDateString('en-US', { 
+        month: 'long', 
+        day: 'numeric', 
+        year: 'numeric' 
+      })
+    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
+        month: 'long', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
 
   const seatCount = userType === 'solo' ? 0 : userType === 'team' ? 10 : 50;
   const seatTotal = seatCount * (currentTier.seatPrice || 0);
@@ -378,42 +415,55 @@ const BillingSection = () => {
         </div>
         
         <div className="border-2 border-border rounded-3xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/30">
-                <tr>
-                  <th className="text-left p-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date</th>
-                  <th className="text-left p-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description</th>
-                  <th className="text-left p-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Amount</th>
-                  <th className="text-left p-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
-                  <th className="text-left p-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Receipt</th>
-                </tr>
-              </thead>
-              <tbody>
-                {billingHistory.map((item) => (
-                  <tr key={item.id} className="border-t border-border/50">
-                    <td className="p-4 text-sm font-medium">{item.date}</td>
-                    <td className="p-4 text-sm">{item.description}</td>
-                    <td className="p-4 text-sm font-black">${item.amount.toFixed(2)}</td>
-                    <td className="p-4">
-                      <Badge className={cn(
-                        "text-xs",
-                        item.status === 'Paid' ? "bg-green-100 text-green-800 border-green-200" : "bg-yellow-100 text-yellow-800 border-yellow-200"
-                      )}>
-                        {item.status}
-                      </Badge>
-                    </td>
-                    <td className="p-4">
-                      <Button variant="ghost" size="sm" className="text-xs">
-                        <Download className="w-3 h-3 mr-1" />
-                        Download
-                      </Button>
-                    </td>
+          {loadingTransactions ? (
+            <div className="p-8 text-center">
+              <p className="text-muted-foreground">Loading transactions...</p>
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="p-8 text-center">
+              <p className="text-muted-foreground">No transactions yet</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/30">
+                  <tr>
+                    <th className="text-left p-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date</th>
+                    <th className="text-left p-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description</th>
+                    <th className="text-left p-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Amount</th>
+                    <th className="text-left p-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
+                    <th className="text-left p-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Credits</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {transactions.map((item) => (
+                    <tr key={item.id} className="border-t border-border/50">
+                      <td className="p-4 text-sm font-medium">
+                        {new Date(item.created_at).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          year: 'numeric' 
+                        })}
+                      </td>
+                      <td className="p-4 text-sm">{item.plan_name} ({item.billing_cycle})</td>
+                      <td className="p-4 text-sm font-black">${item.amount.toFixed(2)}</td>
+                      <td className="p-4">
+                        <Badge className={cn(
+                          "text-xs",
+                          item.status === 'success' ? "bg-green-100 text-green-800 border-green-200" : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                        )}>
+                          {item.status}
+                        </Badge>
+                      </td>
+                      <td className="p-4 text-sm font-bold text-purple-600">
+                        {item.credits_awarded?.toLocaleString()} Credits
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
