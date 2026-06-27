@@ -1,9 +1,9 @@
-import React from "react";
-import { usePaystackPayment } from "react-paystack";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useIndustryStore } from "@/lib/industry-store";
 import { countries } from "@/components/ui/PhoneInput";
+import { supabase } from "@/lib/supabase";
 
 // Paystack supported currencies as of now
 const PAYSTACK_SUPPORTED_CURRENCIES = ['GHS', 'NGN', 'USD', 'ZAR', 'KES', 'UGX', 'TZS', 'RWF'];
@@ -12,90 +12,92 @@ interface PaystackCheckoutProps {
   amount: number;
   email: string;
   planName: string;
-  onSuccess?: (reference: any) => void;
-  onClose?: () => void;
+  billingCycle: "Monthly" | "Annual";
+  userType: "solo" | "team" | "organisation" | "enterprise";
+  creditsAwarded: number;
 }
 
 export const PaystackCheckout: React.FC<PaystackCheckoutProps> = ({
   amount,
   email,
   planName,
-  onSuccess,
-  onClose,
+  billingCycle,
+  userType,
+  creditsAwarded,
 }) => {
   const { toast } = useToast();
   const { currentUser, adminProfile, countryCode } = useIndustryStore();
-  
+  const [isLoading, setIsLoading] = useState(false);
+
   const selectedCountry = countries.find(c => c.code === countryCode) || countries[0];
   
-  // Fallback to GHS if currency not supported by Paystack
+  // Fallback to USD if currency not supported by Paystack
   let finalCurrency = selectedCountry.currency;
   let finalCurrencySymbol = selectedCountry.currencySymbol;
   if (!PAYSTACK_SUPPORTED_CURRENCIES.includes(finalCurrency)) {
-    finalCurrency = 'GHS';
-    finalCurrencySymbol = 'GH₵';
+    finalCurrency = 'USD';
+    finalCurrencySymbol = '$';
   }
-  
-  const config = {
-    reference: new Date().getTime().toString(),
-    email: email || (currentUser?.email as string) || (adminProfile?.email as string) || 'user@example.com', // Fallback email
-    amount: amount * 100,
-    currency: finalCurrency,
-    publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "",
-    metadata: {
-      planName: planName,
-      custom_fields: [
+
+  const handleSubscribe = async () => {
+    setIsLoading(true);
+
+    try {
+      // Get current session token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        throw new Error("Not authenticated");
+      }
+
+      // Initialize payment with our Edge Function
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/paystack-initialize`,
         {
-          display_name: "Plan",
-          variable_name: "plan",
-          value: planName
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            email: email || currentUser?.email || adminProfile?.email || "user@example.com",
+            amount: amount,
+            currency: finalCurrency,
+            plan_name: planName,
+            billing_cycle: billingCycle,
+            user_type: userType,
+            credits_awarded: creditsAwarded,
+          }),
         }
-      ]
-    },
-    // Enable Paystack features
-    channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money'], // Include all supported payment methods
-  };
+      );
 
-  const onPaymentSuccess = (reference: any) => {
-    console.log("Payment successful!", reference);
-    toast({
-      title: "Payment Successful!",
-      description: `Your ${planName} plan is now active!`,
-    });
-    onSuccess?.(reference);
-  };
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Failed to initialize payment:", errorData);
+        throw new Error(errorData.error || "Failed to initialize payment");
+      }
 
-  const onPaymentClose = () => {
-    console.log("Payment closed");
-    onClose?.();
-  };
+      const { authorization_url } = await response.json();
 
-  const initializePayment = usePaystackPayment(config);
+      // Redirect to Paystack hosted checkout
+      window.location.href = authorization_url;
+    } catch (error) {
+      console.error("Error starting payment:", error);
+      toast({
+        title: "Payment Failed to Start",
+        description: (error as Error).message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Button
-      onClick={() => {
-        if (!config.email) {
-          toast({
-            title: "Email Required",
-            description: "Please provide your email to continue.",
-            variant: "destructive"
-          });
-          return;
-        }
-        if (!config.publicKey) {
-          toast({
-            title: "Configuration Error",
-            description: "Payment is not configured. Please contact support.",
-            variant: "destructive"
-          });
-          return;
-        }
-        initializePayment(onPaymentSuccess, onPaymentClose);
-      }}
+      onClick={handleSubscribe}
+      disabled={isLoading}
       className="h-14 rounded-2xl font-black uppercase tracking-widest text-[11px]"
     >
-      Pay Now ({finalCurrencySymbol})
+      {isLoading ? "Redirecting..." : `Pay Now (${finalCurrencySymbol})`}
     </Button>
   );
 };

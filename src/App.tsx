@@ -41,6 +41,7 @@ import SelectPlanPage from "./pages/billing/SelectPlanPage";
 import CheckoutPage from "./pages/billing/CheckoutPage";
 import PaymentSuccessPage from "./pages/billing/PaymentSuccessPage";
 import PaymentFailedPage from "./pages/billing/PaymentFailedPage";
+import PaymentCallbackPage from "./pages/billing/PaymentCallbackPage";
 
 import { ThemeProvider } from "./components/app/ThemeProvider";
 
@@ -70,6 +71,7 @@ const App = () => {
               <Route path="/billing/checkout" element={<CheckoutPage />} />
               <Route path="/billing/success" element={<PaymentSuccessPage />} />
               <Route path="/billing/failed" element={<PaymentFailedPage />} />
+              <Route path="/payment/callback" element={<PaymentCallbackPage />} />
               <Route path="/super-admin/auth" element={<SuperAdminAuthPage />} />
               <Route path="/super-admin" element={<SuperAdminPage />} />
               <Route path="/app" element={<AppLayout />}>
