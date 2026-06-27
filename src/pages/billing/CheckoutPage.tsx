@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,27 +6,49 @@ import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
 import { 
   ArrowLeft, 
-  ArrowRight,
   Check,
   Shield,
-  CreditCard
+  CreditCard,
+  Loader2
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import { useIndustryStore } from "@/lib/industry-store";
 import { useToast } from "@/hooks/use-toast";
 import { PaystackCheckout } from "@/components/app/PaystackCheckout";
+import { countries } from "@/components/ui/PhoneInput";
+import { useCurrency } from "@/lib/useCurrency";
+
+// Paystack supported currencies
+const PAYSTACK_SUPPORTED_CURRENCIES = ['GHS', 'NGN', 'USD', 'ZAR', 'KES', 'UGX', 'TZS', 'RWF'];
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { adminProfile, setSubscriptionTier, setUserType } = useIndustryStore();
+  const { adminProfile, setSubscriptionTier, setUserType, countryCode } = useIndustryStore();
+  const { 
+    convertFromUSD, 
+    calculateCredits, 
+    USD_TO_CREDIT_RATE,
+    isLoading,
+    error
+  } = useCurrency();
   
   const planId = searchParams.get('plan') || 'solo';
   const isAnnual = searchParams.get('annual') === 'true';
   
-  // Plan pricing
+  // Get currency info
+  const selectedCountry = countries.find(c => c.code === countryCode) || countries[0];
+  const userCurrency = selectedCountry.currency;
+  const userCurrencySymbol = selectedCountry.currencySymbol;
+  let finalCurrency = selectedCountry.currency;
+  let finalCurrencySymbol = selectedCountry.currencySymbol;
+  if (!PAYSTACK_SUPPORTED_CURRENCIES.includes(finalCurrency)) {
+    finalCurrency = 'GHS';
+    finalCurrencySymbol = 'GH₵';
+  }
+  
+  // Plan pricing (base prices are in USD)
   const getPlanDetails = () => {
     const plans = {
       solo: { name: 'Solo', monthly: 12, yearly: 10 },
@@ -37,21 +59,45 @@ const CheckoutPage = () => {
   };
 
   const plan = getPlanDetails();
-  const monthlyPrice = isAnnual ? plan.yearly : plan.monthly;
-  const seatPrice = isAnnual ? plan.seatYearly : plan.seatPrice;
+  const monthlyPriceUSD = isAnnual ? plan.yearly : plan.monthly;
+  const seatPriceUSD = isAnnual ? plan.seatYearly : plan.seatPrice;
   const billingCycle = isAnnual ? 'Annual' : 'Monthly';
   
-  // Calculate total (mock calculation - in real app this would come from user's seat count)
+  // Calculate totals in USD
   const seatCount = planId === 'solo' ? 0 : planId === 'team' ? 10 : 50;
-  const seatTotal = seatCount * (seatPrice || 0);
-  const subtotal = monthlyPrice + seatTotal;
-  const tax = subtotal * 0.15; // 15% tax (mock)
-  const total = subtotal + tax;
+  const seatTotalUSD = seatCount * (seatPriceUSD || 0);
+  const subtotalUSD = monthlyPriceUSD + seatTotalUSD;
+  const taxUSD = subtotalUSD * 0.15; // 15% tax (mock)
+  const totalUSD = subtotalUSD + taxUSD;
+  
+  // Convert to user's currency
+  const monthlyPriceUser = convertFromUSD(monthlyPriceUSD, userCurrency);
+  const seatTotalUser = convertFromUSD(seatTotalUSD, userCurrency);
+  const subtotalUser = convertFromUSD(subtotalUSD, userCurrency);
+  const taxUser = convertFromUSD(taxUSD, userCurrency);
+  const totalUser = convertFromUSD(totalUSD, userCurrency);
+  
+  // Calculate Credits
+  const totalCredits = calculateCredits(totalUSD);
 
   const handlePaymentSuccess = async (reference: any) => {
     // TODO: Call a Supabase Edge Function here to VERIFY the payment with Paystack's secret key
     // For now, we'll simulate it:
     console.log("Payment reference:", reference);
+    
+    // Calculate expiry date
+    const now = new Date();
+    const expiryDate = isAnnual 
+      ? new Date(now.setFullYear(now.getFullYear() + 1)) 
+      : new Date(now.setMonth(now.getMonth() + 1));
+    
+    // Update admin profile with expiry date
+    if (adminProfile) {
+      setAdminProfile({
+        ...adminProfile,
+        subscriptionExpiresAt: expiryDate.toISOString()
+      });
+    }
     
     setSubscriptionTier("paid");
     setUserType(planId as any);
@@ -113,39 +159,119 @@ const CheckoutPage = () => {
                 <CardTitle className="text-lg font-black uppercase tracking-tight">Order Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Plan</span>
-                    <span className="text-sm font-black">{plan.name} ({billingCycle})</span>
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Loading exchange rates...</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Base Price</span>
-                    <span className="text-sm font-black">${monthlyPrice}/month</span>
+                ) : error ? (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
+                    <p className="text-sm text-red-600">Failed to load exchange rates. Showing USD prices.</p>
                   </div>
-                  {seatCount > 0 && seatPrice && (
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium">Team Members ({seatCount})</span>
-                      <span className="text-sm font-black">${seatTotal}/month</span>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium">Plan</span>
+                        <span className="text-sm font-black">{plan.name} ({billingCycle})</span>
+                      </div>
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-sm font-medium">Base Price</span>
+                        <div className="text-right">
+                          <span className="text-sm font-black">${monthlyPriceUSD}/month</span>
+                          {userCurrency !== 'USD' && (
+                            <p className="text-xs text-muted-foreground">
+                              ~{userCurrencySymbol}{monthlyPriceUser.toFixed(2)}/month
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {seatCount > 0 && seatPriceUSD && (
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-sm font-medium">Team Members ({seatCount})</span>
+                          <div className="text-right">
+                            <span className="text-sm font-black">${seatTotalUSD}/month</span>
+                            {userCurrency !== 'USD' && (
+                              <p className="text-xs text-muted-foreground">
+                                ~{userCurrencySymbol}{seatTotalUser.toFixed(2)}/month
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                
-                <Separator />
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Subtotal</span>
-                    <span className="text-sm font-black">${subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Tax</span>
-                    <span className="text-sm font-black">${tax.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-black">
-                    <span>Total Due Today</span>
-                    <span className="text-primary">${total.toFixed(2)}</span>
-                  </div>
-                </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-sm font-medium">Subtotal</span>
+                        <div className="text-right">
+                          <span className="text-sm font-black">${subtotalUSD.toFixed(2)}</span>
+                          {userCurrency !== 'USD' && (
+                            <p className="text-xs text-muted-foreground">
+                              ~{userCurrencySymbol}{subtotalUser.toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-sm font-medium">Tax</span>
+                        <div className="text-right">
+                          <span className="text-sm font-black">${taxUSD.toFixed(2)}</span>
+                          {userCurrency !== 'USD' && (
+                            <p className="text-xs text-muted-foreground">
+                              ~{userCurrencySymbol}{taxUser.toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-baseline text-lg font-black">
+                        <span>Total Due Today (USD)</span>
+                        <div className="text-right">
+                          <span className="text-primary">${totalUSD.toFixed(2)}</span>
+                          {userCurrency !== 'USD' && (
+                            <p className="text-xs text-muted-foreground font-normal">
+                              ~{userCurrencySymbol}{totalUser.toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    {/* Currency & CDEIS Info */}
+                    <div className="space-y-4 bg-muted/30 rounded-xl p-4">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Your Currency</p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">
+                            {userCurrency} ({userCurrencySymbol})
+                          </span>
+                          <span className="text-sm font-medium">
+                            *Prices displayed in USD for Paystack processing
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-2 border-t border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Credit <span className="text-purple-600 font-bold">(Internal Platform Credit)</span></p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">
+                            1 USD = {USD_TO_CREDIT_RATE} Credits
+                          </span>
+                          <span className="text-lg font-black text-purple-600">
+                            {totalCredits.toLocaleString()} Credits
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          This purchase unlocks {totalCredits.toLocaleString()} Credits for your workspace
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
                 
                 <Separator />
                 
@@ -191,12 +317,12 @@ const CheckoutPage = () => {
                 <div className="flex items-center gap-2">
                   <CreditCard className="w-5 h-5 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    We accept Visa, Mastercard, Verve, and more.
+                    We accept Visa, Mastercard, Verve, and mobile money (Ghanaians).
                   </p>
                 </div>
                 
                 <PaystackCheckout
-                  amount={total}
+                  amount={totalUSD}
                   email={adminProfile?.email || ''}
                   planName={plan.name}
                   onSuccess={handlePaymentSuccess}

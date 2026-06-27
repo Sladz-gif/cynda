@@ -66,6 +66,7 @@ const TrialEndedOverlay = () => (
 const AppLayout = () => {
   const { toast } = useToast();
   const [showTrialBanner, setShowTrialBanner] = useState(true);
+  const [showSubscriptionReminder, setShowSubscriptionReminder] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const { 
@@ -79,7 +80,8 @@ const AppLayout = () => {
     notifications = [],
     cyndiOpen,
     setCyndiOpen,
-    seedNotifications
+    seedNotifications,
+    subscriptionTier
   } = useIndustryStore();
 
   // One-time seed for notifications if empty
@@ -136,6 +138,19 @@ const AppLayout = () => {
   }, [isTrial, trialStartedAt]);
 
   const isTrialExpired = isTrial && trialDaysRemaining <= 0;
+
+  const subscriptionDaysRemaining = useMemo(() => {
+    if (subscriptionTier !== 'paid' || !adminProfile?.subscriptionExpiresAt) return null;
+    const expiry = new Date(adminProfile.subscriptionExpiresAt).getTime();
+    const now = new Date().getTime();
+    const remainingMs = expiry - now;
+    return Math.max(0, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+  }, [subscriptionTier, adminProfile?.subscriptionExpiresAt]);
+
+  const shouldShowSubscriptionReminder = 
+    subscriptionDaysRemaining !== null && 
+    subscriptionDaysRemaining <= 7 && 
+    showSubscriptionReminder && isAdmin;
 
   const effectiveTools = useMemo(() => {
     if (isStaff) {
@@ -276,6 +291,40 @@ const AppLayout = () => {
                         </Button>
                       </Link>
                       <button onClick={() => setShowTrialBanner(false)} className="text-white/60 hover:text-white transition-colors">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              {shouldShowSubscriptionReminder && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="bg-orange-500 border-b border-orange-400 overflow-hidden shadow-glow-sm"
+                >
+                  <div className="px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                        <AlertCircle className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex flex-col">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-white leading-none mb-0.5">
+                          Subscription Renewal: <span className="opacity-80">{subscriptionDaysRemaining} days remaining</span>
+                        </p>
+                        <p className="text-[9px] font-bold text-white/70 uppercase tracking-tighter leading-none">
+                          Renew now to keep your workspace active
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Link to="/billing/select-plan">
+                        <Button size="sm" className="h-8 px-4 rounded-xl bg-white text-orange-600 hover:bg-white/90 font-black uppercase tracking-widest text-[9px] shadow-sm">
+                          Renew Now
+                        </Button>
+                      </Link>
+                      <button onClick={() => setShowSubscriptionReminder(false)} className="text-white/60 hover:text-white transition-colors">
                         <X className="w-4 h-4" />
                       </button>
                     </div>

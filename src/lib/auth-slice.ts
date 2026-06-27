@@ -12,6 +12,7 @@ export interface AdminProfile {
   logo?: string;
   password?: string;
   needsPasswordReset?: boolean;
+  subscriptionExpiresAt?: string;
 }
 
 export interface Staff {
