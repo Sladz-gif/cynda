@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Mail, Lock, User, ArrowRight, Bot, CheckCircle2, Eye, EyeOff, AlertCircle, Zap, Sparkles } from "lucide-react";
 import { cn, generateChatName } from "@/lib/utils";
-import * as bcrypt from 'bcryptjs';
+import { supabase } from "@/lib/supabase";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 
 type Strength = "Weak" | "Fair" | "Strong" | "Very Strong";
@@ -161,32 +161,36 @@ const SignUpPage = () => {
 
     try {
       if (canSubmit) {
-        // Check if email already exists (mock check)
-        const { adminProfile, staffList } = useIndustryStore.getState();
-        const allUsers = [adminProfile, ...staffList].filter(Boolean);
-        const emailExists = allUsers.some(u => u.email === email);
+        const { data, error } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            data: {
+              name: name,
+              phone: phone
+            }
+          }
+        });
         
-        if (emailExists) {
-          setErrors({ email: "An account with this email already exists. Want to sign in instead?" });
+        if (error) {
+          setErrors({
+            general: error.message
+          });
           setIsLoading(false);
           return;
         }
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
+        
         setSubscriptionTier(subscriptionChoice);
         if (subscriptionChoice === "trial") {
           setTrialStartedAt(new Date().toISOString());
         }
-        setAuthenticated(true);
+        
         setOnboarded(false);
         setAdminProfile({
           name: name,
           email: email,
           chatName: generateChatName(name),
           role: "Super Admin",
-          password: hashedPassword,
           phone: phone,
         });
         
@@ -196,7 +200,6 @@ const SignUpPage = () => {
           if (subscriptionChoice === "paid") {
             navigate("/billing/select-plan");
           } else {
-            // For demo purposes, we automatically set onboarded to false to show the onboarding flow
             navigate("/onboarding");
           }
         }, 3000);

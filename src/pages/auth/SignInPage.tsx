@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 import { ShieldCheck, Mail, Lock, ArrowRight, Bot, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import * as bcrypt from 'bcryptjs';
+import { supabase } from "@/lib/supabase";
 
 function getTimeBasedGreeting(): { greeting: string; message: string } {
   const hour = new Date().getHours();
@@ -127,39 +127,30 @@ const SignInPage = () => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulation Logic
-    const isEnterpriseOnboarding = email === "enterprise@cynda.ai";
-    
-    setAuthenticated(true);
-    useIndustryStore.getState().setOnboarded(true);
-    
-    if (isEnterpriseOnboarding) {
-      useIndustryStore.getState().setAdminProfile({
-        name: "Enterprise Partner",
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
         email: email,
-        role: "Director",
-        companyName: "Global Tech Inc",
-        password: password,
-        needsPasswordReset: true
+        password: password
       });
-      useIndustryStore.getState().setUserType("enterprise");
-      useIndustryStore.getState().setNeedsPasswordReset(true);
-      navigate("/force-password-reset");
-    } else {
-      // Normal flow
-      if (!adminProfile) {
-        useIndustryStore.getState().setAdminProfile({
-          name: "Demo User",
-          email: email || "user@example.com",
-          role: "Director",
-          password: "demo",
-          phone: "000-000-0000"
+      
+      if (error) {
+        setErrors({
+          general: error.message
         });
+        setAttemptCount(prev => prev + 1);
+        if (attemptCount + 1 >= 5) {
+          setIsBlocked(true);
+          setBlockTimeRemaining(300);
+        }
       }
-      navigate("/app/dashboard");
+    } catch (err) {
+      console.error("Sign in error:", err);
+      setErrors({
+        general: "An unexpected error occurred. Please try again."
+      });
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (
