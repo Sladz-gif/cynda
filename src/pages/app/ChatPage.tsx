@@ -15,7 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile, useIsTablet } from "@/hooks/use-mobile";
 import { useIndustryStore, Staff, CRMContact } from "@/lib/industry-store";
 import { useLocation } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -76,6 +75,55 @@ interface ChatSession {
   participants: string[];
 }
 
+const mockChats: ChatSession[] = [
+  {
+    id: '1',
+    name: 'John Doe',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
+    type: 'direct',
+    lastMessage: 'Hey, how are things going?',
+    lastTime: '10:30 AM',
+    unreadCount: 2,
+    online: true,
+    messages: [
+      { id: 'm1', senderId: 'john', text: 'Hey there!', time: '10:00 AM', status: 'read', type: 'text', senderName: 'John Doe' },
+      { id: 'm2', senderId: 'me', text: 'Hey John, good!', time: '10:15 AM', status: 'read', type: 'text', senderName: 'You' },
+      { id: 'm3', senderId: 'john', text: 'Hey, how are things going?', time: '10:30 AM', status: 'delivered', type: 'text', senderName: 'John Doe' }
+    ],
+    participants: ['john', 'me']
+  },
+  {
+    id: '2',
+    name: 'Design Team',
+    avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=100',
+    type: 'group',
+    lastMessage: 'New mockup uploaded',
+    lastTime: '9:15 AM',
+    unreadCount: 0,
+    online: false,
+    messages: [
+      { id: 'm1', senderId: 'jane', text: 'Can we review the design?', time: '9:00 AM', status: 'read', type: 'text', senderName: 'Jane Smith' },
+      { id: 'm2', senderId: 'me', text: 'Sure thing', time: '9:10 AM', status: 'read', type: 'text', senderName: 'You' },
+      { id: 'm3', senderId: 'jane', text: 'New mockup uploaded', time: '9:15 AM', status: 'read', type: 'text', senderName: 'Jane Smith' }
+    ],
+    participants: ['jane', 'me', 'john']
+  },
+  {
+    id: '3',
+    name: 'general',
+    avatar: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100',
+    type: 'channel',
+    lastMessage: 'Welcome everyone!',
+    lastTime: 'Yesterday',
+    unreadCount: 5,
+    online: true,
+    messages: [
+      { id: 'm1', senderId: 'admin', text: 'Welcome everyone!', time: 'Yesterday', status: 'read', type: 'text', senderName: 'Admin' }
+    ],
+    participants: ['admin', 'me', 'jane', 'john']
+  }
+];
+
 const ChatPage = () => {
   const { toast } = useToast();
   const location = useLocation();
@@ -95,8 +143,8 @@ const ChatPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileSidebar, setShowSidebar] = useState(true);
   
-  const [chats, setChats] = useState<ChatSession[]>([]);
-  const [selectedChat, setSelectedChat] = useState<ChatSession | null>(null);
+  const [chats, setChats] = useState<ChatSession[]>(mockChats);
+  const [selectedChat, setSelectedChat] = useState<ChatSession | null>(mockChats[0]);
 
   const [chatMessage, setChatMessage] = useState("");
   const [isSearchUserOpen, setIsSearchUserOpen] = useState(false);
@@ -122,337 +170,56 @@ const ChatPage = () => {
     }
   }, [isMobile]);
 
-  useEffect(() => {
-    loadConversations();
-    subscribeToMessages();
-  }, []);
-
-  const loadConversations = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: participantData } = await supabase
-        .from('chat_participants')
-        .select('conversation_id, profiles(id, full_name, chat_name, avatar_url)')
-        .eq('profile_id', user.id);
-
-      if (participantData && participantData.length > 0) {
-        const conversationIds = participantData.map(p => p.conversation_id);
-        
-        const { data: conversations } = await supabase
-          .from('chat_conversations')
-          .select('*')
-          .in('id', conversationIds)
-          .order('updated_at', { ascending: false });
-
-        if (conversations) {
-          const chatSessions = await Promise.all(conversations.map(async (conv) => {
-            const { data: messages } = await supabase
-              .from('chat_messages')
-              .select('*, sender: sender_id(id, full_name, chat_name)')
-              .eq('conversation_id', conv.id)
-              .order('created_at', { ascending: true });
-
-            const { data: allParticipants } = await supabase
-              .from('chat_participants')
-              .select('profile_id, profiles(full_name, chat_name)')
-              .eq('conversation_id', conv.id);
-
-            const lastMessage = messages && messages.length > 0 ? messages[messages.length - 1] : null;
-            
-            let chatName = conv.name || 'Chat';
-            let chatAvatar = '';
-            
-            if (conv.type === 'direct' && allParticipants) {
-              const otherParticipant = allParticipants.find(p => p.profile_id !== user.id);
-              if (otherParticipant && otherParticipant.profiles) {
-                chatName = otherParticipant.profiles.full_name;
-                chatAvatar = '';
-              }
-            }
-
-            return {
-              id: conv.id,
-              name: chatName,
-              avatar: chatAvatar,
-              type: conv.type as any,
-              lastMessage: lastMessage?.content || 'No messages yet',
-              lastTime: lastMessage?.created_at ? new Date(lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
-              unreadCount: 0,
-              messages: (messages || []).map(m => ({
-                id: m.id,
-                senderId: m.sender_id,
-                text: m.content,
-                time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                status: 'sent',
-                type: m.message_type as any,
-                mediaUrl: m.media_url,
-                senderName: m.sender?.full_name,
-                senderChatName: m.sender?.chat_name
-              })),
-              participants: allParticipants?.map(p => p.profile_id) || []
-            };
-          }));
-          
-          setChats(chatSessions);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading conversations:', error);
-    }
-  };
-
-  const subscribeToMessages = () => {
-    const channel = supabase
-      .channel('public:chat_messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
-        const newMessage = payload.new as any;
-        
-        // First get sender data
-        const { data: senderData } = await supabase
-          .from('profiles')
-          .select('full_name, chat_name')
-          .eq('id', newMessage.sender_id)
-          .single();
-        
-        const formattedMessage = {
-          id: newMessage.id,
-          senderId: newMessage.sender_id,
-          text: newMessage.content,
-          time: new Date(newMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          status: 'sent',
-          type: newMessage.message_type,
-          mediaUrl: newMessage.media_url,
-          senderName: senderData?.full_name,
-          senderChatName: senderData?.chat_name
-        };
-        
-        setChats(prev => prev.map(chat => {
-          if (chat.id === newMessage.conversation_id) {
-            return {
-              ...chat,
-              messages: [...chat.messages, formattedMessage],
-              lastMessage: newMessage.content,
-              lastTime: formattedMessage.time
-            };
-          }
-          return chat;
-        }));
-        
-        if (selectedChat?.id === newMessage.conversation_id) {
-          setSelectedChat(prev => {
-            if (!prev) return null;
-            return {
-              ...prev,
-              messages: [...prev.messages, formattedMessage]
-            };
-          });
-        }
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
-  const startChatWithContact = async (contact: Staff | { id: string; name: string; email: string; type: 'external' }) => {
-    const existing = chats.find(c => c.id === contact.id || c.name === contact.name);
-    if (existing) {
-      setSelectedChat(existing);
-      setIsSearchUserOpen(false);
-      setUserSearchQuery("");
-      return;
-    }
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .or(`full_name.ilike.%${contact.name}%,chat_name.ilike.%${(contact as any).chatName}%`)
-        .maybeSingle();
-
-      if (profile) {
-        const { data: newConversation, error } = await supabase
-          .from('chat_conversations')
-          .insert({ type: 'direct', name: null, created_by: user.id })
-          .select('*')
-          .single();
-
-        if (error) throw error;
-
-        await supabase
-          .from('chat_participants')
-          .insert([
-            { conversation_id: newConversation.id, profile_id: user.id },
-            { conversation_id: newConversation.id, profile_id: profile.id }
-          ]);
-
-        const newChat: ChatSession = {
-          id: newConversation.id,
-          name: contact.name,
-          avatar: '',
-          type: 'direct',
-          lastMessage: "No messages yet",
-          lastTime: "Just now",
-          unreadCount: 0,
-          messages: [],
-          participants: [user.id, profile.id]
-        };
-
-        setChats([newChat, ...chats]);
-        setSelectedChat(newChat);
-      } else {
-        const newChat: ChatSession = {
-          id: Math.random().toString(36).substr(2, 9),
-          name: contact.name,
-          avatar: (contact as any).type === 'external' ? "" : `https://i.pravatar.cc/150?u=${contact.id}`,
-          type: 'direct',
-          lastMessage: "No messages yet",
-          lastTime: "Just now",
-          unreadCount: 0,
-          messages: [],
-          participants: []
-        };
-        setChats([newChat, ...chats]);
-        setSelectedChat(newChat);
-      }
-
-      setIsSearchUserOpen(false);
-      setUserSearchQuery("");
-    } catch (error) {
-      console.error('Error starting chat:', error);
-      toast({ title: 'Error', description: 'Could not start chat', variant: 'destructive' });
-    }
-  };
-
-  const handleExternalSearch = () => {
-    const isChatName = userSearchQuery.toLowerCase().endsWith('.cynda');
-
-    if (!isChatName) {
-      toast({ 
-        title: "Invalid Username", 
-        description: "Please enter a valid Cynda username (e.g., name.cynda).", 
-        variant: "destructive" 
-      });
-      return;
-    }
+  const sendMessage = () => {
+    if (!chatMessage.trim() || !selectedChat) return;
     
-    const newExternal: any = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: userSearchQuery.split('.cynda')[0].replace(/\./g, ' '),
-      email: "",
-      chatName: userSearchQuery,
-      type: 'external'
+    const newMessage: ChatMessage = {
+      id: Date.now().toString(),
+      senderId: 'me',
+      text: chatMessage,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'sent',
+      type: 'text',
+      senderName: 'You'
     };
-    
-    addExternalContact(newExternal);
-    startChatWithContact(newExternal);
-    toast({ title: "Contact Added", description: `Started chat with ${userSearchQuery}` });
+
+    setChats(prev => prev.map(chat => {
+      if (chat.id === selectedChat.id) {
+        return {
+          ...chat,
+          messages: [...chat.messages, newMessage],
+          lastMessage: chatMessage,
+          lastTime: newMessage.time
+        };
+      }
+      return chat;
+    }));
+
+    setSelectedChat(prev => prev ? {
+      ...prev,
+      messages: [...prev.messages, newMessage],
+      lastMessage: chatMessage,
+      lastTime: newMessage.time
+    } : null);
+
+    setChatMessage("");
+
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
-  const filteredStaff = staffList.filter(s => 
-    s.name.toLowerCase().includes(userSearchQuery.toLowerCase()) || 
-    (s.chatName && s.chatName.toLowerCase().includes(userSearchQuery.toLowerCase()))
-  );
+  const filteredChats = useMemo(() => {
+    return chats.filter(chat => 
+      chat.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [chats, searchQuery]);
 
-  const filteredExternal = externalContacts.filter(c => 
-    c.name.toLowerCase().includes(userSearchQuery.toLowerCase()) || 
-    (c as any).chatName?.toLowerCase().includes(userSearchQuery.toLowerCase())
-  );
-  
-
-  const handleCreateGroup = async () => {
-    if (!newGroupName.trim()) {
-      toast({ title: "Group Name Required", variant: "destructive" });
-      return;
-    }
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: newConversation, error } = await supabase
-        .from('chat_conversations')
-        .insert({ type: 'group', name: newGroupName, created_by: user.id })
-        .select('*')
-        .single();
-
-      if (error) throw error;
-
-      const participants = [user.id, ...selectedParticipants];
-      await supabase
-        .from('chat_participants')
-        .insert(participants.map(p => ({ conversation_id: newConversation.id, profile_id: p })));
-
-      const newChat: ChatSession = {
-        id: newConversation.id,
-        name: newGroupName,
-        avatar: '',
-        type: 'group',
-        lastMessage: "Group created",
-        lastTime: "Just now",
-        unreadCount: 0,
-        messages: [],
-        participants
-      };
-
-      setChats([newChat, ...chats]);
-      setSelectedChat(newChat);
-      setIsNewGroupOpen(false);
-      setNewGroupName("");
-      setSelectedParticipants([]);
-      toast({ title: "Group Created", description: `"${newGroupName}" is ready for messaging.` });
-    } catch (error) {
-      console.error('Error creating group:', error);
-    }
-  };
-
-  const handleCreateChannel = async () => {
-    if (!newChannelName.trim()) {
-      toast({ title: "Channel Name Required", variant: "destructive" });
-      return;
-    }
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: newConversation, error } = await supabase
-        .from('chat_conversations')
-        .insert({ type: 'channel', name: newChannelName, created_by: user.id })
-        .select('*')
-        .single();
-
-      if (error) throw error;
-
-      await supabase
-        .from('chat_participants')
-        .insert({ conversation_id: newConversation.id, profile_id: user.id });
-
-      const newChat: ChatSession = {
-        id: newConversation.id,
-        name: newChannelName,
-        avatar: "",
-        type: 'channel',
-        lastMessage: "Channel created",
-        lastTime: "Just now",
-        unreadCount: 0,
-        messages: [],
-        participants: [user.id]
-      };
-
-      setChats([newChat, ...chats]);
-      setSelectedChat(newChat);
-      setIsNewChannelOpen(false);
-      setNewChannelName("");
-      toast({ title: "Channel Created", description: `#${newChannelName} is now live.` });
-    } catch (error) {
-      console.error('Error creating channel:', error);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
@@ -462,467 +229,557 @@ const ChatPage = () => {
     );
   };
 
-  const handleSendMessage = async () => {
-    if (!chatMessage.trim() || !selectedChat) return;
-    
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  const createNewDirectChat = (contact: any) => {
+    const newChat: ChatSession = {
+      id: Date.now().toString(),
+      name: contact.name,
+      avatar: contact.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100',
+      type: 'direct',
+      lastMessage: 'Start a conversation!',
+      lastTime: 'Just now',
+      unreadCount: 0,
+      online: true,
+      messages: [],
+      participants: [contact.id, 'me']
+    };
+    setChats([newChat, ...chats]);
+    setSelectedChat(newChat);
+    setIsSearchUserOpen(false);
+  };
 
-      const { data: message, error } = await supabase
-        .from('chat_messages')
-        .insert({
-          conversation_id: selectedChat.id,
-          sender_id: user.id,
-          content: chatMessage,
-          message_type: 'text'
-        })
-        .select('*')
-        .single();
-
-      if (error) throw error;
-
-      setChatMessage("");
-    } catch (error) {
-      console.error('Error sending message:', error);
+  const createGroupChat = () => {
+    if (newGroupName.trim() && selectedParticipants.length > 0) {
+      const newChat: ChatSession = {
+        id: Date.now().toString(),
+        name: newGroupName,
+        avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=100',
+        type: 'group',
+        lastMessage: 'Group created!',
+        lastTime: 'Just now',
+        unreadCount: 0,
+        online: true,
+        messages: [],
+        participants: ['me', ...selectedParticipants]
+      };
+      setChats([newChat, ...chats]);
+      setSelectedChat(newChat);
+      setNewGroupName('');
+      setSelectedParticipants([]);
+      setIsNewGroupOpen(false);
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { subscriptionTier } = useIndustryStore.getState();
-    if (subscriptionTier === 'trial') {
-      toast({ 
-        title: "Action Restricted", 
-        description: "File sharing is disabled during the 3-day trial. Upgrade to a full plan to enable storage.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (e.target.files) {
-      toast({ title: "File selected", description: e.target.files[0].name });
+  const createChannel = () => {
+    if (newChannelName.trim()) {
+      const newChat: ChatSession = {
+        id: Date.now().toString(),
+        name: newChannelName,
+        avatar: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100',
+        type: 'channel',
+        lastMessage: 'Channel created!',
+        lastTime: 'Just now',
+        unreadCount: 0,
+        online: true,
+        messages: [],
+        participants: ['me']
+      };
+      setChats([newChat, ...chats]);
+      setSelectedChat(newChat);
+      setNewChannelName('');
+      setIsNewChannelOpen(false);
     }
   };
-
-  const renderChatList = () => (
-    <div className={cn("flex flex-col h-full", isMobile ? "bg-background" : "bg-muted/30")}>
-      <div className="p-4 border-b border-border/50 bg-background/50 backdrop-blur-md sticky top-0 z-10">
-        <div className="flex items-center gap-3 mb-6 p-2">
-          <Avatar className="h-10 w-10 rounded-full border-2 border-primary/20 shadow-sm">
-            <AvatarFallback className="bg-primary text-white font-black">
-              {activeUser?.name?.charAt(0) || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <p className="text-sm font-black text-foreground truncate uppercase tracking-tight">
-              {activeUser?.chatName || "username.cynda"}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-black text-xl text-foreground tracking-tight uppercase">Chats</h3>
-          <div className="flex gap-1.5">
-            <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl bg-muted text-muted-foreground" onClick={() => setIsNewGroupOpen(true)}>
-              <UserPlus className="w-4 h-4" />
-            </Button>
-            <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl bg-muted text-muted-foreground" onClick={() => setIsNewChannelOpen(true)}>
-              <Hash className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <Input 
-            placeholder="Search messages..." 
-            className="pl-9 h-10 rounded-xl bg-muted border-none text-xs font-bold text-foreground placeholder:text-muted-foreground placeholder:italic shadow-inner"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
-      <ScrollArea className="flex-1">
-        <div className="divide-y divide-border/30">
-          {chats.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest">No chats yet</p>
-              <p className="text-[10px] text-muted-foreground mt-2">Start a new conversation to get chatting</p>
-            </div>
-          ) : (
-            chats.map(chat => (
-              <div 
-                key={chat.id} 
-                onClick={() => setSelectedChat(chat)}
-                className={`p-4 cursor-pointer hover:bg-card/50 transition-all flex items-center gap-4 group relative ${selectedChat?.id === chat.id ? 'bg-card shadow-sm z-10' : ''}`}
-              >
-                {selectedChat?.id === chat.id && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-sm font-black text-foreground truncate tracking-tight uppercase">{chat.name}</span>
-                    <div className="flex items-center gap-2">
-                      {chat.online && <div className="w-2 h-2 rounded-full bg-green-500 shadow-sm" />}
-                      <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest opacity-60">{chat.lastTime}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-[11px] text-muted-foreground truncate flex-1 font-bold leading-none">{chat.lastMessage}</p>
-                    {chat.unreadCount > 0 && (
-                      <Badge className="h-5 min-w-5 rounded-full px-1 text-[9px] font-black bg-primary text-white flex items-center justify-center shadow-md border border-white">{chat.unreadCount}</Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </ScrollArea>
-    </div>
-  );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-56px)] -m-4 md:-m-6 overflow-hidden bg-muted/30">
-      <div className="h-auto md:h-16 border-b border-border/50 bg-background/50 backdrop-blur-md px-4 py-2.5 md:py-0 flex flex-col md:flex-row items-stretch md:items-center justify-between shrink-0 gap-2.5 md:gap-3">
-        <div className="flex items-center gap-2 md:gap-4 overflow-x-auto no-scrollbar pb-0.5 md:pb-0">
-          <div className="bg-muted p-1 rounded-xl flex gap-1 shrink-0">
-            <Button 
-              size="sm" 
-              variant="default"
-              className="h-8 md:h-9 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-widest gap-1.5 md:gap-2 px-2.5 md:px-4 transition-all bg-primary hover:bg-primary/90 text-white shadow-md"
-              onClick={() => setShowSidebar(true)}
-            >
-              <MessageSquare className="w-3 md:w-3.5 h-3 md:h-3.5" /> CHAT
-            </Button>
-          </div>
-          <div className="hidden md:block h-6 w-px bg-border/50" />
-          <Button 
-            size="sm" 
-            className="rounded-xl h-8 md:h-9 px-2.5 md:px-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest gap-1.5 md:gap-2 bg-primary hover:bg-primary/90 text-white shadow-md shrink-0"
-            onClick={() => setIsSearchUserOpen(true)}
+    <div className="flex h-full bg-[#0A0A0B] text-white">
+      {/* Sidebar */}
+      <AnimatePresence mode="wait">
+        {(showMobileSidebar || !isMobile) && (
+          <motion.div
+            initial={{ x: -320, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -320, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className={cn(
+              "flex flex-col bg-[#131316]/80 border-r border-[#262629]",
+              isMobile ? "absolute z-50 h-full" : "relative",
+              isTablet ? "w-[260px]" : "w-[300px]"
+            )}
           >
-            <Plus className="w-3.5 md:w-4 h-3.5 md:h-4 stroke-[3px]" /> NEW
-          </Button>
-        </div>
-        <div className="hidden md:flex items-center gap-2">
-          <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl bg-muted text-muted-foreground">
-            <Bell className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-1 overflow-hidden relative">
-        <AnimatePresence mode="wait">
-          {showMobileSidebar && (
-            <motion.div 
-              initial={isMobile ? { x: -320 } : { x: -320, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={isMobile ? { x: -320 } : { x: -320, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className={cn(
-                "z-20 w-full md:w-[260px] lg:w-[300px] h-full flex-shrink-0 border-r border-border/50 flex-col shadow-xl md:shadow-none",
-                isMobile ? "absolute inset-0 bg-background" : "relative bg-muted/30"
-              )}
-            >
-              {renderChatList()}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="flex-1 flex flex-col bg-background relative overflow-hidden">
-          <div className="h-full flex flex-col overflow-hidden bg-background">
-              {!selectedChat ? (
-                <div className="hidden md:flex flex-1 flex flex-col items-center justify-center text-center p-8 bg-muted/30">
-                  <div className="w-16 h-16 rounded-[24px] bg-primary/10 flex items-center justify-center text-primary mb-6 shadow-glow">
-                    <MessageSquare className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-xl font-black text-foreground uppercase tracking-tighter">SELECT A CHAT</h3>
-                  <p className="text-muted-foreground text-[10px] max-w-xs mt-2 font-black uppercase tracking-widest opacity-60">Connect in real-time with colleagues.</p>
+            {/* Header */}
+            <div className="p-4 border-b border-[#262629] bg-[#131316]">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6600] to-[#FF8A00] flex items-center justify-center">
+                  <MessageSquare className="w-5 h-5 text-white" />
                 </div>
-              ) : (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="h-full flex flex-col overflow-hidden"
+                <h1 className="text-lg font-black">Chats</h1>
+              </div>
+              
+              <div className="flex gap-2 mb-4">
+                <Button 
+                  onClick={() => setIsSearchUserOpen(true)}
+                  className="flex-1 bg-[#FF6600] hover:bg-[#FF8A00] text-white font-bold text-sm py-2"
                 >
-                  <div className="p-3 md:p-4 border-b border-border/50 bg-muted/30 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-3 md:gap-4 min-w-0">
-                      <Button variant="ghost" size="icon" className="md:hidden h-9 w-9 rounded-xl bg-card shadow-sm" onClick={() => setShowSidebar(true)}>
-                        <ArrowLeft className="w-4 h-4" />
-                      </Button>
-                      <div className="min-w-0">
-                        <h3 className="font-black text-sm md:text-base text-foreground tracking-tight leading-none mb-1 truncate uppercase">{selectedChat.name}</h3>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[7px] md:text-[8px] text-muted-foreground font-black uppercase tracking-widest italic opacity-60">ACTIVE {selectedChat.lastTime}</span>
-                        </div>
-                      </div>
-                    </div>
+                  <User className="w-4 h-4 mr-2" />
+                  New Chat
+                </Button>
+                <Button 
+                  onClick={() => setIsNewGroupOpen(true)}
+                  variant="ghost"
+                  className="bg-[#1F1F23] hover:bg-[#262629] text-white font-bold text-sm py-2"
+                >
+                  <Users className="w-4 h-4" />
+                </Button>
+                <Button 
+                  onClick={() => setIsNewChannelOpen(true)}
+                  variant="ghost"
+                  className="bg-[#1F1F23] hover:bg-[#262629] text-white font-bold text-sm py-2"
+                >
+                  <Hash className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search or start new chat" 
+                  className="pl-10 bg-[#1F1F23] border-0 text-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Chat List */}
+            <ScrollArea className="flex-1">
+              <div className="p-2 space-y-1">
+                {filteredChats.map((chat) => (
+                <motion.div
+                  key={chat.id}
+                  onClick={() => setSelectedChat(chat)}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all",
+                    selectedChat?.id === chat.id 
+                      ? "bg-[#FF6600]/10 border border-[#FF6600]/20" 
+                      : "hover:bg-[#1F1F23] hover:border-[#262629]"
+                  )}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="relative">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={chat.avatar} className="object-cover" />
+                      <AvatarFallback className="bg-gradient-to-br from-[#FF6600] to-[#FF8A00] font-black">
+                        {chat.name.slice(0,2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {chat.online && (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-[#131316] rounded-full" />
+                    )}
                   </div>
 
-                  <ScrollArea className="flex-1 bg-background">
-                    <div className="p-4 md:p-6 space-y-6 max-w-3xl mx-auto">
-                      <div className="flex flex-col items-center justify-center py-6 md:py-8 text-center border-b border-border/50 mb-8">
-                        <h4 className="text-lg md:text-xl font-black text-foreground tracking-tight uppercase">{selectedChat.name}</h4>
-                        <p className="text-muted-foreground text-[9px] md:text-[10px] mt-2 font-bold uppercase tracking-widest italic opacity-60">This is the beginning of your chat history.</p>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        {selectedChat.messages.map((msg, i) => {
-                          const { data: { user } } = supabase.auth.getUser();
-                          const isMe = user?.id === msg.senderId;
-                          const senderName = isMe ? (activeUser?.chatName || "me.cynda") : (msg.senderChatName || msg.senderName || selectedChat.name);
-                          
-                          return (
-                            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                              <div className={`max-w-[85%] md:max-w-[75%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                                <span className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.15em] mb-1 px-1">
-                                  {senderName}
-                                </span>
-                                <div className={`px-3 md:px-4 py-1.5 md:py-2 rounded-[16px] md:rounded-[20px] text-xs md:text-sm font-bold shadow-sm transition-all ${
-                                  isMe 
-                                    ? 'bg-primary text-white rounded-tr-none' 
-                                    : 'bg-muted/30 text-foreground border border-border/50 rounded-tl-none'
-                                }`}>
-                                  {msg.text}
-                                </div>
-                                <div className="flex items-center gap-1.5 mt-1 px-1.5">
-                                  <span className="text-[7px] md:text-[8px] text-muted-foreground font-black uppercase tracking-widest">{msg.time}</span>
-                                  {isMe && (
-                                    <div className="flex -space-x-1">
-                                      <CheckCircle2 className="w-2.5 md:w-3 h-2.5 md:h-3 text-primary" />
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                        <div ref={messagesEndRef} />
-                      </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className={cn(
+                        "font-bold truncate",
+                        chat.unreadCount > 0 ? "text-[#FF6600]" : "text-white"
+                      )}>
+                        {chat.type === 'channel' ? `#${chat.name}` : chat.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {chat.lastTime}
+                      </span>
                     </div>
-                  </ScrollArea>
-
-                  <div className="p-3 md:p-4 border-t border-border/50 bg-muted/30 shrink-0">
-                    <div className="max-w-full mx-auto flex items-end gap-2 md:gap-3">
-                      <div className="flex gap-1 md:gap-1.5 mb-1">
-                        <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
-                        <Button size="icon" variant="ghost" className="h-9 w-9 md:h-10 md:w-10 rounded-xl bg-card text-muted-foreground shadow-sm" onClick={() => fileInputRef.current?.click()}>
-                          <Paperclip className="w-3.5 md:w-4 h-3.5 md:h-4" />
-                        </Button>
-                      </div>
-                      <div className="flex-1 relative">
-                        <Textarea 
-                          placeholder={`Message...`}
-                          className="min-h-[38px] md:min-h-[44px] max-h-32 rounded-lg bg-card border-2 border-transparent focus-visible:border-primary/30 shadow-sm resize-none py-2 md:py-2.5 px-3 md:px-4 pr-9 md:pr-11 text-xs md:text-sm font-bold text-foreground placeholder:text-muted-foreground placeholder:italic"
-                          value={chatMessage}
-                          onChange={(e) => setChatMessage(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              handleSendMessage();
-                            }
-                          }}
-                        />
-                        <Button size="icon" variant="ghost" className="absolute right-1.5 md:right-2 bottom-1 md:bottom-1.5 h-7 w-7 md:h-8 md:w-8 rounded-lg text-muted-foreground hover:text-primary">
-                          <Smile className="w-4 md:w-5 h-4 md:h-5" />
-                        </Button>
-                      </div>
-                      <Button 
-                        size="icon" 
-                        className="h-9 w-9 md:h-11 md:w-11 rounded-lg shrink-0 transition-all shadow-md bg-primary text-white disabled:bg-muted disabled:text-muted-foreground disabled:scale-95"
-                        onClick={handleSendMessage}
-                        disabled={!chatMessage.trim()}
-                      >
-                        <Send className="w-4 md:w-5 h-4 md:h-5" />
-                      </Button>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground truncate">
+                        {chat.lastMessage}
+                      </span>
+                      {chat.unreadCount > 0 && (
+                        <Badge className="bg-[#FF6600] text-white text-xs font-black">
+                          {chat.unreadCount}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </motion.div>
-              )}
-          </div>
-        </div>
-      </div>
-
-      <Dialog open={isSearchUserOpen} onOpenChange={setIsSearchUserOpen}>
-        <DialogContent className="sm:max-w-[450px] w-[95%] md:w-[90%] lg:w-[450px] rounded-[24px]">
-          <DialogHeader>
-            <DialogTitle className="font-black text-xl text-foreground uppercase tracking-tight">New Conversation</DialogTitle>
-            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Connect with team members or external contacts using their username.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="relative flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Username (e.g. name.cynda)" 
-                  className="pl-10 h-12 rounded-xl bg-muted border-none text-xs font-bold"
-                  value={userSearchQuery}
-                  onChange={(e) => setUserSearchQuery(e.target.value)}
-                />
-              </div>
-              <Button 
-                onClick={handleExternalSearch}
-                className="h-12 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 border-none font-black text-[10px] uppercase tracking-widest px-4"
-              >
-                <Globe className="w-4 h-4 mr-2" /> Invite
-              </Button>
-            </div>
-            
-            <ScrollArea className="h-[350px] pr-4">
-              <div className="space-y-6">
-                {filteredStaff.length > 0 && (
-                  <div>
-                    <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 px-1">Team Members</h4>
-                    <div className="space-y-1">
-                      {filteredStaff.map((staff) => (
-                        <button 
-                          key={staff.id} 
-                          className="w-full p-3 flex items-center gap-3 rounded-xl hover:bg-muted/30 transition-all group"
-                          onClick={() => startChatWithContact(staff)}
-                        >
-                          <Avatar className="h-10 w-10 rounded-xl border-2 border-card shadow-sm">
-                            <AvatarFallback className="bg-primary/10 text-primary font-black">{staff.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div className="text-left flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs font-black uppercase truncate">{staff.name}</p>
-                              {staff.chatName && (
-                                <span className="text-[9px] text-primary font-bold bg-primary/5 px-2 py-0.5 rounded-full">{staff.chatName}</span>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest truncate">{staff.role} • {staff.department}</p>
-                          </div>
-                          <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {filteredExternal.length > 0 && (
-                  <div>
-                    <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 px-1">External Contacts</h4>
-                    <div className="space-y-1">
-                      {filteredExternal.map((contact) => (
-                        <button 
-                          key={contact.id} 
-                          className="w-full p-3 flex items-center gap-3 rounded-xl hover:bg-muted/30 transition-all group"
-                          onClick={() => startChatWithContact(contact as any)}
-                        >
-                          <Avatar className="h-10 w-10 rounded-xl border-2 border-card shadow-sm">
-                            <AvatarFallback className="bg-blue-500/10 text-blue-500 font-black">
-                              <Globe className="w-4 h-4" />
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="text-left flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs font-black uppercase truncate">{contact.name}</p>
-                              {(contact as any).chatName && (
-                                <span className="text-[9px] text-blue-500 font-bold bg-blue-500/5 px-2 py-0.5 rounded-full">{(contact as any).chatName}</span>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest truncate">{(contact as any).chatName}</p>
-                          </div>
-                          <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {filteredStaff.length === 0 && filteredExternal.length === 0 && (
-                  <div className="py-12 text-center">
-                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">No contacts found</p>
-                    <p className="text-[9px] text-muted-foreground/60 font-medium mt-2">Enter a username (e.g. name.cynda) to connect.</p>
-                  </div>
-                )}
+              ))}
               </div>
             </ScrollArea>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col bg-[#0A0A0B]">
+        {selectedChat ? (
+          <>
+            {/* Chat Header */}
+            <div className="flex items-center justify-between p-4 border-b border-[#262629] bg-[#131316]/80">
+              <div className="flex items-center gap-3">
+                {isMobile && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setShowSidebar(true)}
+                    className="mr-2"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
+                )}
+                
+                <div className="relative">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={selectedChat.avatar} className="object-cover" />
+                    <AvatarFallback className="bg-gradient-to-br from-[#FF6600] to-[#FF8A00] font-black">
+                      {selectedChat.name.slice(0,2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {selectedChat.online && (
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#131316] rounded-full" />
+                  )}
+                </div>
+
+                <div>
+                  <h2 className="font-black text-lg">
+                    {selectedChat.type === 'channel' ? `#${selectedChat.name}` : selectedChat.name}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedChat.type === 'group' 
+                      ? `${selectedChat.participants.length} participants` 
+                      : selectedChat.online ? 'Online' : 'Offline'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon">
+                  <Phone className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="icon">
+                  <Video className="w-5 h-5" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="w-5 h-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-[#1F1F23] border-[#262629]">
+                    <DropdownMenuItem>
+                      <Archive className="w-4 h-4 mr-2" />
+                      Archive
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-red-500">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <ScrollArea className="flex-1 p-4">
+              <div className="max-w-3xl mx-auto space-y-4">
+                {selectedChat.messages.map((message, i) => (
+                  <motion.div
+                    key={message.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className={cn(
+                      "flex gap-3",
+                      message.senderId === 'me' ? "justify-end" : "justify-start"
+                    )}
+                  >
+                    {message.senderId !== 'me' && (
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={selectedChat.avatar} />
+                        <AvatarFallback className="bg-gradient-to-br from-[#FF6600] to-[#FF8A00] font-black">
+                          {message.senderName?.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+
+                    <div className={cn(
+                      "max-w-[65%]",
+                      message.senderId === 'me' && "items-end flex flex-col"
+                    )}>
+                      {message.senderId !== 'me' && (
+                        <span className="text-xs text-muted-foreground mb-1 ml-1">
+                        {message.senderName}
+                      </span>
+                      )}
+                      
+                      <div className={cn(
+                        "px-4 py-2 rounded-2xl",
+                        message.senderId === 'me' 
+                          ? "bg-gradient-to-r from-[#FF6600] to-[#FF8A00] text-white rounded-tr-md" 
+                          : "bg-[#1F1F23] text-white rounded-tl-md"
+                      )}>
+                        {message.type === 'text' ? (
+                          <p className="text-sm">{message.text}</p>
+                        ) : message.type === 'media' ? (
+                          <div className="rounded-xl overflow-hidden">
+                            <img src={message.mediaUrl} alt="media" className="w-full h-auto" />
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                              <div className="w-3 h-3 bg-white rounded-full" />
+                            </div>
+                            <div className="w-20 h-1 bg-white/30 rounded-full" />
+                            <span className="text-xs text-white/70">0:05</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="text-xs text-muted-foreground">{message.time}</span>
+                        {message.senderId === 'me' && (
+                          <CheckCircle2 className="w-3 h-3 text-[#FF6600]" />
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+
+            {/* Input Area */}
+            <div className="p-4 border-t border-[#262629] bg-[#131316]/80">
+              <div className="max-w-3xl mx-auto flex items-end gap-2">
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  multiple 
+                  accept="image/*,video/*"
+                />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip className="w-5 h-5 text-muted-foreground" />
+                </Button>
+                <div className="flex-1 relative">
+                  <Textarea
+                    placeholder={`Message ${selectedChat.type === 'channel' ? `#${selectedChat.name}` : selectedChat.name}`}
+                    className="min-h-[44px] max-h-32 py-2.5 px-4 bg-[#1F1F23] border-0 resize-none"
+                    value={chatMessage}
+                    onChange={(e) => setChatMessage(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                  />
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute right-2 bottom-2"
+                  >
+                    <Smile className="w-5 h-5 text-muted-foreground" />
+                  </Button>
+                </div>
+                <Button 
+                  onClick={sendMessage} 
+                  className="bg-[#FF6600] hover:bg-[#FF8A00] text-white font-black"
+                  disabled={!chatMessage.trim()}
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+            <div className="w-24 h-24 bg-[#1F1F23] rounded-3xl flex items-center justify-center mb-6">
+              <MessageSquare className="w-12 h-12 text-[#FF6600]" />
+            </div>
+            <h2 className="text-2xl font-black text-white mb-2">No chat selected</h2>
+            <p className="text-center max-w-xs">Select a chat from the sidebar or start a new one</p>
+          </div>
+        )}
+      </div>
+
+      {/* New User Search Modal */}
+      <Dialog open={isSearchUserOpen} onOpenChange={setIsSearchUserOpen}>
+        <DialogContent className={cn(
+          "bg-[#131316] border-[#262629]",
+          isMobile ? "w-[95%]" : isTablet ? "w-[90%]" : "w-[500px]"
+        )}>
+          <DialogHeader>
+            <DialogTitle className="text-white font-black">New Chat</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Search for users to start chatting with
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Command className="bg-[#1F1F23] rounded-lg border-[#262629]">
+              <CommandInput 
+                placeholder="Search users by name or @cynda.chat"
+                value={userSearchQuery}
+                onValueChange={setUserSearchQuery}
+                className="border-0"
+              />
+              <CommandList>
+                <CommandEmpty>No users found</CommandEmpty>
+                <CommandGroup heading="Team Members">
+                  {[
+                    { id: 'jane', name: 'Jane Smith', role: 'Designer', chatName: '@jane.cynda.chat', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100' },
+                    { id: 'john', name: 'John Doe', role: 'Developer', chatName: '@john.cynda.chat', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' },
+                  ].map(user => (
+                    <CommandItem
+                      key={user.id}
+                      onSelect={() => createNewDirectChat(user)}
+                      className="flex items-center gap-3 py-2"
+                    >
+                      <Avatar>
+                        <AvatarImage src={user.avatar} />
+                        <AvatarFallback className="bg-gradient-to-br from-[#FF6600] to-[#FF8A00] font-black">
+                          {user.name.slice(0,2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="font-bold text-white">{user.name}</div>
+                        <div className="text-sm text-muted-foreground">{user.chatName}</div>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+                
+                <CommandGroup heading="External Contacts">
+                  {[
+                    { id: 'client1', name: 'Client X', role: 'Client', chatName: '@clientx.cynda.chat', avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=100' }
+                  ].map(contact => (
+                    <CommandItem
+                      key={contact.id}
+                      onSelect={() => createNewDirectChat(contact)}
+                      className="flex items-center gap-3 py-2"
+                    >
+                      <Avatar>
+                        <AvatarImage src={contact.avatar} />
+                        <AvatarFallback className="bg-gradient-to-br from-[#FF6600] to-[#FF8A00] font-black">
+                          {contact.name.slice(0,2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="font-bold text-white">{contact.name}</div>
+                        <div className="text-sm text-muted-foreground">{contact.chatName}</div>
+                      </div>
+                      <Globe className="w-4 h-4 text-[#FF6600]" />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* New Group Modal */}
       <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
-        <DialogContent className="sm:max-w-[450px] w-[95%] md:w-[90%] lg:w-[450px] rounded-[24px]">
+        <DialogContent className={cn(
+          "bg-[#131316] border-[#262629]",
+          isMobile ? "w-[95%]" : isTablet ? "w-[90%]" : "w-[500px]"
+        )}>
           <DialogHeader>
-            <DialogTitle className="font-black text-xl text-foreground uppercase tracking-tight">Create New Group</DialogTitle>
-            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Start a collaborative conversation with your team.</DialogDescription>
+            <DialogTitle className="text-white font-black">Create Group</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Group Name</Label>
-              <Input 
-                placeholder="e.g. Q3 Marketing Sync" 
-                className="h-12 rounded-xl bg-muted border-none text-xs font-bold"
+              <Input
+                placeholder="Enter group name"
                 value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
+                className="bg-[#1F1F23] border-[#262629]"
               />
             </div>
-            
-            <div className="space-y-3">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Select Members</Label>
-              <ScrollArea className="h-[250px] pr-4 border border-border/30 rounded-xl p-2 bg-muted/20">
-                <div className="space-y-1">
-                  {staffList.map((staff) => (
-                    <div 
-                      key={staff.id} 
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() => toggleParticipant(staff.id)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8 rounded-lg">
-                          <AvatarFallback className="text-[10px] font-black">{staff.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-xs font-bold">{staff.name}</p>
-                          <p className="text-[9px] text-muted-foreground uppercase font-medium">{staff.role}</p>
-                        </div>
-                      </div>
-                      <Checkbox checked={selectedParticipants.includes(staff.id)} />
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" className="rounded-xl font-black text-[10px] uppercase tracking-widest" onClick={() => setIsNewGroupOpen(false)}>Cancel</Button>
-            <Button className="rounded-xl font-black text-[10px] uppercase tracking-widest bg-primary text-white" onClick={handleCreateGroup}>Create Group</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isNewChannelOpen} onOpenChange={setIsNewChannelOpen}>
-        <DialogContent className="sm:max-w-[400px] w-[95%] md:w-[90%] lg:w-[400px] rounded-[24px]">
-          <DialogHeader>
-            <DialogTitle className="font-black text-xl text-foreground uppercase tracking-tight">Create New Channel</DialogTitle>
-            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Channels are for broad, department-wide communication.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Channel Name</Label>
-              <div className="relative">
-                <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  placeholder="e.g. general-announcements" 
-                  className="h-12 pl-10 rounded-xl bg-muted border-none text-xs font-bold"
-                  value={newChannelName}
-                  onChange={(e) => setNewChannelName(e.target.value)}
-                />
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Select Members</Label>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {[
+                  { id: 'jane', name: 'Jane Smith', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100' },
+                  { id: 'john', name: 'John Doe', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' },
+                ].map(member => (
+                  <div
+                    key={member.id}
+                    onClick={() => toggleParticipant(member.id)}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#1F1F23] cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedParticipants.includes(member.id)}
+                    />
+                    <Avatar>
+                      <AvatarImage src={member.avatar} />
+                      <AvatarFallback className="bg-gradient-to-br from-[#FF6600] to-[#FF8A00] font-black">
+                        {member.name.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="font-bold text-white">{member.name}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 flex items-start gap-3">
-              <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              <p className="text-[9px] text-primary font-bold uppercase tracking-widest leading-relaxed">Channels are public to all team members in the organization by default.</p>
-            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="rounded-xl font-black text-[10px] uppercase tracking-widest" onClick={() => setIsNewChannelOpen(false)}>Cancel</Button>
-            <Button className="rounded-xl font-black text-[10px] uppercase tracking-widest bg-primary text-white" onClick={handleCreateChannel}>Create Channel</Button>
+            <Button
+              onClick={() => setIsNewGroupOpen(false)}
+              variant="ghost"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={createGroupChat}
+              className="bg-[#FF6600] hover:bg-[#FF8A00] text-white font-black"
+              disabled={!newGroupName.trim() || selectedParticipants.length === 0}
+            >
+              Create Group
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* New Channel Modal */}
+      <Dialog open={isNewChannelOpen} onOpenChange={setIsNewChannelOpen}>
+        <DialogContent className={cn(
+          "bg-[#131316] border-[#262629]",
+          isMobile ? "w-[95%]" : isTablet ? "w-[90%]" : "w-[500px]"
+        )}>
+          <DialogHeader>
+            <DialogTitle className="text-white font-black">Create Channel</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Channel Name</Label>
+              <Input
+                placeholder="e.g. general"
+                value={newChannelName}
+                onChange={(e) => setNewChannelName(e.target.value)}
+                className="bg-[#1F1F23] border-[#262629]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => setIsNewChannelOpen(false)}
+              variant="ghost"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={createChannel}
+              className="bg-[#FF6600] hover:bg-[#FF8A00] text-white font-black"
+              disabled={!newChannelName.trim()}
+            >
+              Create Channel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
