@@ -1,104 +1,141 @@
-# Cynda Automation Engine
+# Cynda — Unified Work OS for Modern Businesses
 
-Python automation backend for the Cynda platform. Your React app on
-Vercel and your Supabase project stay exactly as they are this adds
-a small, separately-hosted Python service that powers the LLM-driven
-and scheduled/polled automations from your platform spec:
+Cynda is an all-in-one workspace platform that replaces your scattered tools. It combines CRM, finance, HR, project management, and AI-powered assistance into a single, intuitive interface.
 
-| Automation | Department | Trigger | LLM |
-|---|---|---|---|
-| Stale deal follow-up | CRM | Poll (hourly) | Yes |
-| Budget threshold alert | Finance | Poll (30 min) | No |
-| Overdue invoice reminder | Finance | Poll (6 hr) | Yes |
-| Won deal → project kickoff | Projects | Event (deal UPDATE) | Yes |
-| New hire checklist | HR | Event (staff INSERT) | No |
-| Weekly Monday briefing | Cross-department | Schedule (cron) | Yes |
+## Features
 
-## Why this shape
+### 🏠 Dashboard
+Get a bird's-eye view of your business: recent deals, upcoming tasks, sales performance, and team activity—all on one clean dashboard.
 
-Three different "wake-up" mechanisms are needed because the automations
-genuinely differ:
-- **Event** something changed right now (a deal closed, a hire was added) → Supabase Database Webhook fires instantly.
-- **Poll** a *passive* condition became true with no triggering write (a deal went quiet, an invoice aged past due) → checked on an interval.
-- **Schedule** a calendar moment, regardless of data state (Monday 8am) → cron.
+### 🤝 CRM
+- Manage your entire contact database
+- Track deals through your sales pipeline
+- View complete interaction history with every customer
+- Import existing contacts quickly
+- Run multi-channel marketing campaigns
 
-Rather than three different codebases, every automation implements one
-`BaseAutomation` contract (`should_trigger()` + `run()`), and the
-engine is the only thing that knows how each trigger type calls it.
-This is the part worth understanding if you're going to keep building
-on this see `automation-service/app/automations/base.py`.
+### 💰 Finance
+- Send professional invoices to clients
+- Track business expenses and receipts
+- Manage payroll for your team
+- Monitor inventory levels
+- Generate financial reports and analytics
 
-## Repo layout
+### 👥 HR
+- Maintain a complete team directory
+- Streamline new staff onboarding
+- Track time off, attendance, and performance
+- Manage hiring pipelines
+
+### 📋 Projects & Tasks
+- Plan and organize projects
+- Assign tasks to team members
+- Use kanban boards, list views, or calendars
+- Track project timelines and milestones
+- Manage resources and workloads
+
+### 📝 Notes & Files
+- Collaborative note-taking and document management
+- Secure, organized file storage
+- Quick search to find what you need
+
+### 🤖 Cynda AI
+AI-powered assistance to help with drafting, brainstorming, and automating repetitive tasks.
+
+### 💳 Billing
+Seamless payment integration via Paystack, supporting Visa, Mastercard, Verve, and mobile money (Ghana).
+
+## Tech Stack
+
+- **Frontend**: React + TypeScript + Vite
+- **Styling**: Tailwind CSS + shadcn/ui
+- **State Management**: Zustand (with persistence)
+- **Routing**: React Router
+- **Backend/Authentication**: Supabase (Auth + Database + Edge Functions)
+- **Payments**: Paystack (via Supabase Edge Functions)
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v18 or higher)
+- npm or yarn
+- A Supabase account and project
+- A Paystack account (for payment features)
+
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/cynda.git
+   cd cynda
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Create a `.env` file in the root of the project using `.env.example` as a reference:
+   ```env
+   VITE_SUPABASE_URL=your-supabase-project-url
+   VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+   VITE_PAYSTACK_PUBLIC_KEY=your-paystack-public-key
+   ```
+
+4. Set up your Supabase project:
+   - Create a new Supabase project
+   - Go to the SQL Editor and run all migrations in the `supabase/` folder (in order)
+   - Go to Authentication → Providers → Email and uncheck "Confirm email" for easier testing
+   - Deploy the Edge Functions from the `supabase/functions` folder:
+     ```bash
+     # Install Supabase CLI first if you haven't
+     supabase functions deploy paystack-initialize
+     supabase functions deploy paystack-verify
+     supabase functions deploy paystack-webhook
+     ```
+   - Set your Paystack secret key as a Supabase Function Secret:
+     ```bash
+     supabase secrets set PAYSTACK_SECRET_KEY=your-paystack-secret-key
+     ```
+
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+6. Open your browser and visit the app at http://localhost:5173 (or the port shown in your terminal)!
+
+## Project Structure
 
 ```
-automation-service/        ← the Python backend (deploy separately, NOT on Vercel)
-  app/
-    automations/
-      base.py              ← the contract every automation implements
-      registry.py          ← auto-discovery, no manual master list to maintain
-      engine.py            ← runs one automation + logs the result
-      loader.py            ← imports every automation file (add new ones here)
-      crm/ finance/ projects/ hr/ cross/   ← one file per automation
-    core/
-      supabase_client.py   ← service-role Supabase client
-      auth.py               ← verifies the frontend's Supabase JWT
-      poller.py             ← runs POLL automations on intervals
-      scheduler.py          ← runs SCHEDULE automations on cron
-    llm/
-      client.py             ← provider-agnostic LLM adapter (Claude default, swappable)
-    routes/
-      webhooks.py           ← receives Supabase Database Webhooks
-      automations.py        ← API the React app calls (list, run, approve/reject)
-    main.py                 ← FastAPI entrypoint, wires it all together
-
-supabase/migrations/        ← SQL for new tables + RLS policies + webhook trigger reference
-frontend-integration/       ← drop-in TS client for your existing React app
-docs/                       ← setup + deployment instructions
+cynda/
+├── src/
+│   ├── components/
+│   │   ├── app/              # App-specific components
+│   │   └── ui/               # shadcn/ui components
+│   ├── pages/
+│   │   ├── auth/             # Sign in, sign up, password reset
+│   │   ├── app/              # Main app pages (dashboard, CRM, finance, etc.)
+│   │   └── billing/          # Payment-related pages
+│   ├── lib/
+│   │   ├── industry-store.ts # Zustand store
+│   │   ├── auth-slice.ts     # Auth state slice
+│   │   ├── supabase.ts       # Supabase client
+│   │   └── ...               # Other utilities
+│   └── main.tsx              # App entry point
+├── supabase/
+│   ├── migrations/           # Database migrations (SQL)
+│   └── functions/            # Supabase Edge Functions
+├── index.html
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+└── README.md
 ```
 
-## Adding automation #7
+## Contributing
 
-This is the part that matters for owning the build long-term:
+Contributions are welcome! Feel free to open issues or submit pull requests.
 
-1. Create `app/automations/<department>/<your_automation>.py`
-2. Subclass `BaseAutomation`, set `key`, `name`, `department`,
-   `trigger_type` (+ the relevant `listens_to_table` /
-   `poll_interval_seconds` / `cron_expression`)
-3. Implement `should_trigger()` and `run()`
-4. Add one import line to `app/automations/loader.py`
-5. If it's an EVENT type, add the corresponding Supabase Database
-   Webhook (see `docs/supabase_webhooks_setup.md`)
+## License
 
-Nothing else changes not the engine, not the API routes, not the
-poller/scheduler registration. They all read from the registry
-automatically.
-
-## Setup order
-
-1. Run `supabase/migrations/0001_automation_tables.sql` against your
-   Supabase project (creates the new tables + RLS policies).
-2. Deploy `automation-service/` (see `docs/deployment.md` Railway
-   recommended, ~10 min).
-3. Configure the two Database Webhooks in Supabase (see
-   `docs/supabase_webhooks_setup.md`).
-4. Drop `frontend-integration/automationApi.ts` into your React app
-   and wire up the Automations settings panel / activity feed.
-5. Set `LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` (or swap to
-   `openai`) in the service's env.
-
-## On "every day is a holiday" / the 100% productivity claim
-
-Worth saying directly: the LLM-powered automations *draft*, they don't
-auto-send. Follow-ups, reminders, and kickoff suggestions land in a
-`pending_review` queue (`deal_drafts`, `invoice_drafts`,
-`project_suggestions`) for a human to approve. This is deliberate, not
-a limitation to remove later companies at the scale you mentioned
-(Google, Microsoft, etc.) don't let an LLM autonomously email a client
-or vendor without a human in the loop, because the cost of one bad
-auto-send (wrong tone, wrong number, hallucinated detail) outweighs the
-time saved on the ones that were fine. The "100% productivity" gain is
-real, but it comes from eliminating the *drafting* and *noticing* work
-a person still clicks approve. If you later want true autopilot for
-specific low-risk cases, that's a one-line change (skip the drafts
-table, call a send function directly) but I'd treat that as an
-explicit, opt-in setting per automation, not a default.
+[Your chosen license]

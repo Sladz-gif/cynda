@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useIndustryStore } from "@/lib/industry-store";
+import { supabase } from "@/lib/supabase";
 
 type Strength = "Weak" | "Fair" | "Strong" | "Very Strong";
 
@@ -74,16 +75,31 @@ const ResetPasswordPage = () => {
     if (!canSubmit) return;
     setIsLoading(true);
     try {
-      // Mock success: in Supabase phase, validate token + update password.
-      setAuthenticated(true);
+      // Update password using Supabase
+      const { error } = await supabase.auth.updateUser({
+        password: password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Get the user to update the store
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setAuthenticated(true);
+      }
+
       toast({
         title: "Password updated successfully",
         description: `Your password has been updated. Signing you in...`,
       });
+      
       setTimeout(() => {
         navigate("/app/dashboard", { replace: true });
       }, 2000); // Slightly longer to show success message
-    } catch {
+    } catch (error) {
+      console.error("Reset password error:", error);
       setSubmitError("Something went wrong on our end. Try again  your information is safe.");
     } finally {
       setIsLoading(false);

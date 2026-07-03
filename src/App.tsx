@@ -18,7 +18,7 @@ import FormsPage from "./pages/app/FormsPage";
 import CRMPage from "./pages/app/CRMPage";
 import FinancePage from "./pages/app/FinancePage";
 import HRPage from "./pages/app/HRPage";
-import ChatComingSoonPage from "./pages/app/ChatComingSoonPage";
+import ChatPage from "./pages/app/ChatPage";
 import NotesPage from "./pages/app/NotesPage";
 import FilesPage from "./pages/app/FilesPage";
 import SettingsPage from "./pages/app/SettingsPage";
@@ -43,6 +43,16 @@ import PaymentSuccessPage from "./pages/billing/PaymentSuccessPage";
 import PaymentFailedPage from "./pages/billing/PaymentFailedPage";
 import PaymentCallbackPage from "./pages/billing/PaymentCallbackPage";
 
+// Demo imports
+import { DemoShell } from "./pages/demo/DemoShell";
+import { DemoDashboard } from "./pages/demo/DemoDashboard";
+import { DemoCRM } from "./pages/demo/DemoCRM";
+import { DemoFinance } from "./pages/demo/DemoFinance";
+import { DemoHR } from "./pages/demo/DemoHR";
+import { DemoProjects } from "./pages/demo/DemoProjects";
+import { DemoNotes } from "./pages/demo/DemoNotes";
+import { DemoAI } from "./pages/demo/DemoAI";
+
 import { ThemeProvider } from "./components/app/ThemeProvider";
 
 const queryClient = new QueryClient();
@@ -57,7 +67,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <Routes>
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<Navigate to="/onboarding" replace />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/signin" element={<SignInPage />} />
               <Route path="/login" element={<Navigate to="/signin" replace />} />
@@ -74,6 +84,19 @@ const App = () => {
               <Route path="/payment/callback" element={<PaymentCallbackPage />} />
               <Route path="/super-admin/auth" element={<SuperAdminAuthPage />} />
               <Route path="/super-admin" element={<SuperAdminPage />} />
+
+              {/* Demo Routes */}
+              <Route path="/demo" element={<DemoShell />}>
+                <Route index element={<Navigate to="/demo/dashboard" replace />} />
+                <Route path="dashboard" element={<DemoDashboard />} />
+                <Route path="crm" element={<DemoCRM />} />
+                <Route path="finance" element={<DemoFinance />} />
+                <Route path="hr" element={<DemoHR />} />
+                <Route path="projects" element={<DemoProjects />} />
+                <Route path="notes" element={<DemoNotes />} />
+                <Route path="ai" element={<DemoAI />} />
+              </Route>
+
               <Route path="/app" element={<AppLayout />}>
                 <Route index element={<Navigate to="/app/dashboard" replace />} />
                 <Route path="dashboard" element={<DashboardPage />} />
@@ -110,7 +133,7 @@ const App = () => {
                 <Route path="timeline" element={<ProjectsPage />} />
                 <Route path="calendar" element={<ProjectsPage />} />
                 <Route path="resource-management" element={<ProjectsPage />} />
-                <Route path="chat" element={<ChatComingSoonPage />} />
+                <Route path="chat" element={<ChatPage />} />
                 <Route path="notes" element={<NotesPage />} />
                 <Route path="files" element={<FilesPage />} />
                 <Route path="settings" element={<SettingsPage />} />

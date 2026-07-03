@@ -12,10 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, useIsTablet } from "@/hooks/use-mobile";
 import { useIndustryStore, Staff, CRMContact } from "@/lib/industry-store";
 import { useLocation } from "react-router-dom";
-// Email UI removed from Chat  keep chat-only experience.
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -49,8 +49,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-// --- Types ---
-
 type MessagingMode = 'chat';
 
 interface ChatMessage {
@@ -61,6 +59,8 @@ interface ChatMessage {
   status: 'sent' | 'delivered' | 'read';
   type: 'text' | 'media' | 'voice';
   mediaUrl?: string;
+  senderName?: string;
+  senderChatName?: string;
 }
 
 interface ChatSession {
@@ -73,16 +73,14 @@ interface ChatSession {
   unreadCount: number;
   online?: boolean;
   messages: ChatMessage[];
+  participants: string[];
 }
-
-// --- Mock Data ---
-
-const MOCK_CHATS: ChatSession[] = [];
 
 const ChatPage = () => {
   const { toast } = useToast();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
   const { 
     staffList = [], 
     externalContacts = [], 
@@ -97,21 +95,8 @@ const ChatPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileSidebar, setShowSidebar] = useState(true);
   
-  // Chat States
-  const [chats, setChats] = useState<ChatSession[]>(MOCK_CHATS);
+  const [chats, setChats] = useState<ChatSession[]>([]);
   const [selectedChat, setSelectedChat] = useState<ChatSession | null>(null);
-
-  // Handle query params for starting new chats
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const contactId = params.get('contactId');
-    if (contactId) {
-      const contact = crmContacts.find(c => c.id === contactId);
-      if (contact) {
-        startChatWithContact({ ...contact, type: 'external' } as any);
-      }
-    }
-  }, [location.search, crmContacts]);
 
   const [chatMessage, setChatMessage] = useState("");
   const [isSearchUserOpen, setIsSearchUserOpen] = useState(false);
@@ -125,45 +110,227 @@ const ChatPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync mobile sidebar when selection changes
   useEffect(() => {
     if (isMobile && selectedChat) {
       setShowSidebar(false);
     }
   }, [selectedChat, isMobile]);
 
-  // Reset sidebar when switching to desktop
   useEffect(() => {
     if (!isMobile) {
       setShowSidebar(true);
     }
   }, [isMobile]);
 
-  const startChatWithContact = (contact: Staff | { id: string; name: string; email: string; type: 'external' }) => {
-    const existing = chats.find(c => c.id === contact.id);
+  useEffect(() => {
+    loadConversations();
+    subscribeToMessages();
+  }, []);
+
+  const loadConversations = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: participantData } = await supabase
+        .from('chat_participants')
+        .select('conversation_id, profiles(id, full_name, chat_name, avatar_url)')
+        .eq('profile_id', user.id);
+
+      if (participantData && participantData.length > 0) {
+        const conversationIds = participantData.map(p => p.conversation_id);
+        
+        const { data: conversations } = await supabase
+          .from('chat_conversations')
+          .select('*')
+          .in('id', conversationIds)
+          .order('updated_at', { ascending: false });
+
+        if (conversations) {
+          const chatSessions = await Promise.all(conversations.map(async (conv) => {
+            const { data: messages } = await supabase
+              .from('chat_messages')
+              .select('*, sender: sender_id(id, full_name, chat_name)')
+              .eq('conversation_id', conv.id)
+              .order('created_at', { ascending: true });
+
+            const { data: allParticipants } = await supabase
+              .from('chat_participants')
+              .select('profile_id, profiles(full_name, chat_name)')
+              .eq('conversation_id', conv.id);
+
+            const lastMessage = messages && messages.length > 0 ? messages[messages.length - 1] : null;
+            
+            let chatName = conv.name || 'Chat';
+            let chatAvatar = '';
+            
+            if (conv.type === 'direct' && allParticipants) {
+              const otherParticipant = allParticipants.find(p => p.profile_id !== user.id);
+              if (otherParticipant && otherParticipant.profiles) {
+                chatName = otherParticipant.profiles.full_name;
+                chatAvatar = '';
+              }
+            }
+
+            return {
+              id: conv.id,
+              name: chatName,
+              avatar: chatAvatar,
+              type: conv.type as any,
+              lastMessage: lastMessage?.content || 'No messages yet',
+              lastTime: lastMessage?.created_at ? new Date(lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+              unreadCount: 0,
+              messages: (messages || []).map(m => ({
+                id: m.id,
+                senderId: m.sender_id,
+                text: m.content,
+                time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                status: 'sent',
+                type: m.message_type as any,
+                mediaUrl: m.media_url,
+                senderName: m.sender?.full_name,
+                senderChatName: m.sender?.chat_name
+              })),
+              participants: allParticipants?.map(p => p.profile_id) || []
+            };
+          }));
+          
+          setChats(chatSessions);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    }
+  };
+
+  const subscribeToMessages = () => {
+    const channel = supabase
+      .channel('public:chat_messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
+        const newMessage = payload.new as any;
+        
+        // First get sender data
+        const { data: senderData } = await supabase
+          .from('profiles')
+          .select('full_name, chat_name')
+          .eq('id', newMessage.sender_id)
+          .single();
+        
+        const formattedMessage = {
+          id: newMessage.id,
+          senderId: newMessage.sender_id,
+          text: newMessage.content,
+          time: new Date(newMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'sent',
+          type: newMessage.message_type,
+          mediaUrl: newMessage.media_url,
+          senderName: senderData?.full_name,
+          senderChatName: senderData?.chat_name
+        };
+        
+        setChats(prev => prev.map(chat => {
+          if (chat.id === newMessage.conversation_id) {
+            return {
+              ...chat,
+              messages: [...chat.messages, formattedMessage],
+              lastMessage: newMessage.content,
+              lastTime: formattedMessage.time
+            };
+          }
+          return chat;
+        }));
+        
+        if (selectedChat?.id === newMessage.conversation_id) {
+          setSelectedChat(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              messages: [...prev.messages, formattedMessage]
+            };
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
+  const startChatWithContact = async (contact: Staff | { id: string; name: string; email: string; type: 'external' }) => {
+    const existing = chats.find(c => c.id === contact.id || c.name === contact.name);
     if (existing) {
       setSelectedChat(existing);
-    } else {
-      const newChat: ChatSession = {
-        id: contact.id,
-        name: contact.name,
-        avatar: contact.type === 'external' ? "" : `https://i.pravatar.cc/150?u=${contact.id}`,
-        type: 'direct',
-        lastMessage: "No messages yet",
-        lastTime: "Just now",
-        unreadCount: 0,
-        online: contact.type !== 'external',
-        messages: []
-      };
-      setChats([newChat, ...chats]);
-      setSelectedChat(newChat);
+      setIsSearchUserOpen(false);
+      setUserSearchQuery("");
+      return;
     }
-    setIsSearchUserOpen(false);
-    setUserSearchQuery("");
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .or(`full_name.ilike.%${contact.name}%,chat_name.ilike.%${(contact as any).chatName}%`)
+        .maybeSingle();
+
+      if (profile) {
+        const { data: newConversation, error } = await supabase
+          .from('chat_conversations')
+          .insert({ type: 'direct', name: null, created_by: user.id })
+          .select('*')
+          .single();
+
+        if (error) throw error;
+
+        await supabase
+          .from('chat_participants')
+          .insert([
+            { conversation_id: newConversation.id, profile_id: user.id },
+            { conversation_id: newConversation.id, profile_id: profile.id }
+          ]);
+
+        const newChat: ChatSession = {
+          id: newConversation.id,
+          name: contact.name,
+          avatar: '',
+          type: 'direct',
+          lastMessage: "No messages yet",
+          lastTime: "Just now",
+          unreadCount: 0,
+          messages: [],
+          participants: [user.id, profile.id]
+        };
+
+        setChats([newChat, ...chats]);
+        setSelectedChat(newChat);
+      } else {
+        const newChat: ChatSession = {
+          id: Math.random().toString(36).substr(2, 9),
+          name: contact.name,
+          avatar: (contact as any).type === 'external' ? "" : `https://i.pravatar.cc/150?u=${contact.id}`,
+          type: 'direct',
+          lastMessage: "No messages yet",
+          lastTime: "Just now",
+          unreadCount: 0,
+          messages: [],
+          participants: []
+        };
+        setChats([newChat, ...chats]);
+        setSelectedChat(newChat);
+      }
+
+      setIsSearchUserOpen(false);
+      setUserSearchQuery("");
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      toast({ title: 'Error', description: 'Could not start chat', variant: 'destructive' });
+    }
   };
 
   const handleExternalSearch = () => {
-    // Strictly check for Cynda chat name format (username.cynda)
     const isChatName = userSearchQuery.toLowerCase().endsWith('.cynda');
 
     if (!isChatName) {
@@ -199,49 +366,94 @@ const ChatPage = () => {
   );
   
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     if (!newGroupName.trim()) {
       toast({ title: "Group Name Required", variant: "destructive" });
       return;
     }
-    const newChat: ChatSession = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: newGroupName,
-      avatar: `https://i.pravatar.cc/150?u=${newGroupName}`,
-      type: 'group',
-      lastMessage: "Group created",
-      lastTime: "Just now",
-      unreadCount: 0,
-      messages: []
-    };
-    setChats([newChat, ...chats]);
-    setSelectedChat(newChat);
-    setIsNewGroupOpen(false);
-    setNewGroupName("");
-    setSelectedParticipants([]);
-    toast({ title: "Group Created", description: `"${newGroupName}" is ready for messaging.` });
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: newConversation, error } = await supabase
+        .from('chat_conversations')
+        .insert({ type: 'group', name: newGroupName, created_by: user.id })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      const participants = [user.id, ...selectedParticipants];
+      await supabase
+        .from('chat_participants')
+        .insert(participants.map(p => ({ conversation_id: newConversation.id, profile_id: p })));
+
+      const newChat: ChatSession = {
+        id: newConversation.id,
+        name: newGroupName,
+        avatar: '',
+        type: 'group',
+        lastMessage: "Group created",
+        lastTime: "Just now",
+        unreadCount: 0,
+        messages: [],
+        participants
+      };
+
+      setChats([newChat, ...chats]);
+      setSelectedChat(newChat);
+      setIsNewGroupOpen(false);
+      setNewGroupName("");
+      setSelectedParticipants([]);
+      toast({ title: "Group Created", description: `"${newGroupName}" is ready for messaging.` });
+    } catch (error) {
+      console.error('Error creating group:', error);
+    }
   };
 
-  const handleCreateChannel = () => {
+  const handleCreateChannel = async () => {
     if (!newChannelName.trim()) {
       toast({ title: "Channel Name Required", variant: "destructive" });
       return;
     }
-    const newChat: ChatSession = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: newChannelName,
-      avatar: "",
-      type: 'channel',
-      lastMessage: "Channel created",
-      lastTime: "Just now",
-      unreadCount: 0,
-      messages: []
-    };
-    setChats([newChat, ...chats]);
-    setSelectedChat(newChat);
-    setIsNewChannelOpen(false);
-    setNewChannelName("");
-    toast({ title: "Channel Created", description: `#${newChannelName} is now live.` });
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: newConversation, error } = await supabase
+        .from('chat_conversations')
+        .insert({ type: 'channel', name: newChannelName, created_by: user.id })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      await supabase
+        .from('chat_participants')
+        .insert({ conversation_id: newConversation.id, profile_id: user.id });
+
+      const newChat: ChatSession = {
+        id: newConversation.id,
+        name: newChannelName,
+        avatar: "",
+        type: 'channel',
+        lastMessage: "Channel created",
+        lastTime: "Just now",
+        unreadCount: 0,
+        messages: [],
+        participants: [user.id]
+      };
+
+      setChats([newChat, ...chats]);
+      setSelectedChat(newChat);
+      setIsNewChannelOpen(false);
+      setNewChannelName("");
+      toast({ title: "Channel Created", description: `#${newChannelName} is now live.` });
+    } catch (error) {
+      console.error('Error creating channel:', error);
+    }
   };
 
   const toggleParticipant = (id: string) => {
@@ -250,27 +462,30 @@ const ChatPage = () => {
     );
   };
 
-  // --- Handlers ---
-
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!chatMessage.trim() || !selectedChat) return;
     
-    const newMessage: ChatMessage = {
-      id: Math.random().toString(36).substr(2, 9),
-      senderId: "me",
-      text: chatMessage,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: 'sent',
-      type: 'text'
-    };
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    setChats(prev => prev.map(c => 
-      c.id === selectedChat.id 
-        ? { ...c, messages: [...c.messages, newMessage], lastMessage: chatMessage, lastTime: newMessage.time } 
-        : c
-    ));
-    setSelectedChat(prev => prev ? { ...prev, messages: [...prev.messages, newMessage] } : null);
-    setChatMessage("");
+      const { data: message, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          conversation_id: selectedChat.id,
+          sender_id: user.id,
+          content: chatMessage,
+          message_type: 'text'
+        })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      setChatMessage("");
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -289,12 +504,9 @@ const ChatPage = () => {
     }
   };
 
-  // --- UI Components ---
-
   const renderChatList = () => (
     <div className={cn("flex flex-col h-full", isMobile ? "bg-background" : "bg-muted/30")}>
       <div className="p-4 border-b border-border/50 bg-background/50 backdrop-blur-md sticky top-0 z-10">
-        {/* User Profile Summary */}
         <div className="flex items-center gap-3 mb-6 p-2">
           <Avatar className="h-10 w-10 rounded-full border-2 border-primary/20 shadow-sm">
             <AvatarFallback className="bg-primary text-white font-black">
@@ -331,32 +543,39 @@ const ChatPage = () => {
       </div>
       <ScrollArea className="flex-1">
         <div className="divide-y divide-border/30">
-          {chats.map(chat => (
-            <div 
-              key={chat.id} 
-              onClick={() => setSelectedChat(chat)}
-              className={`p-4 cursor-pointer hover:bg-card/50 transition-all flex items-center gap-4 group relative ${selectedChat?.id === chat.id ? 'bg-card shadow-sm z-10' : ''}`}
-            >
-              {selectedChat?.id === chat.id && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-sm font-black text-foreground truncate tracking-tight uppercase">{chat.name}</span>
-                  <div className="flex items-center gap-2">
-                    {chat.online && <div className="w-2 h-2 rounded-full bg-green-500 shadow-sm" />}
-                    <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest opacity-60">{chat.lastTime}</span>
+          {chats.length === 0 ? (
+            <div className="p-8 text-center">
+              <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest">No chats yet</p>
+              <p className="text-[10px] text-muted-foreground mt-2">Start a new conversation to get chatting</p>
+            </div>
+          ) : (
+            chats.map(chat => (
+              <div 
+                key={chat.id} 
+                onClick={() => setSelectedChat(chat)}
+                className={`p-4 cursor-pointer hover:bg-card/50 transition-all flex items-center gap-4 group relative ${selectedChat?.id === chat.id ? 'bg-card shadow-sm z-10' : ''}`}
+              >
+                {selectedChat?.id === chat.id && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-sm font-black text-foreground truncate tracking-tight uppercase">{chat.name}</span>
+                    <div className="flex items-center gap-2">
+                      {chat.online && <div className="w-2 h-2 rounded-full bg-green-500 shadow-sm" />}
+                      <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest opacity-60">{chat.lastTime}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] text-muted-foreground truncate flex-1 font-bold leading-none">{chat.lastMessage}</p>
+                    {chat.unreadCount > 0 && (
+                      <Badge className="h-5 min-w-5 rounded-full px-1 text-[9px] font-black bg-primary text-white flex items-center justify-center shadow-md border border-white">{chat.unreadCount}</Badge>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] text-muted-foreground truncate flex-1 font-bold leading-none">{chat.lastMessage}</p>
-                  {chat.unreadCount > 0 && (
-                    <Badge className="h-5 min-w-5 rounded-full px-1 text-[9px] font-black bg-primary text-white flex items-center justify-center shadow-md border border-white">{chat.unreadCount}</Badge>
-                  )}
-                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </ScrollArea>
     </div>
@@ -364,7 +583,6 @@ const ChatPage = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-56px)] -m-4 md:-m-6 overflow-hidden bg-muted/30">
-      {/* Horizontal Toolbar */}
       <div className="h-auto md:h-16 border-b border-border/50 bg-background/50 backdrop-blur-md px-4 py-2.5 md:py-0 flex flex-col md:flex-row items-stretch md:items-center justify-between shrink-0 gap-2.5 md:gap-3">
         <div className="flex items-center gap-2 md:gap-4 overflow-x-auto no-scrollbar pb-0.5 md:pb-0">
           <div className="bg-muted p-1 rounded-xl flex gap-1 shrink-0">
@@ -385,13 +603,6 @@ const ChatPage = () => {
           >
             <Plus className="w-3.5 md:w-4 h-3.5 md:h-4 stroke-[3px]" /> NEW
           </Button>
-          <div className="relative flex-1 md:flex-none min-w-[100px] md:min-w-[120px]">
-            <Search className="absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground" />
-            <Input 
-              placeholder="Contacts..." 
-              className="pl-7 md:pl-9 h-8 md:h-9 w-full md:w-48 lg:w-64 rounded-xl bg-muted border-none text-[10px] md:text-xs placeholder:text-muted-foreground shadow-inner"
-            />
-          </div>
         </div>
         <div className="hidden md:flex items-center gap-2">
           <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl bg-muted text-muted-foreground">
@@ -401,7 +612,6 @@ const ChatPage = () => {
       </div>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Sidebar Column */}
         <AnimatePresence mode="wait">
           {showMobileSidebar && (
             <motion.div 
@@ -410,7 +620,7 @@ const ChatPage = () => {
               exit={isMobile ? { x: -320 } : { x: -320, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className={cn(
-                "z-20 w-full md:w-[280px] lg:w-[320px] h-full flex-shrink-0 border-r border-border/50 flex-col shadow-xl md:shadow-none",
+                "z-20 w-full md:w-[260px] lg:w-[300px] h-full flex-shrink-0 border-r border-border/50 flex-col shadow-xl md:shadow-none",
                 isMobile ? "absolute inset-0 bg-background" : "relative bg-muted/30"
               )}
             >
@@ -419,7 +629,6 @@ const ChatPage = () => {
           )}
         </AnimatePresence>
 
-        {/* Content Column */}
         <div className="flex-1 flex flex-col bg-background relative overflow-hidden">
           <div className="h-full flex flex-col overflow-hidden bg-background">
               {!selectedChat ? (
@@ -444,17 +653,9 @@ const ChatPage = () => {
                       <div className="min-w-0">
                         <h3 className="font-black text-sm md:text-base text-foreground tracking-tight leading-none mb-1 truncate uppercase">{selectedChat.name}</h3>
                         <div className="flex items-center gap-1.5">
-                          {selectedChat.online ? (
-                            <span className="text-[7px] md:text-[8px] text-green-600 font-black uppercase tracking-widest flex items-center gap-1">
-                              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> ONLINE
-                            </span>
-                          ) : (
-                            <span className="text-[7px] md:text-[8px] text-muted-foreground font-black uppercase tracking-widest italic opacity-60">ACTIVE {selectedChat.lastTime}</span>
-                          )}
+                          <span className="text-[7px] md:text-[8px] text-muted-foreground font-black uppercase tracking-widest italic opacity-60">ACTIVE {selectedChat.lastTime}</span>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-1 md:gap-2">
                     </div>
                   </div>
 
@@ -467,15 +668,10 @@ const ChatPage = () => {
                       
                       <div className="space-y-4">
                         {selectedChat.messages.map((msg, i) => {
-                          const isMe = msg.senderId === 'me';
-                          let senderName = isMe ? (activeUser?.chatName || "me.cynda") : selectedChat.name;
+                          const { data: { user } } = supabase.auth.getUser();
+                          const isMe = user?.id === msg.senderId;
+                          const senderName = isMe ? (activeUser?.chatName || "me.cynda") : (msg.senderChatName || msg.senderName || selectedChat.name);
                           
-                          // In group/channel, find the actual staff member's chatName
-                          if (!isMe && (selectedChat.type === 'group' || selectedChat.type === 'channel')) {
-                            const staff = staffList.find(s => s.id === msg.senderId);
-                            if (staff) senderName = staff.chatName || staff.name;
-                          }
-
                           return (
                             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                               <div className={`max-w-[85%] md:max-w-[75%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
@@ -493,7 +689,7 @@ const ChatPage = () => {
                                   <span className="text-[7px] md:text-[8px] text-muted-foreground font-black uppercase tracking-widest">{msg.time}</span>
                                   {isMe && (
                                     <div className="flex -space-x-1">
-                                      <CheckCircle2 className={`w-2.5 md:w-3 h-2.5 md:h-3 ${msg.status === 'read' ? 'text-primary' : 'text-muted-foreground'}`} />
+                                      <CheckCircle2 className="w-2.5 md:w-3 h-2.5 md:h-3 text-primary" />
                                     </div>
                                   )}
                                 </div>
@@ -548,7 +744,7 @@ const ChatPage = () => {
       </div>
 
       <Dialog open={isSearchUserOpen} onOpenChange={setIsSearchUserOpen}>
-        <DialogContent className="sm:max-w-[450px] rounded-[24px]">
+        <DialogContent className="sm:max-w-[450px] w-[95%] md:w-[90%] lg:w-[450px] rounded-[24px]">
           <DialogHeader>
             <DialogTitle className="font-black text-xl text-foreground uppercase tracking-tight">New Conversation</DialogTitle>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Connect with team members or external contacts using their username.</DialogDescription>
@@ -574,7 +770,6 @@ const ChatPage = () => {
             
             <ScrollArea className="h-[350px] pr-4">
               <div className="space-y-6">
-                {/* Staff Section */}
                 {filteredStaff.length > 0 && (
                   <div>
                     <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 px-1">Team Members</h4>
@@ -604,7 +799,6 @@ const ChatPage = () => {
                   </div>
                 )}
 
-                {/* External Section */}
                 {filteredExternal.length > 0 && (
                   <div>
                     <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 px-1">External Contacts</h4>
@@ -648,9 +842,8 @@ const ChatPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* New Group Dialog */}
       <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
-        <DialogContent className="sm:max-w-[450px] rounded-[24px]">
+        <DialogContent className="sm:max-w-[450px] w-[95%] md:w-[90%] lg:w-[450px] rounded-[24px]">
           <DialogHeader>
             <DialogTitle className="font-black text-xl text-foreground uppercase tracking-tight">Create New Group</DialogTitle>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Start a collaborative conversation with your team.</DialogDescription>
@@ -699,9 +892,8 @@ const ChatPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* New Channel Dialog */}
       <Dialog open={isNewChannelOpen} onOpenChange={setIsNewChannelOpen}>
-        <DialogContent className="sm:max-w-[400px] rounded-[24px]">
+        <DialogContent className="sm:max-w-[400px] w-[95%] md:w-[90%] lg:w-[400px] rounded-[24px]">
           <DialogHeader>
             <DialogTitle className="font-black text-xl text-foreground uppercase tracking-tight">Create New Channel</DialogTitle>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Channels are for broad, department-wide communication.</DialogDescription>

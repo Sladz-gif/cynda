@@ -54,9 +54,14 @@ export interface AuthSlice {
 export const createAuthSlice: StateCreator<AuthSlice> = (set) => ({
   userType: "solo",
   subscriptionTier: "trial",
-  adminProfile: null,
+  adminProfile: {
+    name: "Demo User",
+    email: "demo@cynda.app",
+    chatName: "demo.cynda",
+    role: "Super Admin"
+  },
   currentUser: null,
-  isAuthenticated: false,
+  isAuthenticated: true,
   isOnboarded: false,
   trialStartedAt: null,
   trialMessageCount: 0,

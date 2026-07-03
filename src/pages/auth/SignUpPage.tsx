@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Mail, Lock, User, ArrowRight, Bot, CheckCircle2, Eye, EyeOff, AlertCircle, Zap, Sparkles } from "lucide-react";
 import { cn, generateChatName } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 
 type Strength = "Weak" | "Fair" | "Strong" | "Very Strong";
@@ -161,31 +160,15 @@ const SignUpPage = () => {
 
     try {
       if (canSubmit) {
-        const { data, error } = await supabase.auth.signUp({
-          email: email,
-          password: password,
-          options: {
-            data: {
-              name: name,
-              phone: phone
-            }
-          }
-        });
-        
-        if (error) {
-          setErrors({
-            general: error.message
-          });
-          setIsLoading(false);
-          return;
-        }
+        // No Supabase, just use store
+        setAuthenticated(true);
+        setOnboarded(false);
         
         setSubscriptionTier(subscriptionChoice);
         if (subscriptionChoice === "trial") {
           setTrialStartedAt(new Date().toISOString());
         }
         
-        setOnboarded(false);
         setAdminProfile({
           name: name,
           email: email,
@@ -194,15 +177,8 @@ const SignUpPage = () => {
           phone: phone,
         });
         
-        const firstName = name.split(" ")[0];
-        setShowSuccess(true);
-        setTimeout(() => {
-          if (subscriptionChoice === "paid") {
-            navigate("/billing/select-plan");
-          } else {
-            navigate("/onboarding");
-          }
-        }, 3000);
+        // Navigate to onboarding
+        navigate('/onboarding');
       }
     } catch (error) {
       console.error("Sign up error:", error);
@@ -217,41 +193,7 @@ const SignUpPage = () => {
     }
   };
 
-  if (showSuccess) {
-    const firstName = name.split(" ")[0];
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background p-6">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md text-center space-y-8"
-        >
-          <div className="w-24 h-24 mx-auto rounded-full bg-primary/10 flex items-center justify-center relative">
-            <motion.div 
-              animate={{ rotate: 360 }}
-              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-              className="absolute inset-0 rounded-full border-2 border-dashed border-primary/30"
-            />
-            <CheckCircle2 className="w-10 h-10 text-primary" />
-          </div>
-          <div className="space-y-4">
-            <h1 className="text-4xl font-display font-black uppercase tracking-tighter">Welcome to Cynda, {firstName}.</h1>
-            <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest opacity-80">
-              Your workspace is being set up  this takes about 10 seconds.
-            </p>
-          </div>
-          <div className="w-48 h-1 bg-secondary mx-auto rounded-full overflow-hidden">
-             <motion.div 
-               initial={{ width: 0 }}
-               animate={{ width: "100%" }}
-               transition={{ duration: 3 }}
-               className="h-full bg-primary"
-             />
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-background overflow-hidden">
@@ -315,7 +257,7 @@ const SignUpPage = () => {
           className="w-full max-w-sm space-y-8 my-auto"
         >
           <div className="space-y-2">
-            <h2 className="text-3xl font-black uppercase tracking-tight">Your African business, one workspace.</h2>
+            <h2 className="text-3xl font-black uppercase tracking-tight">Your business, one workspace.</h2>
             <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest opacity-60">No credit card required.</p>
           </div>
 

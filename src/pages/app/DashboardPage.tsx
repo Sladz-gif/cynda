@@ -294,7 +294,7 @@ const DashboardPage = () => {
       {isTrial && (
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t-2 border-border/50">
           <div className="md:col-span-1 space-y-4">
-            <h2 className="font-display text-xl font-black uppercase tracking-tight text-foreground">Why serious African businesses upgrade</h2>
+            <h2 className="font-display text-xl font-black uppercase tracking-tight text-foreground">Why serious businesses upgrade</h2>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Unlock the full power of Cynda for your growing business.
             </p>
@@ -349,7 +349,7 @@ const DashboardPage = () => {
       </section>
 
       <Dialog open={isCreateTaskOpen} onOpenChange={setIsCreateTaskOpen}>
-        <DialogContent className="sm:max-w-md rounded-[2rem] border-2 border-border p-8">
+        <DialogContent className="sm:max-w-md w-[95%] md:w-[90%] lg:w-[448px] rounded-[2rem] border-2 border-border p-6 md:p-8">
           <DialogHeader>
             <DialogTitle className="font-display font-black uppercase tracking-tight text-2xl">Create task</DialogTitle>
             <DialogDescription className="text-xs font-medium text-muted-foreground">

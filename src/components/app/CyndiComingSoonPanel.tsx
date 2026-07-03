@@ -95,7 +95,7 @@ const CyndiComingSoonPanel = ({ onClose }: CyndiComingSoonPanelProps) => {
 
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Cyndi is your workspace copilot, built to understand how African businesses run.
+              Cyndi is your workspace copilot, built to understand how modern businesses run.
             </p>
           </div>
 

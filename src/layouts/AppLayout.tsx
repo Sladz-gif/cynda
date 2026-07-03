@@ -224,14 +224,7 @@ const AppLayout = () => {
     }
   }, [location.pathname]);
 
-  if (!isAuthenticated) {
-    return <Navigate to="/signin" replace />;
-  }
-
-  if (needsPasswordReset) {
-    return <Navigate to="/force-password-reset" replace />;
-  }
-
+  // Auth disabled: Skip signin, but require onboarding
   if (!isOnboarded) {
     return <Navigate to="/onboarding" replace />;
   }

@@ -2,14 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useIndustryStore } from "@/lib/industry-store";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { ShieldCheck, Mail, Lock, ArrowRight, Bot, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
 
 function getTimeBasedGreeting(): { greeting: string; message: string } {
   const hour = new Date().getHours();
@@ -128,20 +126,22 @@ const SignInPage = () => {
     setIsLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // No Supabase, just use store!
+      setAuthenticated(true);
+      
+      // Set a basic profile
+      setAdminProfile({
+        name: 'User',
         email: email,
-        password: password
+        role: 'Super Admin'
       });
       
-      if (error) {
-        setErrors({
-          general: error.message
-        });
-        setAttemptCount(prev => prev + 1);
-        if (attemptCount + 1 >= 5) {
-          setIsBlocked(true);
-          setBlockTimeRemaining(300);
-        }
+      // Check if onboarded - if not, go to onboarding, else to dashboard
+      const { isOnboarded } = useIndustryStore.getState();
+      if (!isOnboarded) {
+        navigate('/onboarding');
+      } else {
+        navigate('/app/dashboard');
       }
     } catch (err) {
       console.error("Sign in error:", err);

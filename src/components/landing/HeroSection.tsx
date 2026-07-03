@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { ArrowRight, Zap, Shield, BarChart3 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ArrowRight, Zap, Shield, BarChart3, PlayCircle } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+  
   return (
     <section className="pt-48 pb-32 px-4 md:px-8 relative overflow-hidden bg-background">
 
@@ -53,7 +55,11 @@ const HeroSection = () => {
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>
-              <Button variant="hero-outline" size="lg" className="px-8 h-12 font-black uppercase tracking-widest text-[11px]" asChild>
+              <Button variant="hero-outline" size="lg" className="px-8 h-12 font-black uppercase tracking-widest text-[11px]" onClick={() => navigate("/demo")}>
+                <PlayCircle className="w-4 h-4 mr-2" />
+                Try the Demo
+              </Button>
+              <Button variant="ghost" size="lg" className="px-8 h-12 font-black uppercase tracking-widest text-[11px]" asChild>
                 <a href="#how" className="flex items-center justify-center">See how it works</a>
               </Button>
             </div>

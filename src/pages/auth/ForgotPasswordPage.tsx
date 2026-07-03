@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { ShieldCheck, Mail, ArrowLeft, Send, AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 function validateEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -61,30 +62,42 @@ const ForgotPasswordPage = () => {
 
     try {
       if (canSubmit) {
-        // Simulate API call
-        setTimeout(() => {
-          setIsSent(true);
-          toast({
-            title: "Reset link sent",
-            description: `Check your inbox. We've sent a reset link to ${email}. It expires in 30 minutes.`,
-          });
-          setIsLoading(false);
-        }, 1500);
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        setIsSent(true);
+        toast({
+          title: "Reset link sent",
+          description: `Check your inbox. We've sent a reset link to ${email}. It expires in 30 minutes.`,
+        });
       }
     } catch (error) {
       console.error("Reset error:", error);
       setErrors({ general: "Something went wrong on our end. Try again  your information is safe." });
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (resendCooldown === 0) {
       setResendCooldown(60); // 60 second cooldown
-      toast({
-        title: "Reset link resent",
-        description: `Another reset link has been sent to ${email}.`,
-      });
+      try {
+        await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        toast({
+          title: "Reset link resent",
+          description: `Another reset link has been sent to ${email}.`,
+        });
+      } catch (error) {
+        console.error("Resend error:", error);
+      }
     }
   };
 
