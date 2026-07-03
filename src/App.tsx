@@ -67,7 +67,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <Routes>
-              <Route path="/" element={<Navigate to="/onboarding" replace />} />
+              <Route path="/" element={<Index />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/signin" element={<SignInPage />} />
               <Route path="/login" element={<Navigate to="/signin" replace />} />
