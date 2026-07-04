@@ -110,7 +110,18 @@ export const DEFAULT_SELECTED_MODULES: string[] = [
   "automation",
 ];
 
-export const TRIAL_ALLOWED_TOOLS: string[] = ['tasks', 'chat', 'notes', 'inbox'];
+export const TRIAL_ALLOWED_TOOLS: string[] = [
+  'tasks', 'chat', 'notes', 'inbox',
+  'crm', 'finance', 'projects', 'hr', 'other',
+  'crm-dashboard', 'marketing', 'crm-automation', 'reports',
+  'finance-dashboard', 'invoicing', 'expenses', 'payroll', 'inventory',
+  'clients', 'finance-time-tracking', 'payments', 'multi-currency',
+  'integrations', 'documents', 'kanban', 'list-view', 'calendar',
+  'timeline', 'resource-management', 'hr-dashboard', 'directory',
+  'hiring', 'onboarding', 'time-off', 'hr-time-tracking', 'hr-payroll',
+  'performance', 'hr-analytics', 'email', 'automation', 'forms',
+  'file-management', 'dashboard'
+];
 
 export const createWorkspaceSlice: StateCreator<WorkspaceSlice> = (set) => ({
   selectedModules: [...DEFAULT_SELECTED_MODULES],

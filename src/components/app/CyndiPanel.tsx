@@ -18,22 +18,19 @@ interface Message {
   timestamp: string;
 }
 
-const TRIAL_LIMIT = 3;
-
 const CyndiPanel = ({ onClose }: CyndiPanelProps) => {
   const [input, setInput] = useState("");
   const navigate = useNavigate();
   const store = useIndustryStore();
   
   const isTrial = store.subscriptionTier === "trial";
-  const hasReachedLimit = isTrial && store.trialMessageCount >= TRIAL_LIMIT;
+  // No more trial limit!
+  const hasReachedLimit = false;
 
   const [messages, setMessages] = useState<Message[]>([
     { 
       role: "assistant", 
-      content: isTrial 
-        ? "Hi, I'm Cyndi. As a trial user, you can ask me a few questions to see how I can help your business. Upgrade anytime for full access!"
-        : "Hi, I'm Cyndi. I have access to your workspace data and can help you manage projects, deals, and daily operations. How can I assist you today?",
+      content: "Hi, I'm Cyndi. I have access to your workspace data and can help you manage projects, deals, and daily operations. How can I assist you today?",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -52,15 +49,6 @@ const CyndiPanel = ({ onClose }: CyndiPanelProps) => {
 
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;
-    
-    if (hasReachedLimit) {
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: "You've reached your trial limit for Cyndi AI. Upgrade to a paid plan to unlock my full potential and keep our conversation going!",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }]);
-      return;
-    }
 
     const userMessage: Message = {
       role: "user",
@@ -90,8 +78,7 @@ const CyndiPanel = ({ onClose }: CyndiPanelProps) => {
       const systemPrompt = `You are Cyndi, a high-performance AI assistant for Cynda, a business operating system. 
       Your tone is professional, concise, and helpful. 
       You have access to the user's workspace context provided in the query.
-      Always try to provide actionable insights or offer to perform tasks (like creating projects or updating statuses).
-      ${isTrial ? "IMPORTANT: This is a trial user. Keep your answers slightly shorter but extremely impressive to encourage them to upgrade." : ""}`;
+      Always try to provide actionable insights or offer to perform tasks (like creating projects or updating statuses).`;
 
       const response = await callCyndi(
         messages.map(m => ({ role: m.role, content: m.content })),
@@ -270,48 +257,26 @@ const CyndiPanel = ({ onClose }: CyndiPanelProps) => {
       {/* Input Area */}
       <div className="p-4 sm:p-6 bg-background/50 backdrop-blur-md border-t border-border shrink-0">
         <div className="relative flex items-center gap-2 max-w-4xl mx-auto">
-          {isTrial && (
-            <div className="absolute -top-10 left-0 right-0 flex justify-center">
-              <div className="bg-primary/10 border border-primary/20 px-3 py-1 rounded-full flex items-center gap-2">
-                <div className="flex gap-1">
-                  {[...Array(TRIAL_LIMIT)].map((_, i) => (
-                    <div 
-                      key={i} 
-                      className={cn(
-                        "w-2 h-2 rounded-full",
-                        i < store.trialMessageCount ? "bg-muted-foreground/30" : "bg-primary animate-pulse"
-                      )} 
-                    />
-                  ))}
-                </div>
-                <span className="text-[9px] font-black uppercase tracking-widest text-primary">
-                  {TRIAL_LIMIT - store.trialMessageCount} messages left
-                </span>
-              </div>
-            </div>
-          )}
-          
           <div className="relative flex-1 group">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder={hasReachedLimit ? "Trial limit reached..." : "Ask Cyndi anything..."}
-              disabled={isTyping || hasReachedLimit}
+              placeholder="Ask Cyndi anything..."
+              disabled={isTyping}
               className={cn(
                 "h-14 pl-5 pr-14 rounded-2xl bg-card border-2 border-transparent transition-all font-medium text-sm",
-                !hasReachedLimit && "group-hover:border-primary/20 focus-visible:border-primary focus-visible:ring-0",
-                hasReachedLimit && "bg-muted/50 cursor-not-allowed"
+                "group-hover:border-primary/20 focus-visible:border-primary focus-visible:ring-0"
               )}
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
               <Button
                 size="icon"
                 onClick={handleSend}
-                disabled={!input.trim() || isTyping || hasReachedLimit}
+                disabled={!input.trim() || isTyping}
                 className={cn(
                   "h-10 w-10 rounded-xl transition-all",
-                  input.trim() && !isTyping && !hasReachedLimit 
+                  input.trim() && !isTyping
                     ? "bg-primary text-white shadow-glow hover:scale-105" 
                     : "bg-muted text-muted-foreground"
                 )}
